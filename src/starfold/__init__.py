@@ -21,6 +21,14 @@ from starfold.embedding import run_pca, run_tsne, run_umap
 from starfold.io import load_pipeline_result, save_pipeline_result
 from starfold.noise_baseline import NoiseBaselineResult, compute_noise_baseline
 from starfold.pipeline import PipelineResult, UnsupervisedPipeline
+from starfold.plotting import (
+    plot_embedding,
+    plot_embedding_comparison,
+    plot_optuna_history,
+    plot_optuna_param_importance,
+    plot_persistence_vs_baseline,
+    plot_trustworthiness_curve,
+)
 from starfold.trustworthiness import trustworthiness, trustworthiness_curve
 
 __all__ = [
@@ -31,6 +39,12 @@ __all__ = [
     "UnsupervisedPipeline",
     "compute_noise_baseline",
     "load_pipeline_result",
+    "plot_embedding",
+    "plot_embedding_comparison",
+    "plot_optuna_history",
+    "plot_optuna_param_importance",
+    "plot_persistence_vs_baseline",
+    "plot_trustworthiness_curve",
     "run_hdbscan",
     "run_pca",
     "run_tsne",
