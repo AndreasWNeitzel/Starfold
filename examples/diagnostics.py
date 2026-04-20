@@ -21,15 +21,18 @@ Run:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 
 mpl.use("Agg")
 
 import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.datasets import make_blobs
 from sklearn.preprocessing import StandardScaler
+
+if TYPE_CHECKING:
+    import numpy as np
 
 from starfold import (
     UnsupervisedPipeline,

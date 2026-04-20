@@ -86,6 +86,9 @@ result.save("run_01/")
 ```
 
 The full runnable example lives in [`docs/tutorial_01_quickstart.ipynb`](docs/tutorial_01_quickstart.ipynb).
+An optional second tutorial, [`docs/tutorial_02_astronomy_example.ipynb`](docs/tutorial_02_astronomy_example.ipynb),
+applies the pipeline to APOGEE DR17 x astroNN chrono-chemo-kinematic features
+once the user has downloaded the VAC locally.
 
 ## What's inside the package
 
