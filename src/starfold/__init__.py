@@ -18,11 +18,14 @@ from starfold.clustering import (
     search_hdbscan,
 )
 from starfold.embedding import run_pca, run_tsne, run_umap
+from starfold.noise_baseline import NoiseBaselineResult, compute_noise_baseline
 from starfold.trustworthiness import trustworthiness, trustworthiness_curve
 
 __all__ = [
     "HDBSCANResult",
+    "NoiseBaselineResult",
     "OptunaSearchResult",
+    "compute_noise_baseline",
     "run_hdbscan",
     "run_pca",
     "run_tsne",
