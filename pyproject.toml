@@ -123,6 +123,8 @@ module = [
     "umap.*",
     "hdbscan",
     "hdbscan.*",
+    "cuml",
+    "cuml.*",
     "sklearn.*",
     "scipy.*",
     "optuna.*",
