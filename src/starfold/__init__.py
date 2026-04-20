@@ -18,18 +18,24 @@ from starfold.clustering import (
     search_hdbscan,
 )
 from starfold.embedding import run_pca, run_tsne, run_umap
+from starfold.io import load_pipeline_result, save_pipeline_result
 from starfold.noise_baseline import NoiseBaselineResult, compute_noise_baseline
+from starfold.pipeline import PipelineResult, UnsupervisedPipeline
 from starfold.trustworthiness import trustworthiness, trustworthiness_curve
 
 __all__ = [
     "HDBSCANResult",
     "NoiseBaselineResult",
     "OptunaSearchResult",
+    "PipelineResult",
+    "UnsupervisedPipeline",
     "compute_noise_baseline",
+    "load_pipeline_result",
     "run_hdbscan",
     "run_pca",
     "run_tsne",
     "run_umap",
+    "save_pipeline_result",
     "search_hdbscan",
     "trustworthiness",
     "trustworthiness_curve",
