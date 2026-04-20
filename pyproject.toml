@@ -95,6 +95,10 @@ ignore = [
     # Small integer literals (``ndim != 2``, ``percentile=99.7``) read better
     # inline than behind a named constant.
     "PLR2004",
+    # Many-argument keyword-only APIs are the scientific-Python convention
+    # (think StandardScaler, UMAP, TSNE); the "too many arguments" rule would
+    # force artificial config objects without readability gain.
+    "PLR0913",
 ]
 
 [tool.ruff.lint.per-file-ignores]
