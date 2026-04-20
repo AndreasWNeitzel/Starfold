@@ -86,6 +86,15 @@ ignore = [
     "D213",
     "COM812",
     "ISC001",
+    # The package convention (documented in src/.../__init__.py) uses `X` for
+    # feature matrices and `X_high`/`X_low` for paired high/low embeddings;
+    # these are the names used throughout the scientific literature this
+    # tool follows, so PEP 8 N803/N806 do not apply.
+    "N803",
+    "N806",
+    # Small integer literals (``ndim != 2``, ``percentile=99.7``) read better
+    # inline than behind a named constant.
+    "PLR2004",
 ]
 
 [tool.ruff.lint.per-file-ignores]
