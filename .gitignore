@@ -36,6 +36,7 @@ Thumbs.db
 
 # Package cache (platformdirs-managed) mirrored locally by some setups
 .cache/
+docs/_noise_cache/
 
 # WSL/Windows download metadata
 *:Zone.Identifier
