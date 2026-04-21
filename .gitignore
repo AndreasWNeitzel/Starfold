@@ -37,6 +37,13 @@ Thumbs.db
 # Package cache (platformdirs-managed) mirrored locally by some setups
 .cache/
 docs/_noise_cache/
+docs/cache/
+
+# nbconvert run artefacts
+docs/tutorial_02_run.log
+
+# uv lockfile kept out of VCS for this project
+uv.lock
 
 # WSL/Windows download metadata
 *:Zone.Identifier
