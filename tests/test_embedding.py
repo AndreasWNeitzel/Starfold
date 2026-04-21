@@ -16,7 +16,12 @@ import numpy as np
 import pytest
 from sklearn.manifold import TSNE as _TSNE
 
+from starfold._engine import cuml_is_importable
 from starfold.embedding import run_pca, run_tsne, run_umap
+
+_cuml_required = pytest.mark.skipif(
+    not cuml_is_importable(), reason="RAPIDS cuml is not importable in this environment."
+)
 
 
 @pytest.fixture(name="X")
@@ -82,6 +87,33 @@ def test_umap_honours_n_components(X: np.ndarray) -> None:
         warnings.simplefilter("ignore")
         emb = run_umap(X, n_components=3, n_epochs=50, random_state=0)
     assert emb.shape == (X.shape[0], 3)
+
+
+def test_umap_cpu_engine_explicit(X: np.ndarray) -> None:
+    """``engine="cpu"`` must run the reference path regardless of cuml availability."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        emb = run_umap(X, n_epochs=50, random_state=0, engine="cpu")
+    assert emb.shape == (X.shape[0], 2)
+    assert emb.dtype == np.float64
+
+
+def test_umap_cuml_raises_when_unavailable() -> None:
+    if cuml_is_importable():
+        pytest.skip("cuml is importable; strict-mode error path not reachable.")
+    with pytest.raises(ImportError, match="cuml"):
+        run_umap(np.zeros((4, 2)), engine="cuml")
+
+
+@_cuml_required
+def test_umap_cuml_smoke() -> None:
+    """GPU UMAP must return a finite ``(n, 2)`` float64 array."""
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(400, 4))
+    emb = run_umap(x, n_epochs=200, random_state=0, engine="cuml")
+    assert emb.shape == (400, 2)
+    assert emb.dtype == np.float64
+    assert np.all(np.isfinite(emb))
 
 
 # --------------------------------------------------------------------- tSNE

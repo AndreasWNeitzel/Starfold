@@ -134,7 +134,11 @@ class UnsupervisedPipeline:
     metric : str, default ``"euclidean"``
         HDBSCAN metric, threaded through to every trial.
     engine : {"auto", "cpu", "cuml"}, default ``"auto"``
-        HDBSCAN backend.
+        Backend for both UMAP and HDBSCAN. ``"auto"`` prefers the RAPIDS
+        :mod:`cuml` GPU implementations when importable and falls back
+        to CPU otherwise. The same selector is threaded into
+        :func:`starfold.noise_baseline.compute_noise_baseline` unless
+        explicitly overridden in ``noise_baseline_kwargs``.
     noise_baseline_kwargs : dict, optional
         Forwarded to :func:`compute_noise_baseline`. Pass
         ``{"n_realisations": 0}`` or set ``skip_noise_baseline=True``
@@ -214,7 +218,9 @@ class UnsupervisedPipeline:
         scaler = StandardScaler().fit(x)
         x_scaled = scaler.transform(x)
 
-        embedding = run_umap(x_scaled, random_state=self.random_state, **self.umap_kwargs)
+        umap_kwargs = dict(self.umap_kwargs)
+        umap_kwargs.setdefault("engine", self.engine)
+        embedding = run_umap(x_scaled, random_state=self.random_state, **umap_kwargs)
 
         search = search_hdbscan(
             embedding,

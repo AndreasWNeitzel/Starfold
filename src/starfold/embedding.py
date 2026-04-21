@@ -5,8 +5,14 @@ Each wrapper returns a plain ``numpy.ndarray`` of shape
 is threaded through to the underlying estimator. No wrapper standardises
 its input; callers are responsible for scaling (e.g. via
 :class:`sklearn.preprocessing.StandardScaler`). The
-:class:`~starfold.pipeline.UnsupervisedPipeline`
-does the scaling internally.
+:class:`~starfold.pipeline.UnsupervisedPipeline` does the scaling
+internally.
+
+:func:`run_umap` also accepts an ``engine`` selector: ``"cpu"`` uses the
+reference :mod:`umap-learn` (Euclidean CPU implementation), ``"cuml"``
+uses :class:`cuml.manifold.UMAP` on the GPU, and ``"auto"`` picks cuml
+when importable. t-SNE and PCA are CPU-only; they exist for
+documentation diagnostics, not high-throughput embedding.
 """
 
 from __future__ import annotations
@@ -17,6 +23,8 @@ import numpy as np
 import umap
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+
+from starfold._engine import Engine, ResolvedEngine, resolve_engine
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
@@ -32,6 +40,53 @@ def _as_2d_float(X: ArrayLike) -> NDArray[np.floating[Any]]:
     return x
 
 
+def _run_umap_cpu(
+    x: NDArray[np.floating[Any]],
+    *,
+    n_neighbors: int,
+    min_dist: float,
+    n_epochs: int,
+    metric: str,
+    n_components: int,
+    random_state: int | None,
+) -> NDArray[np.floating[Any]]:
+    reducer = umap.UMAP(
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        n_epochs=n_epochs,
+        metric=metric,
+        n_components=n_components,
+        random_state=random_state,
+    )
+    return np.asarray(reducer.fit_transform(x), dtype=np.float64)
+
+
+def _run_umap_cuml(
+    x: NDArray[np.floating[Any]],
+    *,
+    n_neighbors: int,
+    min_dist: float,
+    n_epochs: int,
+    metric: str,
+    n_components: int,
+    random_state: int | None,
+) -> NDArray[np.floating[Any]]:
+    from cuml.manifold import UMAP as CumlUMAP  # noqa: N811, PLC0415
+
+    reducer = CumlUMAP(
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        n_epochs=n_epochs,
+        metric=metric,
+        n_components=n_components,
+        random_state=random_state,
+        output_type="numpy",
+    )
+    # cuml accepts host arrays directly; it moves them to device internally.
+    emb = reducer.fit_transform(x.astype(np.float32, copy=False))
+    return np.asarray(emb, dtype=np.float64)
+
+
 def run_umap(
     X: ArrayLike,
     *,
@@ -41,6 +96,7 @@ def run_umap(
     metric: str = "euclidean",
     n_components: int = 2,
     random_state: int | None = None,
+    engine: Engine = "auto",
 ) -> NDArray[np.floating[Any]]:
     """Compute a UMAP embedding of ``X``.
 
@@ -60,29 +116,52 @@ def run_umap(
         Number of optimisation epochs. UMAP typically converges after a few
         hundred epochs; 10 000 is conservative per the reference paper.
     metric : str, default ``"euclidean"``
-        Distance metric in the input space.
+        Distance metric in the input space. ``engine="cuml"`` only
+        supports a subset -- check the cuml documentation.
     n_components : int, default 2
         Dimensionality of the embedding.
     random_state : int or None, default None
-        Seed for reproducibility. With an integer seed, UMAP falls back to
-        single-threaded execution to guarantee bit-identical output.
+        Seed. On the CPU backend with an integer seed, :mod:`umap-learn`
+        falls back to single-threaded execution to guarantee bit-identical
+        output across runs. On ``engine="cuml"`` the seed is threaded
+        through to cuml, but GPU reductions are not bit-reproducible; two
+        runs with the same seed will be very similar, not identical.
+    engine : {"auto", "cpu", "cuml"}, default ``"auto"``
+        Backend. ``"auto"`` prefers ``"cuml"`` when the RAPIDS
+        :mod:`cuml` package is importable, and ``"cpu"`` otherwise.
+        ``"cuml"`` is strict -- it raises :class:`ImportError` if
+        :mod:`cuml` is missing. ``"cpu"`` pins the reference
+        :mod:`umap-learn` implementation.
 
     Returns
     -------
     ndarray of shape (n_samples, n_components)
-        The low-dimensional embedding.
+        The low-dimensional embedding as a contiguous ``float64`` array,
+        regardless of which backend produced it.
 
     Examples
     --------
     >>> import numpy as np
     >>> from starfold.embedding import run_umap
     >>> X = np.random.default_rng(0).normal(size=(100, 5))
-    >>> emb = run_umap(X, n_epochs=50, random_state=0)
+    >>> emb = run_umap(X, n_epochs=50, random_state=0, engine="cpu")
     >>> emb.shape
     (100, 2)
     """
     x = _as_2d_float(X)
-    reducer = umap.UMAP(
+    resolved: ResolvedEngine = resolve_engine(engine)
+    if resolved == "cuml":
+        return _run_umap_cuml(
+            x,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
+            n_epochs=n_epochs,
+            metric=metric,
+            n_components=n_components,
+            random_state=random_state,
+        )
+    return _run_umap_cpu(
+        x,
         n_neighbors=n_neighbors,
         min_dist=min_dist,
         n_epochs=n_epochs,
@@ -90,7 +169,6 @@ def run_umap(
         n_components=n_components,
         random_state=random_state,
     )
-    return np.asarray(reducer.fit_transform(x), dtype=np.float64)
 
 
 def run_tsne(

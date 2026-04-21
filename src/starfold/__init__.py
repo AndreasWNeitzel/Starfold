@@ -11,6 +11,7 @@ conventions of the scientific-Python literature this tool builds on.
 
 from __future__ import annotations
 
+from starfold._engine import Engine, cuml_is_importable
 from starfold.clustering import (
     HDBSCANResult,
     OptunaSearchResult,
@@ -32,12 +33,14 @@ from starfold.plotting import (
 from starfold.trustworthiness import trustworthiness, trustworthiness_curve
 
 __all__ = [
+    "Engine",
     "HDBSCANResult",
     "NoiseBaselineResult",
     "OptunaSearchResult",
     "PipelineResult",
     "UnsupervisedPipeline",
     "compute_noise_baseline",
+    "cuml_is_importable",
     "load_pipeline_result",
     "plot_embedding",
     "plot_embedding_comparison",
