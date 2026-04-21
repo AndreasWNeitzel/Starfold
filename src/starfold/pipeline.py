@@ -27,7 +27,12 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
-from starfold.clustering import Engine, OptunaSearchResult, search_hdbscan
+from starfold.clustering import (
+    Engine,
+    OptunaSearchResult,
+    TrialObjective,
+    search_hdbscan,
+)
 from starfold.embedding import run_umap
 from starfold.noise_baseline import NoiseBaselineResult, compute_noise_baseline
 from starfold.trustworthiness import trustworthiness
@@ -35,7 +40,10 @@ from starfold.trustworthiness import trustworthiness
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from matplotlib.figure import Figure
     from numpy.typing import ArrayLike, NDArray
+
+    from starfold.stability import SubsampleStability
 
 __all__ = ["PipelineResult", "UnsupervisedPipeline"]
 
@@ -95,6 +103,21 @@ class PipelineResult:
         """Return a short printable metrics table."""
         n = int(self.labels.shape[0])
         n_outliers = int(np.sum(self.labels < 0))
+        objective = str(self.config.get("hdbscan_objective", "persistence_sum"))
+        persistence_sum = float(self.persistence.sum()) if self.persistence.size else 0.0
+        persistence_median = (
+            float(np.median(self.persistence)) if self.persistence.size else 0.0
+        )
+        best_trial = None
+        try:
+            best_trial = self.search.study.best_trial
+        except (ValueError, AttributeError):
+            best_trial = None
+        dbcv = (
+            float(best_trial.user_attrs.get("relative_validity", float("nan")))
+            if best_trial is not None
+            else float("nan")
+        )
         lines = [
             "starfold pipeline result",
             "-" * 32,
@@ -102,7 +125,11 @@ class PipelineResult:
             f"n_clusters       {self.n_clusters}",
             f"n_outliers       {n_outliers}  ({n_outliers / n:.1%})",
             f"trustworthiness  {self.trustworthiness:.4f}",
+            f"objective        {objective}",
             f"best_params      {self.best_params}",
+            f"persistence_sum  {persistence_sum:.4f}",
+            f"persistence_med  {persistence_median:.4f}",
+            f"DBCV (MST proxy) {dbcv:.4f}",
         ]
         if self.noise_baseline is not None:
             lines.append(f"noise_threshold  {self.noise_baseline.threshold:.4f}")
@@ -116,6 +143,195 @@ class PipelineResult:
         from starfold.io import save_pipeline_result  # noqa: PLC0415
 
         return save_pipeline_result(self, directory)
+
+    def plot_tuning_dashboard(
+        self,
+        *,
+        figsize: tuple[float, float] = (22.0, 10.5),
+    ) -> Figure:
+        """Eight-panel HDBSCAN tuning dashboard for this run.
+
+        Panels: (a) Optuna TPE history of the objective, (b) Pareto
+        frontier in sum-persistence vs DBCV, (c) Pareto in median
+        persistence vs DBCV, (d) hyperparameter landscape, (e)
+        granularity-stability, (f) parallel coordinates, (g) the
+        HDBSCAN condensed tree of the selected fit, (h) fANOVA
+        parameter importance. The star on every panel marks the
+        selected trial (the Optuna best, which for
+        ``hdbscan_objective="combined_geom"`` is the geometric mean of
+        DBCV and median persistence rather than simply arg-max of
+        persistence).
+
+        Parameters
+        ----------
+        figsize
+            Size of the combined figure.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The assembled figure, ready to ``savefig`` or ``show``.
+        """
+        import matplotlib.pyplot as plt  # noqa: PLC0415
+
+        from starfold.plotting import (  # noqa: PLC0415
+            plot_condensed_tree,
+            plot_granularity_stability,
+            plot_optuna_history,
+            plot_optuna_hyperparam_landscape,
+            plot_optuna_parallel,
+            plot_optuna_param_importance,
+            plot_optuna_pareto,
+        )
+
+        study = self.search.study
+        fig, axes = plt.subplots(2, 4, figsize=figsize, constrained_layout=True)
+        plot_optuna_history(study, ax=axes[0, 0])
+        axes[0, 0].set_title("(a) Optuna TPE history (objective)")
+        plot_optuna_pareto(
+            study,
+            x_metric="persistence_sum",
+            y_metric="relative_validity",
+            ax=axes[0, 1],
+        )
+        axes[0, 1].set_title("(b) Pareto: sum persistence vs DBCV")
+        plot_optuna_pareto(
+            study,
+            x_metric="persistence_median",
+            y_metric="relative_validity",
+            ax=axes[0, 2],
+        )
+        axes[0, 2].set_title("(c) Pareto: median persistence vs DBCV")
+        plot_optuna_hyperparam_landscape(
+            study, metric="persistence_sum", ax=axes[0, 3],
+        )
+        axes[0, 3].set_title("(d) landscape (colour = sum persistence)")
+        plot_granularity_stability(study, ax=axes[1, 0])
+        axes[1, 0].set_title("(e) granularity-stability trade-off")
+        plot_optuna_parallel(study, ax=axes[1, 1])
+        axes[1, 1].set_title("(f) parallel coordinates (colour = trial #)")
+        plot_condensed_tree(self.search.model, ax=axes[1, 2])
+        axes[1, 2].set_title("(g) HDBSCAN condensed tree")
+        plot_optuna_param_importance(study, ax=axes[1, 3])
+        axes[1, 3].set_title("(h) parameter importance (fANOVA)")
+        objective = str(self.config.get("hdbscan_objective", "persistence_sum"))
+        fig.suptitle(
+            "starfold HDBSCAN tuning dashboard -- "
+            f"objective = {objective}, best = {self.best_params}, "
+            f"sum persistence = {float(self.persistence.sum()):.3f}",
+            fontsize=13,
+        )
+        return fig
+
+    def plot_quality_dashboard(
+        self,
+        X: ArrayLike,
+        *,
+        stability: SubsampleStability | None = None,
+        n_subsamples: int = 30,
+        subsample_fraction: float = 0.8,
+        k_values: tuple[int, ...] = (5, 10, 15, 30, 50, 100),
+        figsize: tuple[float, float] = (17.0, 9.5),
+        random_state: int | None = 0,
+    ) -> Figure:
+        """Six-panel pipeline-quality dashboard.
+
+        Panels: (a) HDBSCAN membership-probability map, (b) fANOVA
+        parameter importance, (c) trustworthiness T(k), (d)
+        n_clusters across subsamples, (e) ARI vs reference labels, (f)
+        per-cluster persistence distribution across subsamples.
+
+        Parameters
+        ----------
+        X
+            The *raw*, un-standardised input matrix. This is re-scaled
+            internally with the pipeline's fitted scaler so the
+            trustworthiness curve uses the same high-dimensional space
+            the pipeline saw.
+        stability
+            Optional pre-computed :class:`SubsampleStability`. When
+            ``None`` one is computed on the fly via
+            :func:`compute_subsample_stability`.
+        n_subsamples, subsample_fraction
+            Forwarded to :func:`compute_subsample_stability` when
+            ``stability`` is ``None``. 30 subsamples x 80% is a reasonable
+            tutorial default.
+        k_values
+            k grid for :func:`trustworthiness_curve`.
+        figsize
+            Figure size.
+        random_state
+            Seed threaded into :func:`compute_subsample_stability` for
+            reproducibility.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The assembled figure.
+        """
+        import matplotlib.pyplot as plt  # noqa: PLC0415
+
+        from starfold.plotting import (  # noqa: PLC0415
+            plot_membership_confidence,
+            plot_optuna_param_importance,
+            plot_subsample_stability,
+            plot_trustworthiness_curve,
+        )
+        from starfold.stability import compute_subsample_stability  # noqa: PLC0415
+        from starfold.trustworthiness import trustworthiness_curve  # noqa: PLC0415
+
+        x = np.asarray(X, dtype=np.float64)
+        if x.ndim != 2:
+            msg = f"X must be a 2-D array (got shape {x.shape})."
+            raise ValueError(msg)
+        x_scaled = self.scaler.transform(x)
+
+        if stability is None:
+            stability = compute_subsample_stability(
+                self.embedding,
+                self.labels,
+                self.persistence,
+                min_cluster_size=self.best_params["min_cluster_size"],
+                min_samples=self.best_params["min_samples"],
+                n_subsamples=n_subsamples,
+                subsample_fraction=subsample_fraction,
+                engine=self.config.get("engine", "auto"),
+                random_state=random_state,
+            )
+
+        fig = plt.figure(figsize=figsize, constrained_layout=True)
+        gs = fig.add_gridspec(2, 3, height_ratios=[1.0, 1.0])
+
+        ax_conf = fig.add_subplot(gs[0, 0])
+        plot_membership_confidence(
+            self.embedding, self.labels, self.probabilities, ax=ax_conf,
+        )
+        ax_conf.set_title("(a) HDBSCAN membership-probability map")
+
+        ax_imp = fig.add_subplot(gs[0, 1])
+        plot_optuna_param_importance(self.search.study, ax=ax_imp)
+        ax_imp.set_title("(b) parameter importance (fANOVA)")
+
+        ax_trust = fig.add_subplot(gs[0, 2])
+        scores = trustworthiness_curve(x_scaled, self.embedding, k_values=k_values)
+        plot_trustworthiness_curve(scores, ax=ax_trust, threshold=0.9)
+        ax_trust.set_title("(c) trustworthiness T(k)")
+
+        ax_sb1 = fig.add_subplot(gs[1, 0])
+        ax_sb2 = fig.add_subplot(gs[1, 1])
+        ax_sb3 = fig.add_subplot(gs[1, 2])
+        plot_subsample_stability(
+            stability, self.persistence, axes=[ax_sb1, ax_sb2, ax_sb3],
+        )
+        ax_sb1.set_title(
+            f"(d) n_clusters across {stability.n_subsamples} subsamples "
+            f"({int(stability.subsample_fraction * 100)}%)"
+        )
+        ax_sb2.set_title("(e) ARI vs reference labels")
+        ax_sb3.set_title("(f) per-cluster persistence distribution")
+
+        fig.suptitle("starfold pipeline-quality dashboard", fontsize=13)
+        return fig
 
 
 class UnsupervisedPipeline:
@@ -180,6 +396,7 @@ class UnsupervisedPipeline:
         noise_baseline_kwargs: dict[str, Any] | None = None,
         skip_noise_baseline: bool = False,
         random_state: int | None = None,
+        hdbscan_objective: TrialObjective = "persistence_sum",
     ) -> None:
         self.umap_kwargs: dict[str, Any] = dict(umap_kwargs or {})
         self.hdbscan_optuna_trials = int(hdbscan_optuna_trials)
@@ -190,6 +407,7 @@ class UnsupervisedPipeline:
         self.noise_baseline_kwargs: dict[str, Any] = dict(noise_baseline_kwargs or {})
         self.skip_noise_baseline = bool(skip_noise_baseline)
         self.random_state = random_state
+        self.hdbscan_objective: TrialObjective = hdbscan_objective
 
     def _as_2d_float(self, X: ArrayLike) -> NDArray[np.floating[Any]]:
         x = np.asarray(X, dtype=np.float64)
@@ -230,6 +448,7 @@ class UnsupervisedPipeline:
             metric=self.metric,
             random_state=self.random_state,
             engine=self.engine,
+            objective=self.hdbscan_objective,
         )
         hdbscan_result = search.hdbscan_result
 
@@ -277,4 +496,5 @@ class UnsupervisedPipeline:
             "noise_baseline_kwargs": dict(self.noise_baseline_kwargs),
             "skip_noise_baseline": self.skip_noise_baseline,
             "random_state": self.random_state,
+            "hdbscan_objective": self.hdbscan_objective,
         }

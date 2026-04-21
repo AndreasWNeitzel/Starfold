@@ -49,7 +49,16 @@ def _run_umap_cpu(
     metric: str,
     n_components: int,
     random_state: int | None,
+    low_memory: bool,
+    n_jobs: int | None,
 ) -> NDArray[np.floating[Any]]:
+    # umap-learn forces single-threaded execution whenever random_state
+    # is set so output is bit-reproducible. When the caller does not ask
+    # for reproducibility (random_state is None), parallelise across all
+    # cores by default -- this is the knn-graph bottleneck for large N.
+    resolved_n_jobs = (
+        n_jobs if n_jobs is not None else (1 if random_state is not None else -1)
+    )
     reducer = umap.UMAP(
         n_neighbors=n_neighbors,
         min_dist=min_dist,
@@ -57,8 +66,13 @@ def _run_umap_cpu(
         metric=metric,
         n_components=n_components,
         random_state=random_state,
+        low_memory=low_memory,
+        n_jobs=resolved_n_jobs,
     )
-    return np.asarray(reducer.fit_transform(x), dtype=np.float64)
+    # Cast to float32 on the fly: umap-learn works internally in float32
+    # and this halves peak kNN memory without changing output.
+    x32 = x.astype(np.float32, copy=False)
+    return np.asarray(reducer.fit_transform(x32), dtype=np.float64)
 
 
 def _run_umap_cuml(
@@ -97,6 +111,8 @@ def run_umap(
     n_components: int = 2,
     random_state: int | None = None,
     engine: Engine = "auto",
+    low_memory: bool = False,
+    n_jobs: int | None = None,
 ) -> NDArray[np.floating[Any]]:
     """Compute a UMAP embedding of ``X``.
 
@@ -132,6 +148,15 @@ def run_umap(
         ``"cuml"`` is strict -- it raises :class:`ImportError` if
         :mod:`cuml` is missing. ``"cpu"`` pins the reference
         :mod:`umap-learn` implementation.
+    low_memory : bool, default False
+        Forwarded to :class:`umap.UMAP`. Trades a modest CPU cost for
+        a reduced kNN-graph memory footprint. Turn on if peak RSS is
+        a concern on large ``n_samples``.
+    n_jobs : int or None, default None
+        CPU parallelism for the kNN build. ``None`` picks a sensible
+        default: all cores when ``random_state`` is ``None``, single
+        thread when a seed is supplied (so :mod:`umap-learn`'s
+        bit-reproducibility guarantee is honoured).
 
     Returns
     -------
@@ -168,6 +193,8 @@ def run_umap(
         metric=metric,
         n_components=n_components,
         random_state=random_state,
+        low_memory=low_memory,
+        n_jobs=n_jobs,
     )
 
 

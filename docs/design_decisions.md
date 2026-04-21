@@ -24,7 +24,9 @@ different behaviour override the argument at call time.
 | Auto-cap | `mcs_high = max(5, n // 10)` | Not in paper | Prevents the search from sampling MCS values that forbid any cluster at all on small samples. Documented in `run_hdbscan` / `search_hdbscan` docstrings. |
 | Sampler | `TPESampler(seed=random_state)` | §3.3 | Reproducible under a fixed seed. |
 | Pruner | none | Paper silent | Pruning would distort the objective (sum of persistences) since early trials cannot be compared against later ones. |
-| Objective | sum of `cluster_persistence_` | §3.3 | Explicitly the sum, not the max. |
+| Objective | `"persistence_sum"` (default) | §3.3 | Sum of `cluster_persistence_`, explicitly the sum not the max. Matches the paper. |
+| Alternative objective | `"combined_geom"` | Paper silent | Geometric mean of `max(relative_validity_, 0)` (the HDBSCAN MST-based DBCV proxy) and the *median* per-cluster persistence: $\sqrt{\max(\mathrm{DBCV}, 0)\cdot\mathrm{median}(\text{persistence})}$. Rewards configurations that produce both internally well-separated clusters (DBCV) and consistently high per-cluster stability (median persistence), which penalises solutions that over-split into a few spurious high-persistence clusters plus a long tail of low-persistence ones. Exposed via `hdbscan_objective="combined_geom"` on `UnsupervisedPipeline` and `search_hdbscan`. |
+| HDBSCAN backend during search | CPU `hdbscan` library | Not in paper | The Optuna search and the final refit always run on the CPU `hdbscan` library even when `engine="cuml"` is selected. Reasons: (1) `cuml.HDBSCAN` does not expose `relative_validity_`, which is required both for the diagnostic dashboards and for the `combined_geom` objective; (2) for a 2-D UMAP embedding of typical size (10⁴–10⁵) CPU HDBSCAN is competitive with cuml once GPU setup overhead is amortised over ~100 trials. UMAP still runs on the GPU when `cuml` is available. |
 
 ## Noise baseline
 

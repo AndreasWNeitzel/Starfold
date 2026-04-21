@@ -23,13 +23,21 @@ from starfold.io import load_pipeline_result, save_pipeline_result
 from starfold.noise_baseline import NoiseBaselineResult, compute_noise_baseline
 from starfold.pipeline import PipelineResult, UnsupervisedPipeline
 from starfold.plotting import (
+    plot_condensed_tree,
     plot_embedding,
     plot_embedding_comparison,
+    plot_granularity_stability,
+    plot_membership_confidence,
     plot_optuna_history,
+    plot_optuna_hyperparam_landscape,
+    plot_optuna_parallel,
     plot_optuna_param_importance,
+    plot_optuna_pareto,
     plot_persistence_vs_baseline,
+    plot_subsample_stability,
     plot_trustworthiness_curve,
 )
+from starfold.stability import SubsampleStability, compute_subsample_stability
 from starfold.trustworthiness import trustworthiness, trustworthiness_curve
 
 __all__ = [
@@ -38,15 +46,24 @@ __all__ = [
     "NoiseBaselineResult",
     "OptunaSearchResult",
     "PipelineResult",
+    "SubsampleStability",
     "UnsupervisedPipeline",
     "compute_noise_baseline",
+    "compute_subsample_stability",
     "cuml_is_importable",
     "load_pipeline_result",
+    "plot_condensed_tree",
     "plot_embedding",
     "plot_embedding_comparison",
+    "plot_granularity_stability",
+    "plot_membership_confidence",
     "plot_optuna_history",
+    "plot_optuna_hyperparam_landscape",
+    "plot_optuna_parallel",
     "plot_optuna_param_importance",
+    "plot_optuna_pareto",
     "plot_persistence_vs_baseline",
+    "plot_subsample_stability",
     "plot_trustworthiness_curve",
     "run_hdbscan",
     "run_pca",

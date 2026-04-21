@@ -26,6 +26,7 @@ Pass ``force_recompute=True`` to invalidate the cache for one call.
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import json
 from dataclasses import dataclass, field
@@ -202,7 +203,12 @@ def _one_realisation(
         engine=engine,
     )
     persistence = search.hdbscan_result.cluster_persistence
-    return float(persistence.max()) if persistence.size else 0.0
+    result = float(persistence.max()) if persistence.size else 0.0
+    # Drop the embedding, noise matrix, and Optuna study before returning
+    # so peak memory across many realisations is bounded to one live fit.
+    del noise, emb, search
+    gc.collect()
+    return result
 
 
 def compute_noise_baseline(

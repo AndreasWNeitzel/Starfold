@@ -18,14 +18,17 @@ CPU implementation.
 
 from __future__ import annotations
 
+import gc
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import hdbscan as _hdbscan
 import numpy as np
 import optuna
 
 from starfold._engine import Engine, ResolvedEngine, resolve_engine
+
+TrialObjective = Literal["persistence_sum", "combined_geom"]
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
@@ -34,6 +37,7 @@ __all__ = [
     "Engine",
     "HDBSCANResult",
     "OptunaSearchResult",
+    "TrialObjective",
     "run_hdbscan",
     "search_hdbscan",
 ]
@@ -74,16 +78,25 @@ class OptunaSearchResult:
         The corresponding objective value.
     study
         The underlying :class:`optuna.Study`, retained for trial-history
-        and importance inspection.
+        and importance inspection. Every completed trial carries the
+        following ``user_attrs``: ``relative_validity`` (DBCV proxy from
+        the minimum spanning tree), ``n_clusters``, ``outlier_fraction``,
+        and ``persistence_max``.
     hdbscan_result
         :class:`HDBSCANResult` produced by refitting HDBSCAN at
         ``best_params``.
+    model
+        The fitted ``hdbscan.HDBSCAN`` instance from the refit, or
+        ``None`` on the cuml backend (cuml returns a different object
+        that does not expose the condensed-tree API). Retained so that
+        diagnostics such as the condensed-tree plot can be drawn.
     """
 
     best_params: dict[str, int]
     best_persistence_sum: float
     study: optuna.Study
     hdbscan_result: HDBSCANResult
+    model: _hdbscan.HDBSCAN | None = None
 
 
 _resolve_engine = resolve_engine  # backward-compatible alias for internal callers
@@ -118,6 +131,23 @@ def _fit_cpu(
     min_samples: int | None,
     metric: str,
 ) -> HDBSCANResult:
+    model, result = _fit_cpu_with_model(
+        x,
+        min_cluster_size=min_cluster_size,
+        min_samples=min_samples,
+        metric=metric,
+    )
+    del model
+    return result
+
+
+def _fit_cpu_with_model(
+    x: NDArray[np.floating[Any]],
+    *,
+    min_cluster_size: int,
+    min_samples: int | None,
+    metric: str,
+) -> tuple[_hdbscan.HDBSCAN, HDBSCANResult]:
     model = _hdbscan.HDBSCAN(
         min_cluster_size=int(min_cluster_size),
         min_samples=None if min_samples is None else int(min_samples),
@@ -125,7 +155,16 @@ def _fit_cpu(
         gen_min_span_tree=True,
     )
     model.fit(x)
-    return _pack(model.labels_, model.cluster_persistence_, model.probabilities_)
+    result = _pack(model.labels_, model.cluster_persistence_, model.probabilities_)
+    return model, result
+
+
+def _relative_validity(model: _hdbscan.HDBSCAN) -> float:
+    """Return HDBSCAN's MST-based DBCV proxy, or NaN if unavailable."""
+    try:
+        return float(model.relative_validity_)
+    except (AttributeError, ValueError, ZeroDivisionError):
+        return float("nan")
 
 
 def _fit_cuml(
@@ -239,6 +278,29 @@ def _effective_mcs_bounds(
     return low, max(low, capped)
 
 
+def _validate_search_inputs(
+    n_trials: int,
+    mcs_range: tuple[int, int],
+    ms_range: tuple[int, int],
+    objective: TrialObjective,
+) -> None:
+    if n_trials < 1:
+        msg = f"n_trials must be >= 1 (got {n_trials})."
+        raise ValueError(msg)
+    if mcs_range[0] < 2 or mcs_range[1] < mcs_range[0]:
+        msg = f"mcs_range must satisfy 2 <= low <= high (got {mcs_range})."
+        raise ValueError(msg)
+    if ms_range[0] < 1 or ms_range[1] < ms_range[0]:
+        msg = f"ms_range must satisfy 1 <= low <= high (got {ms_range})."
+        raise ValueError(msg)
+    if objective not in ("persistence_sum", "combined_geom"):
+        msg = (
+            "objective must be 'persistence_sum' or 'combined_geom' "
+            f"(got {objective!r})."
+        )
+        raise ValueError(msg)
+
+
 def search_hdbscan(
     X: ArrayLike,
     *,
@@ -249,15 +311,25 @@ def search_hdbscan(
     random_state: int | None = None,
     engine: Engine = "auto",
     show_progress_bar: bool = False,
+    objective: TrialObjective = "persistence_sum",
 ) -> OptunaSearchResult:
-    """Tune HDBSCAN by maximising the sum of cluster-persistence scores.
+    """Tune HDBSCAN by maximising a per-trial objective.
 
-    The objective follows Neitzel et al. (2025) §3.3: for each
+    The default objective follows Neitzel et al. (2025) §3.3: for each
     ``(min_cluster_size, min_samples)`` pair, fit HDBSCAN and return the
-    sum of :attr:`hdbscan.HDBSCAN.cluster_persistence_`. The search uses
-    a :class:`optuna.samplers.TPESampler` seeded with ``random_state``,
+    sum of :attr:`hdbscan.HDBSCAN.cluster_persistence_`. A second
+    choice, ``"combined_geom"``, returns the geometric mean of the
+    MST-based DBCV proxy (``relative_validity_``, clipped at 0) and the
+    median per-cluster persistence -- a balanced "both must be good"
+    score for clusterings where either weak persistence or weak
+    internal validity should disqualify a trial. The search uses a
+    :class:`optuna.samplers.TPESampler` seeded with ``random_state``,
     so identical seeds produce identical trial sequences on the CPU
-    backend.
+    backend. Every trial records ``user_attrs`` with full per-trial
+    metrics (``persistence_sum``, ``persistence_median``,
+    ``persistence_max``, ``persistence_mean``, ``relative_validity``,
+    ``n_clusters``, ``outlier_fraction``) so post-hoc selection and
+    diagnostics are cheap.
 
     Parameters
     ----------
@@ -277,9 +349,22 @@ def search_hdbscan(
     random_state : int or None, default None
         Seed for Optuna's TPE sampler.
     engine : {"auto", "cpu", "cuml"}, default ``"auto"``
-        Backend for each trial's HDBSCAN fit.
+        Nominal backend. The search itself always runs HDBSCAN on the
+        CPU because (a) the ``relative_validity_`` attribute used for
+        diagnostic plots and the ``combined_geom`` objective is only
+        computed by :class:`hdbscan.HDBSCAN`, and (b) on a 2-D embedding
+        the CPU implementation is already faster than the GPU one.
+        The setting is retained so it can be forwarded to the caller
+        (:class:`starfold.pipeline.UnsupervisedPipeline` uses it for
+        UMAP and the noise baseline).
     show_progress_bar : bool, default False
         Forwarded to :meth:`optuna.Study.optimize`.
+    objective : {"persistence_sum", "combined_geom"}, default ``"persistence_sum"``
+        What the TPE sampler maximises. ``"persistence_sum"`` matches
+        the paper; ``"combined_geom"`` returns
+        ``sqrt(max(DBCV, 0) * median_cluster_persistence)``, rewarding
+        clusterings that are good on both stability and internal
+        validity simultaneously.
 
     Returns
     -------
@@ -302,43 +387,78 @@ def search_hdbscan(
     >>> search.hdbscan_result.n_clusters
     3
     """
-    if n_trials < 1:
-        msg = f"n_trials must be >= 1 (got {n_trials})."
-        raise ValueError(msg)
-    if mcs_range[0] < 2 or mcs_range[1] < mcs_range[0]:
-        msg = f"mcs_range must satisfy 2 <= low <= high (got {mcs_range})."
-        raise ValueError(msg)
-    if ms_range[0] < 1 or ms_range[1] < ms_range[0]:
-        msg = f"ms_range must satisfy 1 <= low <= high (got {ms_range})."
-        raise ValueError(msg)
+    _validate_search_inputs(n_trials, mcs_range, ms_range, objective)
 
     x = _as_2d_float(X)
-    resolved = _resolve_engine(engine)
+    # Trials and the final refit always use CPU HDBSCAN; see the
+    # engine docstring note above. Resolve anyway so a missing cuml
+    # with engine="cuml" still raises through resolve_engine.
+    _ = _resolve_engine(engine)
     mcs_low, mcs_high = _effective_mcs_bounds(x.shape[0], mcs_range)
     ms_low, ms_high = ms_range
 
-    def objective(trial: optuna.Trial) -> float:
+    def _attrs_from(model: _hdbscan.HDBSCAN | None, result: HDBSCANResult) -> dict[str, float]:
+        labels = result.labels
+        n_samples = int(labels.shape[0])
+        persistence = np.asarray(result.cluster_persistence, dtype=np.float64)
+        return {
+            "relative_validity": (
+                _relative_validity(model) if model is not None else float("nan")
+            ),
+            "n_clusters": float(result.n_clusters),
+            "outlier_fraction": float((labels == -1).sum()) / float(max(n_samples, 1)),
+            "persistence_sum": float(persistence.sum()) if persistence.size else 0.0,
+            "persistence_max": float(persistence.max()) if persistence.size else 0.0,
+            "persistence_mean": float(persistence.mean()) if persistence.size else 0.0,
+            "persistence_median": (
+                float(np.median(persistence)) if persistence.size else 0.0
+            ),
+        }
+
+    def _score(attrs: dict[str, float]) -> float:
+        if objective == "persistence_sum":
+            return float(attrs["persistence_sum"])
+        if objective == "combined_geom":
+            dbcv_plus = max(0.0, float(attrs["relative_validity"]))
+            if not np.isfinite(dbcv_plus):
+                return 0.0
+            return float(np.sqrt(dbcv_plus * float(attrs["persistence_median"])))
+        msg = f"unknown objective {objective!r}."
+        raise ValueError(msg)
+
+    def objective_fn(trial: optuna.Trial) -> float:
         mcs = trial.suggest_int("min_cluster_size", mcs_low, mcs_high, log=True)
         ms = trial.suggest_int("min_samples", ms_low, ms_high, log=True)
-        result = _fit(resolved, x, min_cluster_size=mcs, min_samples=ms, metric=metric)
-        return float(np.sum(result.cluster_persistence))
+        model, result = _fit_cpu_with_model(
+            x, min_cluster_size=mcs, min_samples=ms, metric=metric
+        )
+        attrs = _attrs_from(model, result)
+        for key, value in attrs.items():
+            trial.set_user_attr(key, value)
+        score = _score(attrs)
+        # Release the fitted model (and its condensed tree + MST) before
+        # the next trial so peak memory stays bounded to one live fit.
+        del model, result
+        gc.collect()
+        return score
 
     sampler = optuna.samplers.TPESampler(seed=random_state)
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     study = optuna.create_study(direction="maximize", sampler=sampler)
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=show_progress_bar)
+    study.optimize(objective_fn, n_trials=n_trials, show_progress_bar=show_progress_bar)
 
     best_params = {k: int(v) for k, v in study.best_params.items()}
-    best_result = _fit(
-        resolved,
+    best_model, best_result = _fit_cpu_with_model(
         x,
         min_cluster_size=best_params["min_cluster_size"],
         min_samples=best_params["min_samples"],
         metric=metric,
     )
+    best_persistence_sum = float(np.sum(best_result.cluster_persistence))
     return OptunaSearchResult(
         best_params=best_params,
-        best_persistence_sum=float(study.best_value),
+        best_persistence_sum=best_persistence_sum,
         study=study,
         hdbscan_result=best_result,
+        model=best_model,
     )

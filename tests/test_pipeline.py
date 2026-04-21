@@ -8,11 +8,18 @@ Covers:
 * ``skip_noise_baseline=True`` skips the expensive step cleanly,
 * the noise-baseline path populates ``significant``,
 * input validation rejects non-2D arrays,
-* the summary string mentions the key metrics.
+* the summary string mentions the key metrics,
+* the ``combined_geom`` objective produces a valid run,
+* the tuning and quality dashboards return well-formed figures.
 """
 
 from __future__ import annotations
 
+import matplotlib as mpl
+
+mpl.use("Agg")
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from sklearn.metrics import adjusted_rand_score
@@ -112,3 +119,131 @@ def test_pipeline_scaler_is_fitted(
     transformed = result.scaler.transform(X)
     np.testing.assert_allclose(transformed.mean(axis=0), 0.0, atol=1e-10)
     np.testing.assert_allclose(transformed.std(axis=0, ddof=0), 1.0, atol=1e-10)
+
+
+# --------------------------------------------------------------- combined_geom
+
+
+def test_pipeline_combined_geom_objective(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    X, _ = gmm_three_clusters_2d
+    result = _cheap_pipeline(hdbscan_objective="combined_geom").fit(X)
+    assert result.config["hdbscan_objective"] == "combined_geom"
+    best = result.search.study.best_trial
+    dbcv = best.user_attrs["relative_validity"]
+    persistence_median = best.user_attrs["persistence_median"]
+    assert np.isfinite(dbcv)
+    assert np.isfinite(persistence_median)
+    expected = float(np.sqrt(max(dbcv, 0.0) * persistence_median))
+    assert best.value == pytest.approx(expected, abs=1e-12)
+
+
+def test_summary_contains_dbcv_line(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    X, _ = gmm_three_clusters_2d
+    result = _cheap_pipeline(hdbscan_objective="combined_geom").fit(X)
+    text = result.summary()
+    assert "DBCV" in text
+    assert "persistence_med" in text
+    assert "objective" in text
+    assert "combined_geom" in text
+
+
+# --------------------------------------------------------------- dashboards
+
+
+def test_plot_tuning_dashboard_returns_eight_panel_figure(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    X, _ = gmm_three_clusters_2d
+    result = _cheap_pipeline(hdbscan_objective="combined_geom").fit(X)
+    fig = result.plot_tuning_dashboard()
+    try:
+        # 2x4 subplot grid; colorbars add extra axes, so allow >= 8.
+        assert len(fig.axes) >= 8
+        titles = [ax.get_title() for ax in fig.axes]
+        tags = "".join(titles)
+        for marker in ("(a)", "(b)", "(c)", "(d)", "(e)", "(f)", "(g)", "(h)"):
+            assert marker in tags
+        assert "starfold HDBSCAN tuning dashboard" in fig.get_suptitle()
+    finally:
+        plt.close(fig)
+
+
+def test_plot_tuning_dashboard_respects_figsize(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    X, _ = gmm_three_clusters_2d
+    result = _cheap_pipeline().fit(X)
+    fig = result.plot_tuning_dashboard(figsize=(16.0, 8.0))
+    try:
+        w, h = fig.get_size_inches()
+        assert float(w) == pytest.approx(16.0)
+        assert float(h) == pytest.approx(8.0)
+    finally:
+        plt.close(fig)
+
+
+def test_plot_quality_dashboard_returns_six_panel_figure(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    X, _ = gmm_three_clusters_2d
+    result = _cheap_pipeline().fit(X)
+    fig = result.plot_quality_dashboard(
+        X,
+        n_subsamples=5,
+        subsample_fraction=0.8,
+        k_values=(5, 10, 15),
+        random_state=0,
+    )
+    try:
+        # Six-panel grid; the membership-confidence panel adds a colorbar.
+        assert len(fig.axes) >= 6
+        titles = [ax.get_title() for ax in fig.axes]
+        tags = "".join(titles)
+        for marker in ("(a)", "(b)", "(c)", "(d)", "(e)", "(f)"):
+            assert marker in tags
+        assert "pipeline-quality dashboard" in fig.get_suptitle()
+    finally:
+        plt.close(fig)
+
+
+def test_plot_quality_dashboard_rejects_non_2d(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    X, _ = gmm_three_clusters_2d
+    result = _cheap_pipeline().fit(X)
+    with pytest.raises(ValueError, match="2-D"):
+        result.plot_quality_dashboard(np.zeros(10))
+
+
+def test_plot_quality_dashboard_accepts_precomputed_stability(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    from starfold.stability import compute_subsample_stability  # noqa: PLC0415
+
+    X, _ = gmm_three_clusters_2d
+    result = _cheap_pipeline().fit(X)
+    stability = compute_subsample_stability(
+        result.embedding,
+        result.labels,
+        result.persistence,
+        min_cluster_size=result.best_params["min_cluster_size"],
+        min_samples=result.best_params["min_samples"],
+        n_subsamples=4,
+        subsample_fraction=0.8,
+        engine="cpu",
+        random_state=0,
+    )
+    fig = result.plot_quality_dashboard(
+        X,
+        stability=stability,
+        k_values=(5, 10, 15),
+    )
+    try:
+        assert len(fig.axes) >= 6
+        assert stability.n_subsamples == 4
+    finally:
+        plt.close(fig)
