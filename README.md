@@ -87,8 +87,10 @@ result.save("run_01/")
 
 The full runnable example lives in [`docs/tutorial_01_quickstart.ipynb`](docs/tutorial_01_quickstart.ipynb).
 An optional second tutorial, [`docs/tutorial_02_astronomy_example.ipynb`](docs/tutorial_02_astronomy_example.ipynb),
-applies the pipeline to APOGEE DR17 x astroNN chrono-chemo-kinematic features
-once the user has downloaded the VAC locally.
+applies the pipeline to a bundled 9 242-star Milky Way chemo-dynamical sample
+(APOGEE DR19 ASPCAP chemistry + `galpy` actions from Gaia DR3 astrometry; shipped as a
+~0.5 MB parquet under [`docs/data/`](docs/data/stellar_chemokinematics_apogee_dr19.provenance.md)
+so the notebook runs offline).
 
 ## What's inside the package
 

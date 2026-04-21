@@ -82,8 +82,7 @@ def generate_embedding_comparison(X: np.ndarray, y: np.ndarray) -> None:
         figsize=(15.0, 4.5),
     )
     fig.suptitle(
-        "Three ways to project a 5-D, 4-blob dataset to 2-D. "
-        "Colour = ground-truth label.",
+        "Three ways to project a 5-D, 4-blob dataset to 2-D. Colour = ground-truth label.",
         y=1.02,
     )
     _save(fig, "embedding_comparison.png")
@@ -113,8 +112,7 @@ def generate_pipeline_figures(X: np.ndarray, y: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(6.0, 5.5))
     plot_embedding(result.embedding, result.labels, ax=ax)
     ax.set_title(
-        f"UMAP + Optuna-HDBSCAN -> {result.n_clusters} clusters "
-        f"(T = {result.trustworthiness:.3f})"
+        f"UMAP + Optuna-HDBSCAN -> {result.n_clusters} clusters (T = {result.trustworthiness:.3f})"
     )
     _save(fig, "pipeline_embedding.png")
 
@@ -147,8 +145,7 @@ def generate_pipeline_figures(X: np.ndarray, y: np.ndarray) -> None:
         ax=ax,
     )
     ax.set_title(
-        f"Per-cluster persistence vs 99.7-percentile noise baseline "
-        f"({baseline.threshold:.3f})"
+        f"Per-cluster persistence vs 99.7-percentile noise baseline ({baseline.threshold:.3f})"
     )
     _save(fig, "persistence_vs_baseline.png")
 
