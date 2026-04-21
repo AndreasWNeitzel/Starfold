@@ -160,6 +160,51 @@ def test_search_hdbscan_rejects_bad_ms_range() -> None:
         search_hdbscan(X, ms_range=(20, 10), engine="cpu")
 
 
+def test_search_hdbscan_rejects_unknown_objective() -> None:
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(200, 2))
+    with pytest.raises(ValueError, match="objective"):
+        search_hdbscan(
+            X, n_trials=3, engine="cpu",
+            objective="max_persistence",  # type: ignore[arg-type]
+        )
+
+
+def test_search_hdbscan_combined_geom_objective(
+    gmm_three_clusters_2d: tuple[np.ndarray, np.ndarray],
+) -> None:
+    X, _ = gmm_three_clusters_2d
+    search = search_hdbscan(
+        X,
+        n_trials=12,
+        mcs_range=(5, 60),
+        ms_range=(1, 20),
+        random_state=0,
+        engine="cpu",
+        objective="combined_geom",
+    )
+    study = search.study
+    assert len(study.trials) == 12
+    # Each trial records the full per-trial metric panel.
+    expected_keys = {
+        "relative_validity",
+        "persistence_sum",
+        "persistence_median",
+        "persistence_max",
+        "persistence_mean",
+        "n_clusters",
+        "outlier_fraction",
+    }
+    for trial in study.trials:
+        assert expected_keys.issubset(trial.user_attrs.keys())
+    # Best trial value equals sqrt(max(DBCV, 0) * median_persistence).
+    best = study.best_trial
+    dbcv = best.user_attrs["relative_validity"]
+    persistence_median = best.user_attrs["persistence_median"]
+    expected_value = float(np.sqrt(max(dbcv, 0.0) * persistence_median))
+    assert best.value == pytest.approx(expected_value, abs=1e-12)
+
+
 # ------------------------------------------------------------ _effective_mcs_bounds
 
 
