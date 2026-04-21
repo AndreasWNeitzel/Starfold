@@ -25,17 +25,27 @@ import numpy as np
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    import hdbscan as _hdbscan_typing
     import optuna
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
     from numpy.typing import ArrayLike
 
+    from starfold.stability import SubsampleStability
+
 __all__ = [
+    "plot_condensed_tree",
     "plot_embedding",
     "plot_embedding_comparison",
+    "plot_granularity_stability",
+    "plot_membership_confidence",
     "plot_optuna_history",
+    "plot_optuna_hyperparam_landscape",
+    "plot_optuna_parallel",
     "plot_optuna_param_importance",
+    "plot_optuna_pareto",
     "plot_persistence_vs_baseline",
+    "plot_subsample_stability",
     "plot_trustworthiness_curve",
 ]
 
@@ -285,6 +295,524 @@ def plot_optuna_param_importance(
     axis.set_xlabel("importance")
     axis.set_xlim(0.0, 1.0)
     return axis
+
+
+_ATTR_KEYS: tuple[str, ...] = (
+    "relative_validity",
+    "n_clusters",
+    "outlier_fraction",
+    "persistence_sum",
+    "persistence_max",
+    "persistence_mean",
+    "persistence_median",
+)
+
+
+def _trial_frame(study: optuna.Study) -> dict[str, np.ndarray]:
+    """Extract (mcs, ms, value, user_attrs) arrays from a study.
+
+    Returned keys include every metric recorded by
+    :func:`starfold.clustering.search_hdbscan` as well as the study
+    ``value`` under the key ``"value"``. The legacy key
+    ``"persistence"`` is aliased to ``"persistence_sum"`` for
+    backward-compatible plotting code, and ``"dbcv"`` aliases
+    ``"relative_validity"``.
+    """
+    buckets: dict[str, list[float]] = {k: [] for k in _ATTR_KEYS}
+    mcs: list[float] = []
+    ms: list[float] = []
+    value: list[float] = []
+    number: list[int] = []
+    for t in study.trials:
+        if t.value is None or t.params.get("min_cluster_size") is None:
+            continue
+        mcs.append(float(t.params["min_cluster_size"]))
+        ms.append(float(t.params["min_samples"]))
+        value.append(float(t.value))
+        for key in _ATTR_KEYS:
+            buckets[key].append(float(t.user_attrs.get(key, float("nan"))))
+        number.append(int(t.number))
+    frame: dict[str, np.ndarray] = {
+        "mcs": np.array(mcs, dtype=np.float64),
+        "ms": np.array(ms, dtype=np.float64),
+        "value": np.array(value, dtype=np.float64),
+        "number": np.array(number, dtype=np.intp),
+    }
+    for key in _ATTR_KEYS:
+        frame[key] = np.array(buckets[key], dtype=np.float64)
+    # Aliases: older callers ask for "persistence" (the sum) and "dbcv".
+    frame["persistence"] = frame["persistence_sum"]
+    frame["dbcv"] = frame["relative_validity"]
+    return frame
+
+
+def _pareto_mask(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Return a boolean mask of maximise-maximise Pareto-optimal points."""
+    n = x.shape[0]
+    keep = np.ones(n, dtype=bool)
+    for i in range(n):
+        if not keep[i]:
+            continue
+        dominated = (x >= x[i]) & (y >= y[i]) & ((x > x[i]) | (y > y[i]))
+        if np.any(dominated):
+            keep[i] = False
+    return keep
+
+
+def _best_trial_row(study: optuna.Study, data: dict[str, np.ndarray]) -> int | None:
+    """Row index into ``_trial_frame`` for ``study.best_trial``.
+
+    Returns ``None`` if the study has no best trial (no completed trial)
+    or the best trial was dropped from the frame (e.g. its value is
+    None). The match is on ``trial.number``.
+    """
+    try:
+        best_number = int(study.best_trial.number)
+    except (ValueError, AttributeError):
+        return None
+    numbers = data["number"]
+    hit = np.flatnonzero(numbers == best_number)
+    if hit.size == 0:
+        return None
+    return int(hit[0])
+
+
+_METRIC_LABELS: dict[str, str] = {
+    "persistence_sum": "sum of cluster persistence",
+    "persistence_median": "median cluster persistence",
+    "persistence_mean": "mean cluster persistence",
+    "persistence_max": "max cluster persistence",
+    "relative_validity": "relative validity (DBCV proxy)",
+    "dbcv": "relative validity (DBCV proxy)",
+    "persistence": "sum of cluster persistence",
+    "n_clusters": "n_clusters",
+    "outlier_fraction": "outlier fraction",
+}
+
+
+def plot_optuna_pareto(
+    study: optuna.Study,
+    *,
+    x_metric: str = "persistence_sum",
+    y_metric: str = "relative_validity",
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (5.5, 4.5),
+    selected_index: int | None = None,
+    selected_label: str | None = None,
+) -> Axes:
+    """Scatter trials in (x_metric, y_metric) space with a Pareto frontier.
+
+    Both axes are treated as maximise-direction. Any trial-level metric
+    recorded in :attr:`optuna.trial.Trial.user_attrs` by
+    :func:`starfold.clustering.search_hdbscan` is a valid choice -- e.g.
+    ``"persistence_sum"``, ``"persistence_median"``,
+    ``"relative_validity"``. A point is on the frontier when no other
+    trial dominates it on both axes simultaneously. Trials whose
+    chosen metric evaluates to NaN are dropped before plotting.
+
+    Parameters
+    ----------
+    study
+        The Optuna study.
+    x_metric, y_metric
+        Which user_attr to place on each axis. Aliases ``"persistence"``
+        (sum) and ``"dbcv"`` (relative_validity) are honoured.
+    ax, figsize
+        Standard plotting arguments.
+    selected_index
+        Index into the filtered (finite on both axes) points that the
+        caller wants starred as "the selected trial". When ``None``,
+        defaults to ``argmax(x_metric)`` to retain the original
+        behaviour.
+    selected_label
+        Legend label for the starred point. ``None`` derives one from
+        ``x_metric``.
+    """
+    axis = _get_ax(ax, figsize)
+    data = _trial_frame(study)
+    if x_metric not in data or y_metric not in data:
+        msg = (
+            "x_metric/y_metric must be a key of _trial_frame: "
+            f"got {x_metric!r}, {y_metric!r}."
+        )
+        raise ValueError(msg)
+    x_all = data[x_metric]
+    y_all = data[y_metric]
+    finite = np.isfinite(x_all) & np.isfinite(y_all)
+    if finite.sum() == 0:
+        axis.text(
+            0.5, 0.5,
+            f"no trials with finite {x_metric} and {y_metric}",
+            ha="center", va="center",
+        )
+        return axis
+    x = x_all[finite]
+    y = y_all[finite]
+    axis.scatter(x, y, s=22, color="tab:blue", alpha=0.6, label="trial")
+    mask = _pareto_mask(x, y)
+    order = np.argsort(x[mask])
+    axis.plot(
+        x[mask][order],
+        y[mask][order],
+        color="tab:red",
+        linewidth=1.5,
+        marker="o",
+        markersize=5,
+        label="Pareto frontier",
+    )
+    if selected_index is None:
+        row = _best_trial_row(study, data)
+        if row is not None and finite[row]:
+            # Map absolute row -> index in the filtered (finite) array.
+            sel = int(np.sum(finite[:row]))
+            auto_label = "selected (Optuna best)"
+        else:
+            sel = int(np.argmax(x))
+            auto_label = f"selected (arg max {x_metric})"
+    else:
+        sel = int(selected_index)
+        auto_label = f"selected (arg max {x_metric})"
+    if 0 <= sel < x.shape[0]:
+        label = selected_label if selected_label is not None else auto_label
+        axis.scatter(
+            x[sel],
+            y[sel],
+            s=220,
+            marker="*",
+            color="tab:orange",
+            edgecolor="black",
+            linewidth=1.0,
+            zorder=5,
+            label=label,
+        )
+    axis.set_xlabel(_METRIC_LABELS.get(x_metric, x_metric))
+    axis.set_ylabel(_METRIC_LABELS.get(y_metric, y_metric))
+    axis.legend(loc="best", fontsize=8)
+    return axis
+
+
+def plot_optuna_hyperparam_landscape(
+    study: optuna.Study,
+    *,
+    metric: str = "persistence",
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (5.5, 4.5),
+) -> Axes:
+    """Scatter trials in (log mcs, log ms) colored by ``metric``.
+
+    ``metric`` is one of ``"persistence"``, ``"dbcv"``,
+    ``"n_clusters"``, or ``"outlier_fraction"``. The best trial by the
+    Optuna objective is marked with a star.
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    axis = _get_ax(ax, figsize)
+    data = _trial_frame(study)
+    if data["mcs"].size == 0:
+        axis.text(0.5, 0.5, "no completed trials", ha="center", va="center")
+        return axis
+    if metric not in data:
+        msg = f"metric must be one of {sorted(data.keys())!r}, got {metric!r}."
+        raise ValueError(msg)
+    colour_values = data[metric]
+    finite = np.isfinite(colour_values)
+    sc = axis.scatter(
+        data["mcs"][finite],
+        data["ms"][finite],
+        c=colour_values[finite],
+        s=38,
+        cmap="viridis",
+        edgecolor="white",
+        linewidth=0.4,
+    )
+    plt.colorbar(sc, ax=axis, label=metric)
+    best_idx = _best_trial_row(study, data)
+    if best_idx is None:
+        best_idx = int(np.argmax(data["persistence"]))
+    axis.scatter(
+        data["mcs"][best_idx],
+        data["ms"][best_idx],
+        s=240,
+        marker="*",
+        color="tab:orange",
+        edgecolor="black",
+        linewidth=1.0,
+        zorder=5,
+        label="selected",
+    )
+    axis.set_xscale("log")
+    axis.set_yscale("log")
+    axis.set_xlabel("min_cluster_size (log)")
+    axis.set_ylabel("min_samples (log)")
+    axis.legend(loc="best", fontsize=8)
+    return axis
+
+
+def plot_granularity_stability(
+    study: optuna.Study,
+    *,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (5.5, 4.5),
+) -> Axes:
+    """Granularity-stability scatter: n_clusters vs persistence, coloured by DBCV.
+
+    Each trial is a point with horizontal position = number of
+    clusters, vertical position = summed persistence. Colour = DBCV.
+    The best trial is starred. Exposes the classic HDBSCAN
+    trade-off between "many weakly-stable clusters" and "few
+    strongly-stable clusters".
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    axis = _get_ax(ax, figsize)
+    data = _trial_frame(study)
+    if data["mcs"].size == 0:
+        axis.text(0.5, 0.5, "no completed trials", ha="center", va="center")
+        return axis
+    finite = np.isfinite(data["dbcv"])
+    sc = axis.scatter(
+        data["n_clusters"][finite],
+        data["persistence"][finite],
+        c=data["dbcv"][finite],
+        cmap="coolwarm",
+        s=38,
+        edgecolor="white",
+        linewidth=0.4,
+    )
+    plt.colorbar(sc, ax=axis, label="DBCV proxy")
+    if (~finite).any():
+        axis.scatter(
+            data["n_clusters"][~finite],
+            data["persistence"][~finite],
+            color="lightgrey",
+            s=20,
+            label="DBCV = NaN",
+        )
+    best_idx = _best_trial_row(study, data)
+    if best_idx is None:
+        best_idx = int(np.argmax(data["persistence"]))
+    axis.scatter(
+        data["n_clusters"][best_idx],
+        data["persistence"][best_idx],
+        s=240,
+        marker="*",
+        color="tab:orange",
+        edgecolor="black",
+        linewidth=1.0,
+        zorder=5,
+        label="selected",
+    )
+    axis.set_xlabel("n_clusters")
+    axis.set_ylabel("sum of cluster persistence")
+    axis.legend(loc="best", fontsize=8)
+    return axis
+
+
+def plot_optuna_parallel(
+    study: optuna.Study,
+    *,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (8.0, 4.5),
+) -> Axes:
+    """Parallel-coordinates plot of trials.
+
+    Axes (left to right): ``min_cluster_size``, ``min_samples``,
+    ``n_clusters``, ``outlier_fraction``, ``persistence``, ``DBCV``.
+    Each trial is a polyline; colour encodes TPE iteration (viridis).
+    Shows search progress at a glance.
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+    from matplotlib.collections import LineCollection  # noqa: PLC0415
+
+    axis = _get_ax(ax, figsize)
+    data = _trial_frame(study)
+    n = int(data["mcs"].size)
+    if n == 0:
+        axis.text(0.5, 0.5, "no completed trials", ha="center", va="center")
+        return axis
+    keys = ["mcs", "ms", "n_clusters", "outlier_fraction", "persistence", "dbcv"]
+    labels = [
+        "min_cluster_size",
+        "min_samples",
+        "n_clusters",
+        "outlier_fraction",
+        "persistence",
+        "DBCV",
+    ]
+    cols = np.array([data[k] for k in keys], dtype=np.float64).T  # (n, k)
+    col_min = np.nanmin(cols, axis=0)
+    col_max = np.nanmax(cols, axis=0)
+    spread = np.where(col_max > col_min, col_max - col_min, 1.0)
+    norm = (cols - col_min) / spread
+    xs = np.arange(len(keys))
+
+    order = np.argsort(data["number"])
+    cmap = plt.get_cmap("viridis")
+    tpe_colour = cmap(np.linspace(0.0, 1.0, n))
+    segments = []
+    colours = []
+    for rank, i in enumerate(order):
+        row = norm[i]
+        if np.any(~np.isfinite(row)):
+            continue
+        segments.append(np.column_stack([xs, row]))
+        colours.append(tpe_colour[rank])
+    lc = LineCollection(segments, colors=colours, linewidths=0.9, alpha=0.7)
+    axis.add_collection(lc)
+    axis.set_xticks(xs)
+    axis.set_xticklabels(labels, rotation=30, ha="right")
+    axis.set_yticks([])
+    axis.set_ylim(-0.05, 1.05)
+    axis.set_xlim(-0.3, len(keys) - 0.7)
+    from matplotlib.colors import Normalize  # noqa: PLC0415
+    for x in xs:
+        axis.axvline(float(x), color="black", linewidth=0.5, alpha=0.3)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(1, max(n, 1)))
+    sm.set_array([])
+    plt.colorbar(sm, ax=axis, label="trial number")
+    return axis
+
+
+def plot_condensed_tree(
+    model: _hdbscan_typing.HDBSCAN | None,
+    *,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (6.5, 5.0),
+    select_clusters: bool = True,
+) -> Axes:
+    """Draw HDBSCAN's condensed tree with selected clusters highlighted.
+
+    Parameters
+    ----------
+    model
+        A fitted :class:`hdbscan.HDBSCAN` instance (as returned on the
+        CPU backend in :attr:`OptunaSearchResult.model`).
+    ax
+        Target axes.
+    figsize
+        Figure size when ``ax`` is ``None``.
+    select_clusters
+        Whether to outline the selected (flat) clusters.
+    """
+    axis = _get_ax(ax, figsize)
+    if model is None:
+        axis.text(
+            0.5, 0.5, "condensed tree unavailable\n(cuml backend?)",
+            ha="center", va="center",
+        )
+        return axis
+    try:
+        model.condensed_tree_.plot(
+            axis=axis, select_clusters=select_clusters, selection_palette=None,
+        )
+    except (AttributeError, ValueError) as exc:
+        axis.text(0.5, 0.5, f"condensed tree unavailable\n({exc})", ha="center", va="center")
+        return axis
+    axis.set_xlabel("")
+    return axis
+
+
+def plot_membership_confidence(
+    embedding: ArrayLike,
+    labels: ArrayLike,
+    probabilities: ArrayLike,
+    *,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (6.0, 5.5),
+    outlier_color: str = "lightgrey",
+) -> Axes:
+    """Scatter the 2-D embedding with colour = HDBSCAN membership probability.
+
+    Outliers are drawn in ``outlier_color``; clustered points are
+    coloured by their ``probabilities_`` in viridis. Exposes how
+    confident each assignment is and which cluster boundaries are
+    fuzzy.
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    axis = _get_ax(ax, figsize)
+    emb = np.asarray(embedding, dtype=np.float64)
+    lab = np.asarray(labels).astype(np.intp, copy=False)
+    prob = np.asarray(probabilities, dtype=np.float64)
+    outliers = lab < 0
+    if outliers.any():
+        axis.scatter(
+            emb[outliers, 0], emb[outliers, 1], s=6,
+            color=outlier_color, alpha=0.5, label="outlier",
+        )
+    sc = axis.scatter(
+        emb[~outliers, 0], emb[~outliers, 1],
+        c=prob[~outliers], cmap="viridis",
+        s=8, vmin=0.0, vmax=1.0,
+    )
+    plt.colorbar(sc, ax=axis, label="cluster-membership probability")
+    axis.set_xlabel("component 1")
+    axis.set_ylabel("component 2")
+    axis.set_aspect("equal", adjustable="datalim")
+    return axis
+
+
+def plot_subsample_stability(
+    stability: SubsampleStability,
+    reference_persistence: ArrayLike,
+    *,
+    axes: Sequence[Axes] | None = None,
+    figsize: tuple[float, float] = (13.0, 3.8),
+) -> Sequence[Axes]:
+    """Three-panel summary of :class:`SubsampleStability`.
+
+    Panels: (left) histogram of n_clusters; (middle) histogram of
+    ARI vs reference on the overlap; (right) box-plot of per-cluster
+    persistence across subsamples with reference persistence overlaid
+    in orange.
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    if axes is None:
+        _, ax_arr = plt.subplots(1, 3, figsize=figsize)
+        panel = list(ax_arr)
+    else:
+        panel = list(axes)
+    if len(panel) != 3:
+        msg = f"plot_subsample_stability needs 3 axes, got {len(panel)}."
+        raise ValueError(msg)
+    nc = np.asarray(stability.n_clusters, dtype=np.intp)
+    ari = np.asarray(stability.ari, dtype=np.float64)
+    per = np.asarray(stability.persistence_per_cluster, dtype=np.float64)
+    ref = np.asarray(reference_persistence, dtype=np.float64)
+
+    panel[0].hist(nc, bins=np.arange(nc.min(), nc.max() + 2) - 0.5,
+                  color="tab:blue", edgecolor="white")
+    panel[0].set_xlabel("n_clusters")
+    panel[0].set_ylabel("subsample count")
+    panel[0].set_title("cluster count under subsampling")
+
+    panel[1].hist(ari[np.isfinite(ari)], bins=20, color="tab:green", edgecolor="white")
+    panel[1].axvline(1.0, color="tab:red", linestyle="--", linewidth=1.0, label="ARI = 1")
+    panel[1].set_xlabel("Adjusted Rand Index (vs reference)")
+    panel[1].set_ylabel("subsample count")
+    panel[1].set_title("label stability")
+    panel[1].legend(loc="upper left", fontsize=8)
+
+    if per.shape[1] > 0:
+        data = [per[np.isfinite(per[:, c]), c] for c in range(per.shape[1])]
+        positions = np.arange(1, per.shape[1] + 1)
+        panel[2].boxplot(
+            data, positions=positions, widths=0.6,
+            patch_artist=True, boxprops={"facecolor": "tab:blue", "alpha": 0.45},
+            medianprops={"color": "black"},
+        )
+        panel[2].scatter(
+            positions, ref[: per.shape[1]],
+            color="tab:orange", zorder=4, s=40, label="selected fit",
+        )
+        panel[2].set_xticks(positions)
+        panel[2].set_xticklabels([str(c) for c in range(per.shape[1])])
+        panel[2].set_xlabel("reference cluster index")
+        panel[2].set_ylabel("persistence")
+        panel[2].set_title("per-cluster persistence distribution")
+        panel[2].legend(loc="best", fontsize=8)
+    return panel
 
 
 def plot_embedding_comparison(

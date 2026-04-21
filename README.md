@@ -14,11 +14,17 @@ paper if you use this tool; see `CITATION.cff`.
 
 ## At a glance
 
-UMAP concentrates the four blobs more aggressively than PCA or t-SNE on
-the same 5-D dataset, which is what makes HDBSCAN's job easier
-downstream.
+`starfold`'s quickstart dataset is a closed chain of eight Hopf-linked
+tori in 3D -- adjacent tori interlock through each other's central
+holes, non-adjacent tori don't. It's a topologically non-trivial point
+cloud that exposes what the pipeline does to real structure.
 
-![PCA vs t-SNE vs UMAP on a 5-D, 4-blob synthetic dataset](docs/figures/embedding_comparison.png)
+![Eight Hopf-linked tori in 3D, two views](docs/figures/torus_chain_3d.png)
+
+PCA collapses the chain into its 2-D shadow; t-SNE and UMAP unroll the
+loops into distinguishable components.
+
+![PCA vs t-SNE vs UMAP on the torus chain](docs/figures/embedding_comparison.png)
 
 `starfold`'s pipeline then picks HDBSCAN hyperparameters by maximising
 the sum of cluster persistences with a TPE-sampled Optuna study.
@@ -39,6 +45,19 @@ And trustworthiness as a function of *k*, the paper's sanity check on
 whether UMAP preserved local structure:
 
 ![Trustworthiness T(k) vs k](docs/figures/trustworthiness_curve.png)
+
+Two single-call dashboards put every diagnostic on one canvas:
+`result.plot_tuning_dashboard()` for the HDBSCAN search (Optuna history,
+Pareto fronts, hyperparameter landscape, parameter importance, condensed
+tree, and granularity-stability trade-off):
+
+![HDBSCAN tuning dashboard](docs/figures/hdbscan_tuning_dashboard.png)
+
+...and `result.plot_quality_dashboard(X)` for pipeline quality
+(membership-probability map, parameter importance, trustworthiness curve,
+and three panels of bootstrap subsample stability):
+
+![Pipeline-quality dashboard](docs/figures/pipeline_quality_dashboard.png)
 
 ---
 
@@ -82,6 +101,11 @@ result.significant          # (n_clusters,) bool, vs noise baseline
 result.trustworthiness      # float in [0, 1]
 print(result.summary())
 sf.plot_embedding(result.embedding, result.labels)
+
+# One-line diagnostic dashboards:
+result.plot_tuning_dashboard()      # 8-panel HDBSCAN tuning canvas
+result.plot_quality_dashboard(X)    # 6-panel pipeline-quality canvas
+
 result.save("run_01/")
 ```
 
@@ -101,7 +125,7 @@ so the notebook runs offline).
 | `starfold.clustering` | `run_hdbscan` and `search_hdbscan` (Optuna TPE over MCS/MS). |
 | `starfold.noise_baseline` | 99.7th-percentile persistence baseline with on-disk caching. |
 | `starfold.pipeline` | `UnsupervisedPipeline` orchestrates all four steps. |
-| `starfold.plotting` | `plot_embedding`, `plot_trustworthiness_curve`, and four diagnostic panels. |
+| `starfold.plotting` | `plot_embedding`, `plot_trustworthiness_curve`, and a family of tuning / quality diagnostic panels composable into `PipelineResult.plot_tuning_dashboard` and `plot_quality_dashboard`. |
 | `starfold.io` | `PipelineResult.save` / `load_pipeline_result`. |
 
 See [`docs/methodology.md`](docs/methodology.md) for the paper §3
