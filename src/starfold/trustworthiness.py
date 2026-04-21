@@ -18,6 +18,12 @@ farthest, rank :math:`N` = self).
 The formula is equivalent to :func:`sklearn.manifold.trustworthiness`; this
 module is cross-tested against it. The score lies in ``[0, 1]``; 1 indicates
 a perfectly faithful embedding.
+
+The implementation streams the high-dimensional rank computation in
+``_DEFAULT_CHUNK_SIZE`` rows at a time, so peak memory is
+``chunk_size * N * 8`` bytes rather than ``N**2 * 8`` bytes. This keeps
+``N = 25_000`` well under 1 GB at the default chunk size; the previous
+dense implementation needed ~10 GB at that scale.
 """
 
 from __future__ import annotations
@@ -26,6 +32,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from sklearn.metrics import pairwise_distances
+from sklearn.neighbors import NearestNeighbors
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -33,6 +40,8 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
 
 __all__ = ["trustworthiness", "trustworthiness_curve"]
+
+_DEFAULT_CHUNK_SIZE = 512
 
 
 def _validate_inputs(
@@ -67,44 +76,62 @@ def _validate_k(k: int, n: int) -> int:
     return k_int
 
 
-def _inverted_rank_index(
-    X: NDArray[np.floating[Any]],
+def _topk_low(
+    x_low: NDArray[np.floating[Any]],
+    k_max: int,
     metric: str,
 ) -> NDArray[np.intp]:
-    n = X.shape[0]
-    dist = pairwise_distances(X, metric=metric)
-    np.fill_diagonal(dist, np.inf)
-    order = np.argsort(dist, axis=1)
-    del dist
-    inv = np.empty((n, n), dtype=np.intp)
-    rows = np.arange(n)[:, None]
-    inv[rows, order] = np.arange(1, n + 1, dtype=np.intp)[None, :]
-    return inv
+    """Top-``k_max`` non-self neighbours of every low-D point.
+
+    Uses :class:`sklearn.neighbors.NearestNeighbors`, which is O(N log N)
+    on low-dimensional inputs and never materialises the full pairwise
+    distance matrix.
+    """
+    nn = NearestNeighbors(n_neighbors=k_max + 1, metric=metric).fit(x_low)
+    idx = nn.kneighbors(x_low, return_distance=False)
+    # idx[:, 0] is the point itself (distance 0); drop it.
+    return np.asarray(idx[:, 1 : k_max + 1], dtype=np.intp)
 
 
-def _topk_indices(
-    X: NDArray[np.floating[Any]],
-    k: int,
-    metric: str,
-) -> NDArray[np.intp]:
-    n = X.shape[0]
-    dist = pairwise_distances(X, metric=metric)
-    np.fill_diagonal(dist, np.inf)
-    if k >= n - 1:
-        return np.argsort(dist, axis=1)[:, :k].astype(np.intp, copy=False)
-    part = np.argpartition(dist, kth=k - 1, axis=1)[:, :k]
-    return part.astype(np.intp, copy=False)
-
-
-def _score(
-    inv_high: NDArray[np.intp],
+def _accumulate_penalty(
+    x_high: NDArray[np.floating[Any]],
     nn_low: NDArray[np.intp],
-    k: int,
-    n: int,
-) -> float:
-    rows = np.arange(n)[:, None]
-    ranks = inv_high[rows, nn_low] - k
-    penalty = int(np.sum(ranks[ranks > 0]))
+    ks: list[int],
+    metric: str,
+    chunk_size: int,
+) -> dict[int, int]:
+    r"""Stream the high-D rank computation in row-chunks.
+
+    For each chunk of ``chunk_size`` rows we materialise only a
+    ``(chunk_size, N)`` distance block and its inverted-rank companion.
+    The penalty
+    :math:`\sum_{i \in \text{chunk}} \sum_{j \in U_k(x_i)} (r(x_i, x_j) - k)`
+    is then accumulated for every requested ``k`` before the block is
+    released, so memory peaks at ``2 * chunk_size * N * 8`` bytes.
+    """
+    n = x_high.shape[0]
+    penalties: dict[int, int] = dict.fromkeys(ks, 0)
+    for start in range(0, n, chunk_size):
+        stop = min(start + chunk_size, n)
+        chunk = x_high[start:stop]
+        dist = pairwise_distances(chunk, x_high, metric=metric)
+        local_rows = np.arange(stop - start)
+        dist[local_rows, np.arange(start, stop)] = np.inf
+        order = np.argsort(dist, axis=1)
+        del dist
+        inv = np.empty((stop - start, n), dtype=np.intp)
+        rows = local_rows[:, None]
+        inv[rows, order] = np.arange(1, n + 1, dtype=np.intp)[None, :]
+        del order
+        chunk_nn = nn_low[start:stop]
+        for k in ks:
+            ranks = inv[rows, chunk_nn[:, :k]] - k
+            penalties[k] += int(np.sum(ranks[ranks > 0]))
+        del inv
+    return penalties
+
+
+def _score_from_penalty(penalty: int, k: int, n: int) -> float:
     norm = n * k * (2.0 * n - 3.0 * k - 1.0)
     return 1.0 - penalty * (2.0 / norm)
 
@@ -156,9 +183,9 @@ def trustworthiness(
     """
     x_high, x_low, n = _validate_inputs(X_high, X_low)
     k_int = _validate_k(k, n)
-    inv_high = _inverted_rank_index(x_high, metric)
-    nn_low = _topk_indices(x_low, k_int, metric)
-    return _score(inv_high, nn_low, k_int, n)
+    nn_low = _topk_low(x_low, k_int, metric)
+    penalties = _accumulate_penalty(x_high, nn_low, [k_int], metric, _DEFAULT_CHUNK_SIZE)
+    return _score_from_penalty(penalties[k_int], k_int, n)
 
 
 def trustworthiness_curve(
@@ -170,8 +197,11 @@ def trustworthiness_curve(
 ) -> dict[int, float]:
     """Compute trustworthiness at several values of ``k`` in one pass.
 
-    The inverted rank index of ``X_high`` and the sort order of ``X_low``
-    are computed once and reused for every requested ``k``.
+    The low-dimensional neighbour indices are computed once at the
+    largest requested ``k``, and the high-dimensional rank stream is
+    reused across every ``k`` inside each row-chunk, so the cost is
+    roughly that of a single :func:`trustworthiness` call regardless of
+    how many ``k`` values are supplied.
 
     Parameters
     ----------
@@ -210,17 +240,14 @@ def trustworthiness_curve(
     [1.0, 1.0]
     """
     x_high, x_low, n = _validate_inputs(X_high, X_low)
-    inv_high = _inverted_rank_index(x_high, metric)
-    dist_low = pairwise_distances(x_low, metric=metric)
-    np.fill_diagonal(dist_low, np.inf)
-    order_low = np.argsort(dist_low, axis=1)
-    del dist_low
-
-    out: dict[int, float] = {}
+    ordered_ks: list[int] = []
     for k_raw in k_values:
         k_int = _validate_k(k_raw, n)
-        if k_int in out:
-            continue
-        nn_low = order_low[:, :k_int].astype(np.intp, copy=False)
-        out[k_int] = _score(inv_high, nn_low, k_int, n)
-    return out
+        if k_int not in ordered_ks:
+            ordered_ks.append(k_int)
+    if not ordered_ks:
+        return {}
+    k_max = max(ordered_ks)
+    nn_low = _topk_low(x_low, k_max, metric)
+    penalties = _accumulate_penalty(x_high, nn_low, ordered_ks, metric, _DEFAULT_CHUNK_SIZE)
+    return {k: _score_from_penalty(penalties[k], k, n) for k in ordered_ks}
