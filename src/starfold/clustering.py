@@ -19,11 +19,13 @@ CPU implementation.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import hdbscan as _hdbscan
 import numpy as np
 import optuna
+
+from starfold._engine import Engine, ResolvedEngine, resolve_engine
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
@@ -35,8 +37,6 @@ __all__ = [
     "run_hdbscan",
     "search_hdbscan",
 ]
-
-Engine = Literal["auto", "cpu", "cuml"]
 
 
 @dataclass(frozen=True)
@@ -86,26 +86,7 @@ class OptunaSearchResult:
     hdbscan_result: HDBSCANResult
 
 
-def _cuml_is_importable() -> bool:
-    try:
-        import cuml.cluster  # noqa: PLC0415
-    except ImportError:
-        return False
-    return cuml.cluster is not None
-
-
-def _resolve_engine(engine: Engine) -> Literal["cpu", "cuml"]:
-    if engine == "cpu":
-        return "cpu"
-    if engine == "cuml":
-        if not _cuml_is_importable():
-            msg = "engine='cuml' requires the optional RAPIDS cuml dependency."
-            raise ImportError(msg)
-        return "cuml"
-    if engine == "auto":
-        return "cuml" if _cuml_is_importable() else "cpu"
-    msg = f"engine must be 'auto', 'cpu', or 'cuml' (got {engine!r})."
-    raise ValueError(msg)
+_resolve_engine = resolve_engine  # backward-compatible alias for internal callers
 
 
 def _as_2d_float(X: ArrayLike) -> NDArray[np.floating[Any]]:
@@ -167,7 +148,7 @@ def _fit_cuml(
 
 
 def _fit(
-    resolved: Literal["cpu", "cuml"],
+    resolved: ResolvedEngine,
     x: NDArray[np.floating[Any]],
     *,
     min_cluster_size: int,

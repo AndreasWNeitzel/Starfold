@@ -86,8 +86,12 @@ def default_cache_dir() -> Path:
 
 
 def _canonical_umap_kwargs(umap_kwargs: dict[str, Any]) -> dict[str, Any]:
+    # ``engine`` is intentionally not part of the cache key: CPU and GPU
+    # UMAP produce statistically equivalent noise baselines, so sharing
+    # the cache across backends is the right default.
     allowed = {"n_neighbors", "min_dist", "n_epochs", "metric", "n_components"}
-    extra = set(umap_kwargs) - allowed
+    ignored = {"engine"}
+    extra = set(umap_kwargs) - allowed - ignored
     if extra:
         msg = f"umap_kwargs contains unsupported keys: {sorted(extra)}."
         raise ValueError(msg)
@@ -186,7 +190,9 @@ def _one_realisation(
 ) -> float:
     rng = np.random.default_rng(seed)
     noise = rng.standard_normal(size=(n_samples, n_features))
-    emb = run_umap(noise, random_state=seed, **umap_kwargs)
+    umap_call_kwargs = dict(umap_kwargs)
+    umap_call_kwargs.setdefault("engine", engine)
+    emb = run_umap(noise, random_state=seed, **umap_call_kwargs)
     search = search_hdbscan(
         emb,
         n_trials=per_realisation_trials,
