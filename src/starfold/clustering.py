@@ -92,7 +92,7 @@ class OptunaSearchResult:
         diagnostics such as the condensed-tree plot can be drawn.
     """
 
-    best_params: dict[str, int]
+    best_params: dict[str, Any]
     best_persistence_sum: float
     study: optuna.Study
     hdbscan_result: HDBSCANResult
@@ -130,12 +130,18 @@ def _fit_cpu(
     min_cluster_size: int,
     min_samples: int | None,
     metric: str,
+    cluster_selection_method: str = "eom",
+    cluster_selection_epsilon: float = 0.0,
+    alpha: float = 1.0,
 ) -> HDBSCANResult:
     model, result = _fit_cpu_with_model(
         x,
         min_cluster_size=min_cluster_size,
         min_samples=min_samples,
         metric=metric,
+        cluster_selection_method=cluster_selection_method,
+        cluster_selection_epsilon=cluster_selection_epsilon,
+        alpha=alpha,
     )
     del model
     return result
@@ -147,12 +153,20 @@ def _fit_cpu_with_model(
     min_cluster_size: int,
     min_samples: int | None,
     metric: str,
+    cluster_selection_method: str = "eom",
+    cluster_selection_epsilon: float = 0.0,
+    alpha: float = 1.0,
+    prediction_data: bool = False,
 ) -> tuple[_hdbscan.HDBSCAN, HDBSCANResult]:
     model = _hdbscan.HDBSCAN(
         min_cluster_size=int(min_cluster_size),
         min_samples=None if min_samples is None else int(min_samples),
         metric=metric,
+        cluster_selection_method=str(cluster_selection_method),
+        cluster_selection_epsilon=float(cluster_selection_epsilon),
+        alpha=float(alpha),
         gen_min_span_tree=True,
+        prediction_data=bool(prediction_data),
     )
     model.fit(x)
     result = _pack(model.labels_, model.cluster_persistence_, model.probabilities_)
@@ -173,6 +187,9 @@ def _fit_cuml(
     min_cluster_size: int,
     min_samples: int | None,
     metric: str,
+    cluster_selection_method: str = "eom",
+    cluster_selection_epsilon: float = 0.0,
+    alpha: float = 1.0,
 ) -> HDBSCANResult:
     from cuml.cluster import HDBSCAN as CumlHDBSCAN  # noqa: N811, PLC0415
 
@@ -180,6 +197,9 @@ def _fit_cuml(
         min_cluster_size=int(min_cluster_size),
         min_samples=None if min_samples is None else int(min_samples),
         metric=metric,
+        cluster_selection_method=str(cluster_selection_method),
+        cluster_selection_epsilon=float(cluster_selection_epsilon),
+        alpha=float(alpha),
         gen_min_span_tree=True,
     )
     model.fit(x)
@@ -193,12 +213,29 @@ def _fit(
     min_cluster_size: int,
     min_samples: int | None,
     metric: str,
+    cluster_selection_method: str = "eom",
+    cluster_selection_epsilon: float = 0.0,
+    alpha: float = 1.0,
 ) -> HDBSCANResult:
     if resolved == "cpu":
         return _fit_cpu(
-            x, min_cluster_size=min_cluster_size, min_samples=min_samples, metric=metric
+            x,
+            min_cluster_size=min_cluster_size,
+            min_samples=min_samples,
+            metric=metric,
+            cluster_selection_method=cluster_selection_method,
+            cluster_selection_epsilon=cluster_selection_epsilon,
+            alpha=alpha,
         )
-    return _fit_cuml(x, min_cluster_size=min_cluster_size, min_samples=min_samples, metric=metric)
+    return _fit_cuml(
+        x,
+        min_cluster_size=min_cluster_size,
+        min_samples=min_samples,
+        metric=metric,
+        cluster_selection_method=cluster_selection_method,
+        cluster_selection_epsilon=cluster_selection_epsilon,
+        alpha=alpha,
+    )
 
 
 def run_hdbscan(
@@ -207,6 +244,9 @@ def run_hdbscan(
     min_cluster_size: int,
     min_samples: int | None = None,
     metric: str = "euclidean",
+    cluster_selection_method: str = "eom",
+    cluster_selection_epsilon: float = 0.0,
+    alpha: float = 1.0,
     engine: Engine = "auto",
 ) -> HDBSCANResult:
     """Cluster ``X`` with HDBSCAN and return persistence scores.
@@ -224,6 +264,22 @@ def run_hdbscan(
     metric : str, default ``"euclidean"``
         Distance metric. For ``engine="cuml"`` the metric must be one
         that cuml supports.
+    cluster_selection_method : {"eom", "leaf"}, default ``"eom"``
+        How HDBSCAN picks the flat clustering off the condensed tree.
+        ``"eom"`` (Excess of Mass) prefers fewer, larger, more stable
+        clusters; ``"leaf"`` picks the leaves of the tree directly and
+        so returns finer-grained clusters. Which is "right" depends on
+        the density profile of the data and is not the library
+        author's call; :func:`search_hdbscan` searches over both by
+        default.
+    cluster_selection_epsilon : float, default ``0.0``
+        Distance threshold below which sibling leaves are merged into
+        their parent before flat selection. ``0.0`` disables epsilon
+        merging (HDBSCAN's native behaviour).
+    alpha : float, default ``1.0``
+        Scales MST edge distances before condensing. Values away from
+        1 shift the density-contrast ratio at which branches survive;
+        0.7--1.5 is a conservative useful range.
     engine : {"auto", "cpu", "cuml"}, default ``"auto"``
         Backend. ``"auto"`` prefers ``"cuml"`` when importable and
         falls back to ``"cpu"`` otherwise.
@@ -257,6 +313,21 @@ def run_hdbscan(
     if min_samples is not None and min_samples < 1:
         msg = f"min_samples must be >= 1 when set (got {min_samples})."
         raise ValueError(msg)
+    if cluster_selection_method not in ("eom", "leaf"):
+        msg = (
+            "cluster_selection_method must be 'eom' or 'leaf' "
+            f"(got {cluster_selection_method!r})."
+        )
+        raise ValueError(msg)
+    if cluster_selection_epsilon < 0.0:
+        msg = (
+            "cluster_selection_epsilon must be >= 0.0 "
+            f"(got {cluster_selection_epsilon})."
+        )
+        raise ValueError(msg)
+    if alpha <= 0.0:
+        msg = f"alpha must be > 0.0 (got {alpha})."
+        raise ValueError(msg)
     resolved = _resolve_engine(engine)
     x = _as_2d_float(X)
     return _fit(
@@ -265,6 +336,9 @@ def run_hdbscan(
         min_cluster_size=min_cluster_size,
         min_samples=min_samples,
         metric=metric,
+        cluster_selection_method=cluster_selection_method,
+        cluster_selection_epsilon=cluster_selection_epsilon,
+        alpha=alpha,
     )
 
 
@@ -283,6 +357,9 @@ def _validate_search_inputs(
     mcs_range: tuple[int, int],
     ms_range: tuple[int, int],
     objective: TrialObjective,
+    cluster_selection_methods: tuple[str, ...],
+    cluster_selection_epsilon_range: tuple[float, float],
+    alpha_range: tuple[float, float],
 ) -> None:
     if n_trials < 1:
         msg = f"n_trials must be >= 1 (got {n_trials})."
@@ -299,6 +376,27 @@ def _validate_search_inputs(
             f"(got {objective!r})."
         )
         raise ValueError(msg)
+    if not cluster_selection_methods:
+        msg = "cluster_selection_methods must contain at least one method."
+        raise ValueError(msg)
+    invalid = [m for m in cluster_selection_methods if m not in ("eom", "leaf")]
+    if invalid:
+        msg = (
+            "cluster_selection_methods entries must be 'eom' or 'leaf' "
+            f"(got {cluster_selection_methods!r})."
+        )
+        raise ValueError(msg)
+    eps_lo, eps_hi = cluster_selection_epsilon_range
+    if eps_lo < 0.0 or eps_hi < eps_lo:
+        msg = (
+            "cluster_selection_epsilon_range must satisfy 0 <= low <= high "
+            f"(got {cluster_selection_epsilon_range})."
+        )
+        raise ValueError(msg)
+    alpha_lo, alpha_hi = alpha_range
+    if alpha_lo <= 0.0 or alpha_hi < alpha_lo:
+        msg = f"alpha_range must satisfy 0 < low <= high (got {alpha_range})."
+        raise ValueError(msg)
 
 
 def search_hdbscan(
@@ -307,6 +405,9 @@ def search_hdbscan(
     n_trials: int = 100,
     mcs_range: tuple[int, int] = (5, 500),
     ms_range: tuple[int, int] = (1, 50),
+    cluster_selection_methods: tuple[str, ...] = ("eom", "leaf"),
+    cluster_selection_epsilon_range: tuple[float, float] = (0.0, 0.5),
+    alpha_range: tuple[float, float] = (0.7, 1.5),
     metric: str = "euclidean",
     random_state: int | None = None,
     engine: Engine = "auto",
@@ -344,6 +445,27 @@ def search_hdbscan(
         that value, to keep the search meaningful on small samples.
     ms_range : tuple of int, default ``(1, 50)``
         Inclusive log-uniform integer range for ``min_samples``.
+    cluster_selection_methods : tuple of str, default ``("eom", "leaf")``
+        Which HDBSCAN flat-selection methods the Optuna trial may
+        sample. ``("eom", "leaf")`` searches both; a single-element
+        tuple (e.g. ``("eom",)``) pins the method and spends budget on
+        the other axes. The two methods correspond to qualitatively
+        different topologies (``"eom"`` = Excess of Mass, fewer larger
+        clusters; ``"leaf"`` = tree leaves, finer clusters); not
+        searching both leaves half the plausible cluster topology
+        space invisible.
+    cluster_selection_epsilon_range : tuple of float, default ``(0.0, 0.5)``
+        Uniform float range for HDBSCAN's
+        ``cluster_selection_epsilon``, the distance threshold below
+        which sibling leaves merge before flat selection. ``0.0``
+        disables epsilon merging (the library default). The 0--0.5
+        range is a 2-D-embedding-appropriate default; enlarge when
+        clustering raw high-dimensional features with larger typical
+        distances. Set ``(0.0, 0.0)`` to pin epsilon off.
+    alpha_range : tuple of float, default ``(0.7, 1.5)``
+        Uniform float range for HDBSCAN's ``alpha`` (MST edge
+        rescaling). Values around 1.0 are the library default;
+        narrower ranges pin the knob (e.g. ``(1.0, 1.0)``).
     metric : str, default ``"euclidean"``
         Distance metric, threaded through to every trial.
     random_state : int or None, default None
@@ -387,7 +509,15 @@ def search_hdbscan(
     >>> search.hdbscan_result.n_clusters
     3
     """
-    _validate_search_inputs(n_trials, mcs_range, ms_range, objective)
+    _validate_search_inputs(
+        n_trials,
+        mcs_range,
+        ms_range,
+        objective,
+        cluster_selection_methods,
+        cluster_selection_epsilon_range,
+        alpha_range,
+    )
 
     x = _as_2d_float(X)
     # Trials and the final refit always use CPU HDBSCAN; see the
@@ -396,6 +526,9 @@ def search_hdbscan(
     _ = _resolve_engine(engine)
     mcs_low, mcs_high = _effective_mcs_bounds(x.shape[0], mcs_range)
     ms_low, ms_high = ms_range
+    eps_lo, eps_hi = cluster_selection_epsilon_range
+    alpha_lo, alpha_hi = alpha_range
+    methods = tuple(cluster_selection_methods)
 
     def _attrs_from(model: _hdbscan.HDBSCAN | None, result: HDBSCANResult) -> dict[str, float]:
         labels = result.labels
@@ -429,8 +562,28 @@ def search_hdbscan(
     def objective_fn(trial: optuna.Trial) -> float:
         mcs = trial.suggest_int("min_cluster_size", mcs_low, mcs_high, log=True)
         ms = trial.suggest_int("min_samples", ms_low, ms_high, log=True)
+        if len(methods) > 1:
+            csm = trial.suggest_categorical("cluster_selection_method", list(methods))
+        else:
+            csm = methods[0]
+        cse = (
+            trial.suggest_float("cluster_selection_epsilon", eps_lo, eps_hi)
+            if eps_lo < eps_hi
+            else eps_lo
+        )
+        alpha = (
+            trial.suggest_float("alpha", alpha_lo, alpha_hi, log=True)
+            if alpha_lo < alpha_hi
+            else alpha_lo
+        )
         model, result = _fit_cpu_with_model(
-            x, min_cluster_size=mcs, min_samples=ms, metric=metric
+            x,
+            min_cluster_size=mcs,
+            min_samples=ms,
+            metric=metric,
+            cluster_selection_method=csm,
+            cluster_selection_epsilon=cse,
+            alpha=alpha,
         )
         attrs = _attrs_from(model, result)
         for key, value in attrs.items():
@@ -445,14 +598,40 @@ def search_hdbscan(
     sampler = optuna.samplers.TPESampler(seed=random_state)
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     study = optuna.create_study(direction="maximize", sampler=sampler)
+    # Preserve the scalar objective used by this search so plotting and
+    # downstream reports can label axes correctly without being told.
+    study.set_user_attr("objective", objective)
     study.optimize(objective_fn, n_trials=n_trials, show_progress_bar=show_progress_bar)
 
-    best_params = {k: int(v) for k, v in study.best_params.items()}
+    # Pull the best trial's full parameter set, filling in any axis
+    # that was pinned (single-element methods, zero-width epsilon /
+    # alpha range) so the refit and the downstream config record match
+    # the Optuna-selected trial exactly.
+    raw_best = dict(study.best_params)
+    best_csm = str(raw_best.get("cluster_selection_method", methods[0]))
+    best_cse = float(raw_best.get("cluster_selection_epsilon", eps_lo))
+    best_alpha = float(raw_best.get("alpha", alpha_lo))
+    best_params: dict[str, Any] = {
+        "min_cluster_size": int(raw_best["min_cluster_size"]),
+        "min_samples": int(raw_best["min_samples"]),
+        "cluster_selection_method": best_csm,
+        "cluster_selection_epsilon": best_cse,
+        "alpha": best_alpha,
+    }
+    # ``prediction_data=True`` on the final best-params refit so
+    # downstream uncertainty propagation can call
+    # ``hdbscan.approximate_predict`` without another fit. The Optuna
+    # trials above leave prediction data off because (a) it adds a small
+    # per-fit allocation and (b) trials are throwaway.
     best_model, best_result = _fit_cpu_with_model(
         x,
         min_cluster_size=best_params["min_cluster_size"],
         min_samples=best_params["min_samples"],
         metric=metric,
+        cluster_selection_method=best_csm,
+        cluster_selection_epsilon=best_cse,
+        alpha=best_alpha,
+        prediction_data=True,
     )
     best_persistence_sum = float(np.sum(best_result.cluster_persistence))
     return OptunaSearchResult(

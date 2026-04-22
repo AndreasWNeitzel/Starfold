@@ -100,7 +100,10 @@ def test_search_hdbscan_finds_three_clusters(
         engine="cpu",
     )
     assert isinstance(search, OptunaSearchResult)
-    assert set(search.best_params) == {"min_cluster_size", "min_samples"}
+    assert {"min_cluster_size", "min_samples"} <= set(search.best_params)
+    assert "cluster_selection_method" in search.best_params
+    assert "cluster_selection_epsilon" in search.best_params
+    assert "alpha" in search.best_params
     assert search.hdbscan_result.n_clusters == 3
     assert adjusted_rand_score(y_true, search.hdbscan_result.labels) > 0.9
 
