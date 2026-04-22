@@ -98,8 +98,11 @@ def test_credibility_passes_when_every_pvalue_below_alpha() -> None:
         per_obj=np.zeros(1000),
     )
     report = compute_credibility(
-        n_clusters=5, best_objective=10.0, max_persistence=1.0,
-        baseline=baseline, alpha=0.01,
+        n_clusters=5,
+        best_objective=10.0,
+        max_persistence=1.0,
+        baseline=baseline,
+        alpha=0.01,
     )
     assert isinstance(report, CredibilityReport)
     assert report.passes is True
@@ -121,8 +124,11 @@ def test_credibility_fails_when_any_pvalue_at_or_above_alpha() -> None:
         per_obj=np.zeros(5),
     )
     report = compute_credibility(
-        n_clusters=3, best_objective=5.0, max_persistence=1.0,
-        baseline=baseline, alpha=0.01,
+        n_clusters=3,
+        best_objective=5.0,
+        max_persistence=1.0,
+        baseline=baseline,
+        alpha=0.01,
     )
     assert report.passes is False
     # r = 5, p = 6/6 = 1.0.
@@ -137,7 +143,9 @@ def test_credibility_copies_baseline_objective_name() -> None:
         objective="combined_geom",
     )
     report = compute_credibility(
-        n_clusters=2, best_objective=0.1, max_persistence=0.1,
+        n_clusters=2,
+        best_objective=0.1,
+        max_persistence=0.1,
         baseline=baseline,
     )
     assert report.objective_name == "combined_geom"
@@ -152,13 +160,19 @@ def test_credibility_rejects_bad_alpha() -> None:
     )
     with pytest.raises(ValueError, match="alpha"):
         compute_credibility(
-            n_clusters=2, best_objective=0.0, max_persistence=0.0,
-            baseline=baseline, alpha=0.0,
+            n_clusters=2,
+            best_objective=0.0,
+            max_persistence=0.0,
+            baseline=baseline,
+            alpha=0.0,
         )
     with pytest.raises(ValueError, match="alpha"):
         compute_credibility(
-            n_clusters=2, best_objective=0.0, max_persistence=0.0,
-            baseline=baseline, alpha=1.0,
+            n_clusters=2,
+            best_objective=0.0,
+            max_persistence=0.0,
+            baseline=baseline,
+            alpha=1.0,
         )
 
 
@@ -170,7 +184,9 @@ def test_credibility_rejects_empty_baseline() -> None:
     )
     with pytest.raises(ValueError, match="no realisations"):
         compute_credibility(
-            n_clusters=2, best_objective=0.0, max_persistence=0.0,
+            n_clusters=2,
+            best_objective=0.0,
+            max_persistence=0.0,
             baseline=empty,
         )
 
@@ -182,7 +198,9 @@ def test_credibility_summary_human_readable() -> None:
         per_obj=np.zeros(10),
     )
     report = compute_credibility(
-        n_clusters=4, best_objective=1.0, max_persistence=0.5,
+        n_clusters=4,
+        best_objective=1.0,
+        max_persistence=0.5,
         baseline=baseline,
     )
     text = report.summary()
@@ -209,8 +227,12 @@ def test_per_cluster_pvalues_match_empirical_formula() -> None:
     )
     observed = np.array([0.1, 0.5, 0.95, 2.0])
     report = compute_credibility(
-        n_clusters=4, best_objective=1.0, max_persistence=2.0,
-        baseline=baseline, cluster_persistence=observed, alpha=0.01,
+        n_clusters=4,
+        best_objective=1.0,
+        max_persistence=2.0,
+        baseline=baseline,
+        cluster_persistence=observed,
+        alpha=0.01,
     )
     # Hand-check each p = (r + 1) / (n + 1).
     for v, p in zip(observed, report.per_cluster_pvalue, strict=True):
@@ -230,7 +252,9 @@ def test_per_cluster_pvalue_is_one_when_no_null_pool() -> None:
         per_obj=np.zeros(5),
     )
     report = compute_credibility(
-        n_clusters=3, best_objective=1.0, max_persistence=1.0,
+        n_clusters=3,
+        best_objective=1.0,
+        max_persistence=1.0,
         baseline=baseline,
         cluster_persistence=np.array([0.1, 0.2, 0.3]),
     )
@@ -250,7 +274,9 @@ def test_per_cluster_rejects_wrong_length() -> None:
     )
     with pytest.raises(ValueError, match="does not match n_clusters"):
         compute_credibility(
-            n_clusters=3, best_objective=1.0, max_persistence=1.0,
+            n_clusters=3,
+            best_objective=1.0,
+            max_persistence=1.0,
             baseline=baseline,
             cluster_persistence=np.array([0.1, 0.2]),
         )
@@ -267,7 +293,9 @@ def test_per_cluster_rejects_non_1d() -> None:
     )
     with pytest.raises(ValueError, match="1-D"):
         compute_credibility(
-            n_clusters=4, best_objective=1.0, max_persistence=1.0,
+            n_clusters=4,
+            best_objective=1.0,
+            max_persistence=1.0,
             baseline=baseline,
             cluster_persistence=np.zeros((2, 2)),
         )
@@ -283,7 +311,9 @@ def test_per_cluster_defaults_to_empty_when_not_provided() -> None:
         null_cluster_realisation=np.zeros(3, dtype=np.intp),
     )
     report = compute_credibility(
-        n_clusters=2, best_objective=0.1, max_persistence=0.1,
+        n_clusters=2,
+        best_objective=0.1,
+        max_persistence=0.1,
         baseline=baseline,
     )
     assert report.observed_cluster_persistence.shape == (0,)
@@ -330,7 +360,8 @@ def test_pipeline_attaches_credibility_when_baseline_runs(
     assert result.credibility.per_cluster_significant.shape == (result.n_clusters,)
     # Observed per-cluster persistence echoes the result's persistence array.
     np.testing.assert_allclose(
-        result.credibility.observed_cluster_persistence, result.persistence,
+        result.credibility.observed_cluster_persistence,
+        result.persistence,
     )
     # The null pool captured at least one noise cluster across the 3
     # realisations (3 trials each is enough for HDBSCAN to find some).

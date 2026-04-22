@@ -186,9 +186,7 @@ def compute_subsample_stability(
         persistence_sum[i] = float(np.sum(sub.cluster_persistence))
         valid = ref_sub >= 0
         if int(valid.sum()) >= 2:
-            ari[i] = float(
-                adjusted_rand_score(ref_sub[valid], sub.labels[valid])
-            )
+            ari[i] = float(adjusted_rand_score(ref_sub[valid], sub.labels[valid]))
         else:
             ari[i] = float("nan")
         per_cluster[i] = _match_persistence(

@@ -24,10 +24,12 @@ from starfold.hierarchy import HierarchicalStructure, extract_hierarchy
 
 def _two_blob_embedding(seed: int = 0) -> tuple[np.ndarray, object, np.ndarray]:
     rng = np.random.default_rng(seed)
-    emb = np.vstack([
-        rng.normal(loc=[-5.0, 0.0], scale=0.35, size=(40, 2)),
-        rng.normal(loc=[5.0, 0.0], scale=0.35, size=(40, 2)),
-    ])
+    emb = np.vstack(
+        [
+            rng.normal(loc=[-5.0, 0.0], scale=0.35, size=(40, 2)),
+            rng.normal(loc=[5.0, 0.0], scale=0.35, size=(40, 2)),
+        ]
+    )
     # Fit once so we have a model + flat labels aligned to ``emb``.
     import hdbscan as _hdbscan  # noqa: PLC0415
 
@@ -124,8 +126,11 @@ def test_pipeline_attaches_hierarchy_on_cpu_backend(
     pipe = UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=6,
-        mcs_range=(5, 20), ms_range=(1, 5),
-        skip_noise_baseline=True, engine="cpu", random_state=0,
+        mcs_range=(5, 20),
+        ms_range=(1, 5),
+        skip_noise_baseline=True,
+        engine="cpu",
+        random_state=0,
     )
     result = pipe.fit(X)
     assert result.hierarchy.available is True
@@ -139,10 +144,12 @@ def test_subcluster_on_integrates_with_run_hdbscan() -> None:
     # subcluster_on passes sensible arguments to run_hdbscan.
     _, model, labels = _two_blob_embedding()
     h = extract_hierarchy(model, labels)
-    emb = np.vstack([
-        np.random.default_rng(0).normal(loc=[-5.0, 0.0], scale=0.35, size=(40, 2)),
-        np.random.default_rng(0).normal(loc=[5.0, 0.0], scale=0.35, size=(40, 2)),
-    ])
+    emb = np.vstack(
+        [
+            np.random.default_rng(0).normal(loc=[-5.0, 0.0], scale=0.35, size=(40, 2)),
+            np.random.default_rng(0).normal(loc=[5.0, 0.0], scale=0.35, size=(40, 2)),
+        ]
+    )
     out = h.subcluster_on(emb, 0, min_cluster_size=5, min_samples=2)
     # Cross-check that run_hdbscan produces a compatibly-shaped labelling.
     baseline = run_hdbscan(emb[labels == 0], min_cluster_size=5, min_samples=2)

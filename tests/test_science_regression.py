@@ -160,9 +160,7 @@ def test_chunked_silhouette_matches_sklearn_on_pipeline_output(
     lbl = pinned_result.labels[mask]
     sk_overall = float(silhouette_score(emb, lbl, metric="euclidean"))
     sk_per_sample = silhouette_samples(emb, lbl, metric="euclidean")
-    ours = chunked_silhouette(
-        pinned_result.embedding, pinned_result.labels, chunk_size=64
-    )
+    ours = chunked_silhouette(pinned_result.embedding, pinned_result.labels, chunk_size=64)
     assert ours.overall == pytest.approx(sk_overall, abs=1e-10)
     np.testing.assert_allclose(ours.per_sample[mask], sk_per_sample, atol=1e-10)
 

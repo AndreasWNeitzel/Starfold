@@ -291,14 +291,16 @@ def _credibility_panel(
     if integer:
         lo, hi = int(np.min(null)), int(np.max(null))
         edges: list[float] = [float(x) for x in np.arange(lo, hi + 2) - 0.5]
-        axis.hist(null, bins=edges, color="tab:grey", edgecolor="white",
-                  alpha=0.8, label="noise null")
+        axis.hist(
+            null, bins=edges, color="tab:grey", edgecolor="white", alpha=0.8, label="noise null"
+        )
     else:
-        axis.hist(null, bins=30, color="tab:grey", edgecolor="white",
-                  alpha=0.8, label="noise null")
+        axis.hist(null, bins=30, color="tab:grey", edgecolor="white", alpha=0.8, label="noise null")
     colour = "tab:green" if pvalue < alpha else "tab:red"
     axis.axvline(
-        observed, color=colour, linewidth=2.0,
+        observed,
+        color=colour,
+        linewidth=2.0,
         label=f"observed = {observed:.3f}" if not integer else f"observed = {int(observed)}",
     )
     axis.set_xlabel(xlabel)
@@ -433,21 +435,27 @@ def plot_per_cluster_credibility(
     ax.bar(indices, obs, color=colours, edgecolor="black", linewidth=0.4)
     for i, (val, p) in enumerate(zip(obs, pvals, strict=True)):
         ax.text(
-            i, val, f"p={p:.3f}", ha="center", va="bottom",
-            fontsize=8, color="black",
+            i,
+            val,
+            f"p={p:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="black",
         )
     if null.size:
         for pct, style in [(50.0, ":"), (99.7, "--"), (99.97, "-.")]:
             level = float(np.percentile(null, pct))
             ax.axhline(
-                level, color="tab:grey", linestyle=style, linewidth=1.0,
+                level,
+                color="tab:grey",
+                linestyle=style,
+                linewidth=1.0,
                 label=f"null {pct:.2f} pct = {level:.3f}",
             )
         ax.legend(loc="upper right", fontsize=8)
     n_cred = int(sig.sum())
-    ax.set_title(
-        f"per-cluster credibility: {n_cred}/{obs.size} at alpha={report.alpha}"
-    )
+    ax.set_title(f"per-cluster credibility: {n_cred}/{obs.size} at alpha={report.alpha}")
     ax.set_xlabel("cluster id")
     ax.set_ylabel("persistence")
     ax.set_xticks(indices)
@@ -511,8 +519,13 @@ def plot_uncertainty_map(
         _, ax = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
 
     scatter = ax.scatter(
-        emb[:, 0], emb[:, 1], c=instab, cmap=cmap, s=s,
-        vmin=0.0, vmax=max(0.5, float(instab.max()) if instab.size else 0.5),
+        emb[:, 0],
+        emb[:, 1],
+        c=instab,
+        cmap=cmap,
+        s=s,
+        vmin=0.0,
+        vmax=max(0.5, float(instab.max()) if instab.size else 0.5),
         edgecolors="none",
     )
     ax.figure.colorbar(scatter, ax=ax, label="instability  (1 - max membership)")
@@ -631,9 +644,7 @@ def _trial_frame(study: optuna.Study) -> dict[str, np.ndarray]:
         alpha.append(float(t.params.get("alpha", float("nan"))))
         eps.append(float(t.params.get("cluster_selection_epsilon", float("nan"))))
         method_raw = t.params.get("cluster_selection_method")
-        method.append(
-            _METHOD_CODE[method_raw] if method_raw in _METHOD_CODE else float("nan")
-        )
+        method.append(_METHOD_CODE[method_raw] if method_raw in _METHOD_CODE else float("nan"))
         value.append(float(t.value))
         for key in _ATTR_KEYS:
             buckets[key].append(float(t.user_attrs.get(key, float("nan"))))
@@ -740,19 +751,18 @@ def plot_optuna_pareto(
     axis = _get_ax(ax, figsize)
     data = _trial_frame(study)
     if x_metric not in data or y_metric not in data:
-        msg = (
-            "x_metric/y_metric must be a key of _trial_frame: "
-            f"got {x_metric!r}, {y_metric!r}."
-        )
+        msg = f"x_metric/y_metric must be a key of _trial_frame: got {x_metric!r}, {y_metric!r}."
         raise ValueError(msg)
     x_all = data[x_metric]
     y_all = data[y_metric]
     finite = np.isfinite(x_all) & np.isfinite(y_all)
     if finite.sum() == 0:
         axis.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             f"no trials with finite {x_metric} and {y_metric}",
-            ha="center", va="center",
+            ha="center",
+            va="center",
         )
         return axis
     x = x_all[finite]
@@ -994,6 +1004,7 @@ def plot_optuna_parallel(  # noqa: PLR0915
     axis.set_ylim(-0.05, 1.05)
     axis.set_xlim(-0.3, len(keys) - 0.7)
     from matplotlib.colors import Normalize  # noqa: PLC0415
+
     for x in xs:
         axis.axvline(float(x), color="black", linewidth=0.5, alpha=0.3)
     # Label the two ends of the categorical method axis so readers
@@ -1001,12 +1012,22 @@ def plot_optuna_parallel(  # noqa: PLR0915
     if "cluster_selection_method" in keys:
         idx = keys.index("cluster_selection_method")
         axis.text(
-            float(idx) + 0.05, -0.08, "eom",
-            ha="left", va="top", fontsize=8, color="0.4",
+            float(idx) + 0.05,
+            -0.08,
+            "eom",
+            ha="left",
+            va="top",
+            fontsize=8,
+            color="0.4",
         )
         axis.text(
-            float(idx) + 0.05, 1.08, "leaf",
-            ha="left", va="bottom", fontsize=8, color="0.4",
+            float(idx) + 0.05,
+            1.08,
+            "leaf",
+            ha="left",
+            va="bottom",
+            fontsize=8,
+            color="0.4",
         )
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(1, max(n, 1)))
     sm.set_array([])
@@ -1038,13 +1059,18 @@ def plot_condensed_tree(
     axis = _get_ax(ax, figsize)
     if model is None:
         axis.text(
-            0.5, 0.5, "condensed tree unavailable\n(cuml backend?)",
-            ha="center", va="center",
+            0.5,
+            0.5,
+            "condensed tree unavailable\n(cuml backend?)",
+            ha="center",
+            va="center",
         )
         return axis
     try:
         model.condensed_tree_.plot(
-            axis=axis, select_clusters=select_clusters, selection_palette=None,
+            axis=axis,
+            select_clusters=select_clusters,
+            selection_palette=None,
         )
     except (AttributeError, ValueError) as exc:
         axis.text(0.5, 0.5, f"condensed tree unavailable\n({exc})", ha="center", va="center")
@@ -1078,13 +1104,21 @@ def plot_membership_confidence(
     outliers = lab < 0
     if outliers.any():
         axis.scatter(
-            emb[outliers, 0], emb[outliers, 1], s=6,
-            color=outlier_color, alpha=0.5, label="outlier",
+            emb[outliers, 0],
+            emb[outliers, 1],
+            s=6,
+            color=outlier_color,
+            alpha=0.5,
+            label="outlier",
         )
     sc = axis.scatter(
-        emb[~outliers, 0], emb[~outliers, 1],
-        c=prob[~outliers], cmap="viridis",
-        s=8, vmin=0.0, vmax=1.0,
+        emb[~outliers, 0],
+        emb[~outliers, 1],
+        c=prob[~outliers],
+        cmap="viridis",
+        s=8,
+        vmin=0.0,
+        vmax=1.0,
     )
     plt.colorbar(sc, ax=axis, label="cluster-membership probability")
     axis.set_xlabel("component 1")
@@ -1122,8 +1156,9 @@ def plot_subsample_stability(
     per = np.asarray(stability.persistence_per_cluster, dtype=np.float64)
     ref = np.asarray(reference_persistence, dtype=np.float64)
 
-    panel[0].hist(nc, bins=np.arange(nc.min(), nc.max() + 2) - 0.5,
-                  color="tab:blue", edgecolor="white")
+    panel[0].hist(
+        nc, bins=np.arange(nc.min(), nc.max() + 2) - 0.5, color="tab:blue", edgecolor="white"
+    )
     panel[0].set_xlabel("n_clusters")
     panel[0].set_ylabel("subsample count")
     panel[0].set_title("cluster count under subsampling")
@@ -1139,13 +1174,20 @@ def plot_subsample_stability(
         data = [per[np.isfinite(per[:, c]), c] for c in range(per.shape[1])]
         positions = np.arange(1, per.shape[1] + 1)
         panel[2].boxplot(
-            data, positions=positions, widths=0.6,
-            patch_artist=True, boxprops={"facecolor": "tab:blue", "alpha": 0.45},
+            data,
+            positions=positions,
+            widths=0.6,
+            patch_artist=True,
+            boxprops={"facecolor": "tab:blue", "alpha": 0.45},
             medianprops={"color": "black"},
         )
         panel[2].scatter(
-            positions, ref[: per.shape[1]],
-            color="tab:orange", zorder=4, s=40, label="selected fit",
+            positions,
+            ref[: per.shape[1]],
+            color="tab:orange",
+            zorder=4,
+            s=40,
+            label="selected fit",
         )
         panel[2].set_xticks(positions)
         panel[2].set_xticklabels([str(c) for c in range(per.shape[1])])

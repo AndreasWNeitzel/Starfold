@@ -163,9 +163,7 @@ class PipelineResult:
         n_outliers = int(np.sum(self.labels < 0))
         objective = str(self.config.get("hdbscan_objective", "persistence_sum"))
         persistence_sum = float(self.persistence.sum()) if self.persistence.size else 0.0
-        persistence_median = (
-            float(np.median(self.persistence)) if self.persistence.size else 0.0
-        )
+        persistence_median = float(np.median(self.persistence)) if self.persistence.size else 0.0
         best_trial = None
         try:
             best_trial = self.search.study.best_trial
@@ -440,9 +438,7 @@ class PipelineResult:
 
         kwargs: dict[str, Any] = {
             "umap_kwargs": dict(self.config.get("umap_kwargs", {}) or {}),
-            "hdbscan_optuna_trials": int(
-                self.config.get("hdbscan_optuna_trials", 100)
-            ),
+            "hdbscan_optuna_trials": int(self.config.get("hdbscan_optuna_trials", 100)),
             "ms_range": tuple(self.config.get("ms_range", (1, 50))),
             "cluster_selection_methods": tuple(
                 self.config.get("cluster_selection_methods", ("eom", "leaf"))
@@ -450,19 +446,13 @@ class PipelineResult:
             "cluster_selection_epsilon_range": tuple(
                 self.config.get("cluster_selection_epsilon_range", (0.0, 0.5))
             ),
-            "alpha_range": tuple(
-                self.config.get("alpha_range", (0.7, 1.5))
-            ),
+            "alpha_range": tuple(self.config.get("alpha_range", (0.7, 1.5))),
             "metric": self.config.get("metric", "euclidean"),
             "engine": self.config.get("engine", "auto"),
-            "noise_baseline_kwargs": dict(
-                self.config.get("noise_baseline_kwargs", {}) or {}
-            ),
+            "noise_baseline_kwargs": dict(self.config.get("noise_baseline_kwargs", {}) or {}),
             "skip_noise_baseline": bool(self.config.get("skip_noise_baseline", False)),
             "random_state": self.config.get("random_state"),
-            "hdbscan_objective": self.config.get(
-                "hdbscan_objective", "persistence_sum"
-            ),
+            "hdbscan_objective": self.config.get("hdbscan_objective", "persistence_sum"),
         }
         # Inherit mcs_range only if the parent pipeline used an explicit
         # tuple; otherwise leave it at None so the subset gets its own
@@ -534,7 +524,9 @@ class PipelineResult:
         )
         axes[0, 2].set_title("(c) Pareto: median persistence vs DBCV")
         plot_optuna_hyperparam_landscape(
-            study, metric="persistence_sum", ax=axes[0, 3],
+            study,
+            metric="persistence_sum",
+            ax=axes[0, 3],
         )
         axes[0, 3].set_title("(d) landscape (colour = sum persistence)")
         plot_granularity_stability(study, ax=axes[1, 0])
@@ -645,7 +637,10 @@ class PipelineResult:
 
         ax_conf = fig.add_subplot(gs[0, 0])
         plot_membership_confidence(
-            self.embedding, self.labels, self.probabilities, ax=ax_conf,
+            self.embedding,
+            self.labels,
+            self.probabilities,
+            ax=ax_conf,
         )
         ax_conf.set_title("(a) HDBSCAN membership-probability map")
 
@@ -657,7 +652,10 @@ class PipelineResult:
         scores = trustworthiness_curve(x_scaled, self.embedding, k_values=k_values)
         cont_scores = continuity_curve(x_scaled, self.embedding, k_values=k_values)
         plot_trustworthiness_curve(
-            scores, continuity_scores=cont_scores, ax=ax_trust, threshold=0.9,
+            scores,
+            continuity_scores=cont_scores,
+            ax=ax_trust,
+            threshold=0.9,
         )
         ax_trust.set_title("(c) trustworthiness T(k) and continuity C(k)")
 
@@ -665,7 +663,9 @@ class PipelineResult:
         ax_sb2 = fig.add_subplot(gs[1, 1])
         ax_sb3 = fig.add_subplot(gs[1, 2])
         plot_subsample_stability(
-            stability, self.persistence, axes=[ax_sb1, ax_sb2, ax_sb3],
+            stability,
+            self.persistence,
+            axes=[ax_sb1, ax_sb2, ax_sb3],
         )
         ax_sb1.set_title(
             f"(d) n_clusters across {stability.n_subsamples} subsamples "
@@ -785,9 +785,7 @@ class UnsupervisedPipeline:
         self.umap_kwargs: dict[str, Any] = dict(umap_kwargs or {})
         self.hdbscan_optuna_trials = int(hdbscan_optuna_trials)
         self.mcs_range: tuple[int, int] | None = (
-            None
-            if mcs_range is None
-            else (int(mcs_range[0]), int(mcs_range[1]))
+            None if mcs_range is None else (int(mcs_range[0]), int(mcs_range[1]))
         )
         self.ms_range: tuple[int, int] = (int(ms_range[0]), int(ms_range[1]))
         self.cluster_selection_methods: tuple[str, ...] = tuple(
@@ -881,17 +879,13 @@ class UnsupervisedPipeline:
             baseline_kwargs.setdefault("objective", self.hdbscan_objective)
             baseline_kwargs.setdefault("mcs_range", mcs_range)
             baseline_kwargs.setdefault("ms_range", self.ms_range)
-            baseline_kwargs.setdefault(
-                "cluster_selection_methods", self.cluster_selection_methods
-            )
+            baseline_kwargs.setdefault("cluster_selection_methods", self.cluster_selection_methods)
             baseline_kwargs.setdefault(
                 "cluster_selection_epsilon_range",
                 self.cluster_selection_epsilon_range,
             )
             baseline_kwargs.setdefault("alpha_range", self.alpha_range)
-            baseline_umap_kwargs = baseline_kwargs.pop(
-                "umap_kwargs", self.umap_kwargs
-            )
+            baseline_umap_kwargs = baseline_kwargs.pop("umap_kwargs", self.umap_kwargs)
             baseline = compute_noise_baseline(
                 n_samples=n_samples,
                 n_features=n_features,
@@ -1041,9 +1035,7 @@ class UnsupervisedPipeline:
             "mcs_range_was_auto": self.mcs_range is None,
             "ms_range": list(self.ms_range),
             "cluster_selection_methods": list(self.cluster_selection_methods),
-            "cluster_selection_epsilon_range": list(
-                self.cluster_selection_epsilon_range
-            ),
+            "cluster_selection_epsilon_range": list(self.cluster_selection_epsilon_range),
             "alpha_range": list(self.alpha_range),
             "metric": self.metric,
             "engine": self.engine,

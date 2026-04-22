@@ -19,7 +19,10 @@ from starfold.uncertainty import (
 
 
 def _fit_pipeline(
-    X: np.ndarray, *, random_state: int = 0, n_trials: int = 4,
+    X: np.ndarray,
+    *,
+    random_state: int = 0,
+    n_trials: int = 4,
 ) -> sf.PipelineResult:
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
@@ -34,9 +37,7 @@ def _fit_pipeline(
 @pytest.fixture(scope="module")
 def simple_two_blob_fit() -> tuple[np.ndarray, sf.PipelineResult]:
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(80, 3)) for loc in (-5.0, 5.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(80, 3)) for loc in (-5.0, 5.0)]).astype(np.float64)
     result = _fit_pipeline(X, random_state=0)
     return X, result
 
@@ -311,9 +312,7 @@ def test_propagate_uncertainty_on_result_without_umap_model_raises() -> None:
     # Synthesise a PipelineResult with umap_model=None; the method must
     # refuse to propagate rather than silently fall back.
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 3)) for loc in (-5.0, 5.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 3)) for loc in (-5.0, 5.0)]).astype(np.float64)
     real = _fit_pipeline(X, random_state=0)
     fake = sf.PipelineResult(
         embedding=real.embedding,
@@ -347,7 +346,7 @@ def test_confident_labels_returns_consensus_when_above_threshold() -> None:
         [
             [0.9, 0.05, 0.05],  # confident cluster 0
             [0.55, 0.4, 0.05],  # not confident at 0.8
-            [0.0, 0.0, 1.0],    # outlier column
+            [0.0, 0.0, 1.0],  # outlier column
         ],
         dtype=np.float64,
     )
@@ -401,7 +400,10 @@ def test_build_replica_augmented_matrix_shapes_and_groups() -> None:
     rng = np.random.default_rng(0)
     X = rng.normal(size=(10, 3))
     x_aug, groups = build_replica_augmented_matrix(
-        X, 0.2, n_replicas=4, random_state=7,
+        X,
+        0.2,
+        n_replicas=4,
+        random_state=7,
     )
     assert x_aug.shape == (10 * 5, 3)
     assert groups.shape == (50,)
@@ -469,9 +471,7 @@ def test_consensus_rejects_shape_mismatch() -> None:
 
 def test_fit_with_uncertainty_returns_augmented_fit() -> None:
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 3)) for loc in (-5.0, 5.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 3)) for loc in (-5.0, 5.0)]).astype(np.float64)
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=4,
@@ -495,9 +495,7 @@ def test_fit_with_uncertainty_returns_augmented_fit() -> None:
 
 def test_fit_with_uncertainty_zero_replicas_matches_clean_fit() -> None:
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 3)) for loc in (-5.0, 5.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 3)) for loc in (-5.0, 5.0)]).astype(np.float64)
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=4,
@@ -529,9 +527,7 @@ def test_fit_with_uncertainty_rejects_negative_replicas() -> None:
 
 def test_fit_with_uncertainty_summary_mentions_n_replicas() -> None:
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(30, 3)) for loc in (-5.0, 5.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(30, 3)) for loc in (-5.0, 5.0)]).astype(np.float64)
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=4,
@@ -553,9 +549,9 @@ def test_fit_with_uncertainty_summary_mentions_n_replicas() -> None:
 def test_refit_subcluster_returns_new_pipeline_result() -> None:
     rng = np.random.default_rng(0)
     # Three well-separated blobs in 3-D so the outer fit is stable.
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 0.0, 8.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 0.0, 8.0)]).astype(
+        np.float64
+    )
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=4,
@@ -574,9 +570,7 @@ def test_refit_subcluster_returns_new_pipeline_result() -> None:
 
 def test_refit_subcluster_rejects_negative_cluster() -> None:
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 8.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 8.0)]).astype(np.float64)
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=4,
@@ -591,9 +585,7 @@ def test_refit_subcluster_rejects_negative_cluster() -> None:
 
 def test_refit_subcluster_rejects_out_of_range_cluster() -> None:
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 8.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 8.0)]).astype(np.float64)
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=4,
@@ -608,9 +600,7 @@ def test_refit_subcluster_rejects_out_of_range_cluster() -> None:
 
 def test_refit_subcluster_rejects_shape_mismatch() -> None:
     rng = np.random.default_rng(0)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 8.0)]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 3)) for loc in (-8.0, 8.0)]).astype(np.float64)
     pipeline = sf.UnsupervisedPipeline(
         umap_kwargs={"n_epochs": 50, "n_neighbors": 10},
         hdbscan_optuna_trials=4,

@@ -168,7 +168,9 @@ def test_search_hdbscan_rejects_unknown_objective() -> None:
     X = rng.normal(size=(200, 2))
     with pytest.raises(ValueError, match="objective"):
         search_hdbscan(
-            X, n_trials=3, engine="cpu",
+            X,
+            n_trials=3,
+            engine="cpu",
             objective="max_persistence",  # type: ignore[arg-type]
         )
 

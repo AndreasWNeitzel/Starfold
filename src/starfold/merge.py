@@ -107,7 +107,9 @@ class MergeSuggestion:
 
 
 def _cohesion_ratio(
-    merge_lambda: float, birth_i: float, birth_j: float,
+    merge_lambda: float,
+    birth_i: float,
+    birth_j: float,
 ) -> float:
     """Return ``merge / max(birth_i, birth_j)`` or NaN if undefined.
 
@@ -273,6 +275,7 @@ def suggest_merges(
         If ``embedding`` has the wrong shape or sort_by is invalid.
     """
     from starfold.hierarchy import HierarchicalStructure  # noqa: F401, PLC0415
+
     if not hierarchy.available:
         msg = (
             "suggest_merges requires a HierarchicalStructure from a "
@@ -281,14 +284,10 @@ def suggest_merges(
         )
         raise RuntimeError(msg)
     if sort_by not in ("cohesion_ratio", "gap_ratio"):
-        msg = (
-            f"sort_by must be 'cohesion_ratio' or 'gap_ratio' (got {sort_by!r})."
-        )
+        msg = f"sort_by must be 'cohesion_ratio' or 'gap_ratio' (got {sort_by!r})."
         raise ValueError(msg)
     if not 0.0 < cohesion_threshold <= 1.0:
-        msg = (
-            f"cohesion_threshold must lie in (0, 1] (got {cohesion_threshold})."
-        )
+        msg = f"cohesion_threshold must lie in (0, 1] (got {cohesion_threshold})."
         raise ValueError(msg)
     if gap_threshold <= 0.0:
         msg = f"gap_threshold must be > 0 (got {gap_threshold})."
@@ -308,9 +307,7 @@ def suggest_merges(
         return []
 
     labels = hierarchy.labels
-    births = np.array(
-        [_birth_lambda_of(hierarchy, k) for k in range(n_flat)], dtype=np.float64
-    )
+    births = np.array([_birth_lambda_of(hierarchy, k) for k in range(n_flat)], dtype=np.float64)
     centroids: list[NDArray[np.floating[Any]]] = []
     rms: list[float] = []
     for k in range(n_flat):

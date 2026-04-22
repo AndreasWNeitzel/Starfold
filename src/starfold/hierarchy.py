@@ -208,8 +208,7 @@ class HierarchicalStructure:
     def _check_cluster_id(self, cluster_id: int) -> None:
         if not (0 <= cluster_id < self.flat_to_node.size):
             msg = (
-                f"cluster_id {cluster_id} out of range for "
-                f"{self.flat_to_node.size} flat clusters."
+                f"cluster_id {cluster_id} out of range for {self.flat_to_node.size} flat clusters."
             )
             raise ValueError(msg)
 
@@ -300,7 +299,9 @@ def _build_children_map(
 
 
 def _leaves_under(
-    node: int, children_of: dict[int, list[int]], n_samples: int,
+    node: int,
+    children_of: dict[int, list[int]],
+    n_samples: int,
 ) -> set[int]:
     stack = [node]
     leaves: set[int] = set()

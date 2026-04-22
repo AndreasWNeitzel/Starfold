@@ -158,9 +158,7 @@ def save_pipeline_result(result: PipelineResult, directory: Path | str) -> Path:
             "max_persistence_pvalue": float(result.credibility.max_persistence_pvalue),
             "alpha": float(result.credibility.alpha),
             "passes": bool(result.credibility.passes),
-            "per_cluster_significant_count": int(
-                result.credibility.per_cluster_significant.sum()
-            ),
+            "per_cluster_significant_count": int(result.credibility.per_cluster_significant.sum()),
             "per_cluster_total": int(result.credibility.per_cluster_significant.size),
         }
     (directory / "meta.json").write_text(json.dumps(meta, indent=2, sort_keys=True))
@@ -257,6 +255,6 @@ def _load_credibility_block(
         if key in arrays:
             out[key] = arrays[key].astype(np.float64)
     if "credibility_per_cluster_significant" in arrays:
-        out["credibility_per_cluster_significant"] = (
-            arrays["credibility_per_cluster_significant"].astype(bool)
-        )
+        out["credibility_per_cluster_significant"] = arrays[
+            "credibility_per_cluster_significant"
+        ].astype(bool)

@@ -241,10 +241,7 @@ def chunked_silhouette(
     unique_labels = np.unique(kept_labels)
     n_clusters = int(unique_labels.shape[0])
     if n_clusters < 2:
-        msg = (
-            "silhouette requires at least two distinct non-outlier clusters "
-            f"(got {n_clusters})."
-        )
+        msg = f"silhouette requires at least two distinct non-outlier clusters (got {n_clusters})."
         raise ValueError(msg)
     # Remap potentially non-contiguous labels (e.g. 0, 2, 5) to
     # 0..n_clusters-1 so they index columns of the accumulator.
@@ -254,7 +251,11 @@ def chunked_silhouette(
     cluster_sizes = np.bincount(remapped, minlength=n_clusters).astype(np.intp)
 
     sum_by_cluster = _accumulate_sum_by_cluster(
-        x[kept_idx], remapped, n_clusters, metric, chunk_size,
+        x[kept_idx],
+        remapped,
+        n_clusters,
+        metric,
+        chunk_size,
     )
     silhouette_kept = _silhouette_from_sums(sum_by_cluster, remapped, cluster_sizes)
 

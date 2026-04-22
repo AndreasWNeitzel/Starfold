@@ -104,8 +104,13 @@ def test_subsample_stability_rejects_non_2d_embedding() -> None:
     pers = np.array([0.5])
     with pytest.raises(ValueError, match="shape"):
         compute_subsample_stability(
-            X_3d, labels, pers,
-            min_cluster_size=5, min_samples=1, n_subsamples=2, engine="cpu",
+            X_3d,
+            labels,
+            pers,
+            min_cluster_size=5,
+            min_samples=1,
+            n_subsamples=2,
+            engine="cpu",
         )
 
 
@@ -116,8 +121,13 @@ def test_subsample_stability_rejects_label_mismatch() -> None:
     pers = np.array([0.5])
     with pytest.raises(ValueError, match="one entry per embedding row"):
         compute_subsample_stability(
-            X, labels_wrong, pers,
-            min_cluster_size=5, min_samples=1, n_subsamples=2, engine="cpu",
+            X,
+            labels_wrong,
+            pers,
+            min_cluster_size=5,
+            min_samples=1,
+            n_subsamples=2,
+            engine="cpu",
         )
 
 
@@ -128,13 +138,23 @@ def test_subsample_stability_rejects_bad_fraction() -> None:
     pers = np.array([0.5])
     with pytest.raises(ValueError, match="subsample_fraction"):
         compute_subsample_stability(
-            X, labels, pers,
-            min_cluster_size=5, min_samples=1,
-            subsample_fraction=1.5, n_subsamples=2, engine="cpu",
+            X,
+            labels,
+            pers,
+            min_cluster_size=5,
+            min_samples=1,
+            subsample_fraction=1.5,
+            n_subsamples=2,
+            engine="cpu",
         )
     with pytest.raises(ValueError, match="subsample_fraction"):
         compute_subsample_stability(
-            X, labels, pers,
-            min_cluster_size=5, min_samples=1,
-            subsample_fraction=0.0, n_subsamples=2, engine="cpu",
+            X,
+            labels,
+            pers,
+            min_cluster_size=5,
+            min_samples=1,
+            subsample_fraction=0.0,
+            n_subsamples=2,
+            engine="cpu",
         )

@@ -265,9 +265,7 @@ def diagnose_fit(result: PipelineResult) -> list[str]:
         and int(result.significant.sum()) == 0
     ):
         threshold = (
-            result.noise_baseline.threshold
-            if result.noise_baseline is not None
-            else float("nan")
+            result.noise_baseline.threshold if result.noise_baseline is not None else float("nan")
         )
         flags.append(
             "NOISE-CONSISTENT: no cluster beats the noise baseline "

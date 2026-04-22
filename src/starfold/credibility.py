@@ -290,21 +290,14 @@ def compute_credibility(
     max_persistence_p = empirical_upper_tail_pvalue(
         float(max_persistence), baseline.per_realisation_max
     )
-    passes = bool(
-        n_clusters_p < alpha
-        and objective_p < alpha
-        and max_persistence_p < alpha
-    )
+    passes = bool(n_clusters_p < alpha and objective_p < alpha and max_persistence_p < alpha)
 
     if cluster_persistence is None:
         observed_cluster = np.zeros(0, dtype=np.float64)
     else:
         observed_cluster = np.asarray(cluster_persistence, dtype=np.float64)
         if observed_cluster.ndim != 1:
-            msg = (
-                f"cluster_persistence must be 1-D (got shape "
-                f"{observed_cluster.shape})."
-            )
+            msg = f"cluster_persistence must be 1-D (got shape {observed_cluster.shape})."
             raise ValueError(msg)
         if observed_cluster.size != n_clusters:
             msg = (
