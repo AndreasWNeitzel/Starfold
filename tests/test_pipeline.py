@@ -94,6 +94,34 @@ def test_pipeline_runs_noise_baseline(tmp_path: object) -> None:
     assert result.significant.dtype == bool
 
 
+def test_noise_baseline_umap_kwargs_override(tmp_path: object) -> None:
+    # The nested ``umap_kwargs`` in ``noise_baseline_kwargs`` should
+    # override the main pipeline's UMAP configuration for noise fits
+    # only. The main-fit UMAP runs at n_epochs=2000 (via _cheap_pipeline)
+    # but the baseline should record n_epochs=300 in its config.
+    rng = np.random.default_rng(0)
+    X = np.vstack([rng.normal(loc, size=(50, 3)) for loc in (-5, 5)])
+    pipeline = _cheap_pipeline(
+        skip_noise_baseline=False,
+        noise_baseline_kwargs={
+            "n_realisations": 2,
+            "per_realisation_trials": 2,
+            "mcs_range": (5, 10),
+            "ms_range": (1, 5),
+            "cache_dir": str(tmp_path),
+            "umap_kwargs": {
+                "n_neighbors": 30,
+                "min_dist": 0.0,
+                "n_epochs": 300,
+            },
+        },
+    )
+    result = pipeline.fit(X)
+    assert result.noise_baseline is not None
+    recorded = result.noise_baseline.config["umap_kwargs"]["n_epochs"]
+    assert recorded == 300
+
+
 def test_pipeline_rejects_non_2d() -> None:
     pipeline = _cheap_pipeline()
     with pytest.raises(ValueError, match="2-D"):

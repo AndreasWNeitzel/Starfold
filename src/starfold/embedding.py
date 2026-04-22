@@ -32,6 +32,54 @@ if TYPE_CHECKING:
 __all__ = ["run_pca", "run_tsne", "run_umap"]
 
 
+def _fit_umap_with_model(
+    X: ArrayLike,
+    *,
+    n_neighbors: int = 15,
+    min_dist: float = 0.0,
+    n_epochs: int = 10_000,
+    metric: str = "euclidean",
+    n_components: int = 2,
+    random_state: int | None = None,
+    engine: Engine = "auto",
+    low_memory: bool = False,
+    n_jobs: int | None = None,
+) -> tuple[NDArray[np.floating[Any]], umap.UMAP | None]:
+    """Fit UMAP and return ``(embedding, reducer_or_None)``.
+
+    Internal helper. The CPU backend returns the trained
+    :class:`umap.UMAP` so downstream code can call
+    :meth:`umap.UMAP.transform` on perturbed samples for uncertainty
+    propagation. The cuml backend returns ``None`` for the reducer
+    because this release does not wrap cuml's transform path through
+    :func:`starfold.uncertainty.propagate_uncertainty`.
+    """
+    x = _as_2d_float(X)
+    resolved: ResolvedEngine = resolve_engine(engine)
+    if resolved == "cuml":
+        emb = _run_umap_cuml(
+            x,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
+            n_epochs=n_epochs,
+            metric=metric,
+            n_components=n_components,
+            random_state=random_state,
+        )
+        return emb, None
+    return _fit_umap_cpu(
+        x,
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        n_epochs=n_epochs,
+        metric=metric,
+        n_components=n_components,
+        random_state=random_state,
+        low_memory=low_memory,
+        n_jobs=n_jobs,
+    )
+
+
 def _as_2d_float(X: ArrayLike) -> NDArray[np.floating[Any]]:
     x = np.asarray(X, dtype=np.float64)
     if x.ndim != 2:
@@ -52,6 +100,38 @@ def _run_umap_cpu(
     low_memory: bool,
     n_jobs: int | None,
 ) -> NDArray[np.floating[Any]]:
+    emb, _ = _fit_umap_cpu(
+        x,
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        n_epochs=n_epochs,
+        metric=metric,
+        n_components=n_components,
+        random_state=random_state,
+        low_memory=low_memory,
+        n_jobs=n_jobs,
+    )
+    return emb
+
+
+def _fit_umap_cpu(
+    x: NDArray[np.floating[Any]],
+    *,
+    n_neighbors: int,
+    min_dist: float,
+    n_epochs: int,
+    metric: str,
+    n_components: int,
+    random_state: int | None,
+    low_memory: bool,
+    n_jobs: int | None,
+) -> tuple[NDArray[np.floating[Any]], umap.UMAP]:
+    """Fit UMAP and return both the embedding and the trained reducer.
+
+    The reducer supports :py:meth:`umap.UMAP.transform` so downstream
+    code can project unseen samples (e.g. perturbations of the training
+    matrix) through the same manifold without refitting.
+    """
     # umap-learn forces single-threaded execution whenever random_state
     # is set so output is bit-reproducible. When the caller does not ask
     # for reproducibility (random_state is None), parallelise across all
@@ -72,7 +152,8 @@ def _run_umap_cpu(
     # Cast to float32 on the fly: umap-learn works internally in float32
     # and this halves peak kNN memory without changing output.
     x32 = x.astype(np.float32, copy=False)
-    return np.asarray(reducer.fit_transform(x32), dtype=np.float64)
+    emb = np.asarray(reducer.fit_transform(x32), dtype=np.float64)
+    return emb, reducer
 
 
 def _run_umap_cuml(
@@ -207,7 +288,16 @@ def run_tsne(
     n_components: int = 2,
     random_state: int | None = None,
 ) -> NDArray[np.floating[Any]]:
-    """Compute a t-SNE embedding of ``X``.
+    """Compute a t-SNE embedding of ``X`` (diagnostic comparison only).
+
+    The starfold pipeline is built around UMAP: HDBSCAN, the noise
+    baseline, and trustworthiness validation are all parameterised in
+    terms of the UMAP embedding. :func:`run_tsne` is exposed so users
+    can sanity-check whether a different manifold method shows the same
+    gross structure (``plot_embedding_comparison``); it is *not*
+    plumbed into :class:`~starfold.pipeline.UnsupervisedPipeline`, and
+    wrapping the clustering step around a t-SNE embedding is not
+    supported.
 
     Parameters
     ----------
@@ -255,7 +345,15 @@ def run_pca(
     n_components: int = 2,
     random_state: int | None = None,
 ) -> NDArray[np.floating[Any]]:
-    """Compute a PCA projection of ``X``.
+    """Compute a PCA projection of ``X`` (diagnostic comparison only).
+
+    PCA is exposed as a cheap linear baseline for the embedding step:
+    use it with :func:`starfold.plotting.plot_embedding_comparison` to
+    see whether the non-linear UMAP manifold is actually picking up
+    structure the linear projection misses. It is *not* a substitute
+    for the UMAP step inside
+    :class:`~starfold.pipeline.UnsupervisedPipeline`; HDBSCAN's density
+    heuristics and the noise baseline are tuned for UMAP's output.
 
     Parameters
     ----------

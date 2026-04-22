@@ -31,10 +31,13 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from numpy.typing import ArrayLike
 
+    from starfold.credibility import CredibilityReport
     from starfold.stability import SubsampleStability
+    from starfold.uncertainty import UncertaintyPropagation
 
 __all__ = [
     "plot_condensed_tree",
+    "plot_credibility",
     "plot_embedding",
     "plot_embedding_comparison",
     "plot_granularity_stability",
@@ -44,10 +47,30 @@ __all__ = [
     "plot_optuna_parallel",
     "plot_optuna_param_importance",
     "plot_optuna_pareto",
+    "plot_per_cluster_credibility",
     "plot_persistence_vs_baseline",
     "plot_subsample_stability",
     "plot_trustworthiness_curve",
+    "plot_uncertainty_map",
 ]
+
+
+_OBJECTIVE_Y_LABELS: dict[str, str] = {
+    "persistence_sum": "objective (sum of cluster persistence)",
+    "combined_geom": r"objective ($\sqrt{\max(\mathrm{DBCV},0)\cdot\widetilde{p}}$)",
+}
+
+
+def _objective_label(study: optuna.Study) -> str:
+    """Human-readable y-axis label for the scalar Optuna objective.
+
+    Reads ``study.user_attrs["objective"]`` (set by
+    :func:`starfold.clustering.search_hdbscan`) and falls back to the
+    generic ``"objective"`` when absent, so plots still work for
+    studies built outside starfold.
+    """
+    name = str(study.user_attrs.get("objective", ""))
+    return _OBJECTIVE_Y_LABELS.get(name, "objective")
 
 
 def _get_ax(ax: Axes | None, figsize: tuple[float, float]) -> Axes:
@@ -143,22 +166,31 @@ def plot_embedding(
 def plot_trustworthiness_curve(
     scores: Mapping[int, float],
     *,
+    continuity_scores: Mapping[int, float] | None = None,
     ax: Axes | None = None,
     threshold: float | None = 0.9,
     figsize: tuple[float, float] = (5.5, 4.0),
 ) -> Axes:
-    """Plot :math:`T(k)` vs :math:`k`.
+    """Plot :math:`T(k)` vs :math:`k`, optionally overlaid with :math:`C(k)`.
 
     Parameters
     ----------
     scores
         Mapping from ``k`` to :math:`T(k)`. Typically the output of
         :func:`starfold.trustworthiness.trustworthiness_curve`.
+    continuity_scores
+        Optional mapping from ``k`` to :math:`C(k)`. When supplied,
+        the continuity curve is drawn alongside trustworthiness on the
+        same axes -- the two together bracket the embedding's fidelity
+        (T bounds the false-neighbour rate, C bounds the lost-neighbour
+        rate). Typically the output of
+        :func:`starfold.trustworthiness.continuity_curve`.
     ax
         Existing axes.
     threshold
         Horizontal reference line. Defaults to 0.9, the paper's
-        acceptance heuristic. Pass ``None`` to hide it.
+        acceptance heuristic for trustworthiness. Pass ``None`` to hide
+        it.
     figsize
         Figure size when ``ax`` is ``None``.
 
@@ -170,14 +202,18 @@ def plot_trustworthiness_curve(
     axis = _get_ax(ax, figsize)
     ks = sorted(scores.keys())
     ts = [scores[k] for k in ks]
-    axis.plot(ks, ts, marker="o")
+    axis.plot(ks, ts, marker="o", label="T(k) trustworthiness")
+    if continuity_scores is not None:
+        cs = [continuity_scores[k] for k in ks if k in continuity_scores]
+        cks = [k for k in ks if k in continuity_scores]
+        axis.plot(cks, cs, marker="s", linestyle="--", label="C(k) continuity")
     if threshold is not None:
         axis.axhline(
-            threshold, color="grey", linestyle="--", linewidth=1.0, label=f"T = {threshold}"
+            threshold, color="grey", linestyle=":", linewidth=1.0, label=f"threshold {threshold}"
         )
-        axis.legend(loc="lower right")
+    axis.legend(loc="lower right")
     axis.set_xlabel("k (nearest neighbours)")
-    axis.set_ylabel("trustworthiness T(k)")
+    axis.set_ylabel("T(k) / C(k)" if continuity_scores is not None else "trustworthiness T(k)")
     axis.set_ylim(0.0, 1.01)
     return axis
 
@@ -238,6 +274,259 @@ def plot_persistence_vs_baseline(
     return axis
 
 
+def _credibility_panel(
+    axis: Axes,
+    observed: float,
+    null: np.ndarray,
+    pvalue: float,
+    *,
+    xlabel: str,
+    alpha: float,
+    integer: bool = False,
+) -> None:
+    if null.size == 0:
+        axis.text(0.5, 0.5, "no null samples", ha="center", va="center")
+        axis.set_xlabel(xlabel)
+        return
+    if integer:
+        lo, hi = int(np.min(null)), int(np.max(null))
+        edges: list[float] = [float(x) for x in np.arange(lo, hi + 2) - 0.5]
+        axis.hist(null, bins=edges, color="tab:grey", edgecolor="white",
+                  alpha=0.8, label="noise null")
+    else:
+        axis.hist(null, bins=30, color="tab:grey", edgecolor="white",
+                  alpha=0.8, label="noise null")
+    colour = "tab:green" if pvalue < alpha else "tab:red"
+    axis.axvline(
+        observed, color=colour, linewidth=2.0,
+        label=f"observed = {observed:.3f}" if not integer else f"observed = {int(observed)}",
+    )
+    axis.set_xlabel(xlabel)
+    axis.set_ylabel("noise-realisation count")
+    axis.set_title(f"p = {pvalue:.4f}", fontsize=10)
+    axis.legend(loc="upper right", fontsize=8)
+
+
+def plot_credibility(
+    report: CredibilityReport,
+    *,
+    axes: Sequence[Axes] | None = None,
+    figsize: tuple[float, float] = (13.0, 4.0),
+) -> Sequence[Axes]:
+    """Three-panel null-distribution histogram with observed overlay.
+
+    Each panel shows the noise-realisation null distribution of one
+    run-level scalar (number of clusters, best Optuna objective,
+    maximum cluster persistence) with the real-data observation
+    overlaid as a vertical line. The panel title is the upper-tail
+    p-value; the overlay line is green when ``p < alpha`` and red
+    otherwise, mirroring the ``passes`` criterion on the report.
+
+    Parameters
+    ----------
+    report
+        A :class:`CredibilityReport` from
+        :func:`starfold.credibility.compute_credibility`.
+    axes
+        Three existing axes, left-to-right. When ``None``, a new
+        1x3 figure is created.
+    figsize
+        Figure size used when ``axes`` is ``None``.
+
+    Returns
+    -------
+    Sequence[Axes]
+        The three axes drawn on.
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    if axes is None:
+        _, axes_arr = plt.subplots(1, 3, figsize=figsize, constrained_layout=True)
+        panel: list[Axes] = list(axes_arr)
+    else:
+        panel = list(axes)
+    if len(panel) != 3:
+        msg = f"plot_credibility needs exactly three axes (got {len(panel)})."
+        raise ValueError(msg)
+
+    _credibility_panel(
+        panel[0],
+        observed=float(report.observed_n_clusters),
+        null=np.asarray(report.null_n_clusters, dtype=np.float64),
+        pvalue=report.n_clusters_pvalue,
+        xlabel="n_clusters",
+        alpha=report.alpha,
+        integer=True,
+    )
+    _credibility_panel(
+        panel[1],
+        observed=float(report.observed_objective),
+        null=np.asarray(report.null_objective, dtype=np.float64),
+        pvalue=report.objective_pvalue,
+        xlabel=f"best-trial objective ({report.objective_name})",
+        alpha=report.alpha,
+    )
+    _credibility_panel(
+        panel[2],
+        observed=float(report.observed_max_persistence),
+        null=np.asarray(report.null_max_persistence, dtype=np.float64),
+        pvalue=report.max_persistence_pvalue,
+        xlabel="max cluster persistence",
+        alpha=report.alpha,
+    )
+    verdict = "PASS" if report.passes else "FAIL"
+    panel[0].figure.suptitle(
+        f"credibility vs noise null: {verdict} at alpha={report.alpha}",
+        fontsize=12,
+    )
+    return panel
+
+
+def plot_per_cluster_credibility(
+    report: CredibilityReport,
+    *,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (7.0, 4.5),
+) -> Axes:
+    """Bar chart of per-cluster persistence with credibility shading.
+
+    Overlays each cluster's observed persistence (bars, green when
+    ``p < alpha`` and red otherwise) against the noise null's 50th,
+    99.7th, and 99.97th percentiles (dashed horizontal lines). This
+    is often the most honest single figure: it shows exactly which
+    clusters stand out from noise, not just whether the run-level
+    scalars do.
+
+    Parameters
+    ----------
+    report
+        A :class:`CredibilityReport` whose
+        ``observed_cluster_persistence``,
+        ``null_cluster_persistence``, and
+        ``per_cluster_significant`` fields are populated.
+    ax
+        Existing axis to draw on. Creates a new figure when ``None``.
+    figsize
+        Figure size used when ``ax`` is ``None``.
+
+    Returns
+    -------
+    Axes
+        The axis drawn on.
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    if ax is None:
+        _, ax = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
+
+    obs = np.asarray(report.observed_cluster_persistence, dtype=np.float64)
+    sig = np.asarray(report.per_cluster_significant, dtype=bool)
+    pvals = np.asarray(report.per_cluster_pvalue, dtype=np.float64)
+    null = np.asarray(report.null_cluster_persistence, dtype=np.float64)
+    if obs.size == 0:
+        ax.text(0.5, 0.5, "no clusters", ha="center", va="center", transform=ax.transAxes)
+        ax.set_xlabel("cluster id")
+        ax.set_ylabel("persistence")
+        return ax
+    colours = ["tab:green" if s else "tab:red" for s in sig]
+    indices = np.arange(obs.size)
+    ax.bar(indices, obs, color=colours, edgecolor="black", linewidth=0.4)
+    for i, (val, p) in enumerate(zip(obs, pvals, strict=True)):
+        ax.text(
+            i, val, f"p={p:.3f}", ha="center", va="bottom",
+            fontsize=8, color="black",
+        )
+    if null.size:
+        for pct, style in [(50.0, ":"), (99.7, "--"), (99.97, "-.")]:
+            level = float(np.percentile(null, pct))
+            ax.axhline(
+                level, color="tab:grey", linestyle=style, linewidth=1.0,
+                label=f"null {pct:.2f} pct = {level:.3f}",
+            )
+        ax.legend(loc="upper right", fontsize=8)
+    n_cred = int(sig.sum())
+    ax.set_title(
+        f"per-cluster credibility: {n_cred}/{obs.size} at alpha={report.alpha}"
+    )
+    ax.set_xlabel("cluster id")
+    ax.set_ylabel("persistence")
+    ax.set_xticks(indices)
+    return ax
+
+
+def plot_uncertainty_map(
+    embedding: ArrayLike,
+    propagation: UncertaintyPropagation,
+    *,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] = (7.0, 5.5),
+    cmap: str = "magma",
+    s: float = 10.0,
+) -> Axes:
+    """Scatter the 2-D embedding coloured by per-sample instability.
+
+    Instability is ``1 - max(membership, axis=1)``. A sample that lands
+    in the same cluster in every Monte Carlo draw has instability 0;
+    a sample that splits 50/50 between two clusters has instability
+    0.5. The resulting map is the clearest visual answer to "which of
+    my samples are sitting on a cluster boundary?".
+
+    Parameters
+    ----------
+    embedding
+        2-D UMAP embedding of shape ``(n_samples, 2)``, typically
+        ``result.embedding``.
+    propagation
+        An :class:`~starfold.uncertainty.UncertaintyPropagation`
+        returned by :meth:`PipelineResult.propagate_uncertainty`.
+    ax
+        Existing axis to draw on. A new figure is created when ``None``.
+    figsize
+        Figure size used when ``ax`` is ``None``.
+    cmap
+        Matplotlib colormap for the instability colour scale.
+    s
+        Marker size for the scatter points.
+
+    Returns
+    -------
+    Axes
+        The axis drawn on.
+    """
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+
+    emb = np.asarray(embedding, dtype=np.float64)
+    if emb.ndim != 2 or emb.shape[1] != 2:
+        msg = f"embedding must have shape (n_samples, 2) (got {emb.shape})."
+        raise ValueError(msg)
+    instab = np.asarray(propagation.instability, dtype=np.float64)
+    if instab.shape[0] != emb.shape[0]:
+        msg = (
+            f"embedding has {emb.shape[0]} samples but propagation has "
+            f"{instab.shape[0]}; these must match."
+        )
+        raise ValueError(msg)
+
+    if ax is None:
+        _, ax = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
+
+    scatter = ax.scatter(
+        emb[:, 0], emb[:, 1], c=instab, cmap=cmap, s=s,
+        vmin=0.0, vmax=max(0.5, float(instab.max()) if instab.size else 0.5),
+        edgecolors="none",
+    )
+    ax.figure.colorbar(scatter, ax=ax, label="instability  (1 - max membership)")
+    mean_instab = float(instab.mean()) if instab.size else 0.0
+    frac_high = float((instab > 0.5).mean()) if instab.size else 0.0
+    ax.set_title(
+        f"uncertainty map  ({propagation.n_draws} draws, "
+        f"mean={mean_instab:.3f}, >0.5: {frac_high:.1%})"
+    )
+    ax.set_xlabel("UMAP 1")
+    ax.set_ylabel("UMAP 2")
+    return ax
+
+
 def plot_optuna_history(
     study: optuna.Study,
     *,
@@ -259,7 +548,7 @@ def plot_optuna_history(
     )
     axis.plot(trial_numbers, best, color="tab:red", linewidth=1.5, label="running best")
     axis.set_xlabel("trial #")
-    axis.set_ylabel("objective (sum cluster persistence)")
+    axis.set_ylabel(_objective_label(study))
     axis.legend(loc="lower right")
     return axis
 
@@ -308,19 +597,30 @@ _ATTR_KEYS: tuple[str, ...] = (
 )
 
 
+_METHOD_CODE = {"eom": 0.0, "leaf": 1.0}
+
+
 def _trial_frame(study: optuna.Study) -> dict[str, np.ndarray]:
-    """Extract (mcs, ms, value, user_attrs) arrays from a study.
+    """Extract (mcs, ms, value, user_attrs, extra params) arrays from a study.
 
     Returned keys include every metric recorded by
-    :func:`starfold.clustering.search_hdbscan` as well as the study
-    ``value`` under the key ``"value"``. The legacy key
-    ``"persistence"`` is aliased to ``"persistence_sum"`` for
-    backward-compatible plotting code, and ``"dbcv"`` aliases
+    :func:`starfold.clustering.search_hdbscan`, the study ``value``
+    under the key ``"value"``, and the three optional Optuna axes
+    ``alpha``, ``cluster_selection_epsilon`` and
+    ``cluster_selection_method`` (the last encoded numerically:
+    ``eom=0``, ``leaf=1``) so plotting can surface them even when the
+    caller did not request categorical sampling. Trials that did not
+    sample a given axis (pinned ranges) get ``NaN`` in that column.
+    The legacy key ``"persistence"`` is aliased to ``"persistence_sum"``
+    for backward-compatible plotting code, and ``"dbcv"`` aliases
     ``"relative_validity"``.
     """
     buckets: dict[str, list[float]] = {k: [] for k in _ATTR_KEYS}
     mcs: list[float] = []
     ms: list[float] = []
+    alpha: list[float] = []
+    eps: list[float] = []
+    method: list[float] = []
     value: list[float] = []
     number: list[int] = []
     for t in study.trials:
@@ -328,6 +628,12 @@ def _trial_frame(study: optuna.Study) -> dict[str, np.ndarray]:
             continue
         mcs.append(float(t.params["min_cluster_size"]))
         ms.append(float(t.params["min_samples"]))
+        alpha.append(float(t.params.get("alpha", float("nan"))))
+        eps.append(float(t.params.get("cluster_selection_epsilon", float("nan"))))
+        method_raw = t.params.get("cluster_selection_method")
+        method.append(
+            _METHOD_CODE[method_raw] if method_raw in _METHOD_CODE else float("nan")
+        )
         value.append(float(t.value))
         for key in _ATTR_KEYS:
             buckets[key].append(float(t.user_attrs.get(key, float("nan"))))
@@ -335,6 +641,9 @@ def _trial_frame(study: optuna.Study) -> dict[str, np.ndarray]:
     frame: dict[str, np.ndarray] = {
         "mcs": np.array(mcs, dtype=np.float64),
         "ms": np.array(ms, dtype=np.float64),
+        "alpha": np.array(alpha, dtype=np.float64),
+        "cluster_selection_epsilon": np.array(eps, dtype=np.float64),
+        "cluster_selection_method": np.array(method, dtype=np.float64),
         "value": np.array(value, dtype=np.float64),
         "number": np.array(number, dtype=np.intp),
     }
@@ -608,7 +917,7 @@ def plot_granularity_stability(
     return axis
 
 
-def plot_optuna_parallel(
+def plot_optuna_parallel(  # noqa: PLR0915
     study: optuna.Study,
     *,
     ax: Axes | None = None,
@@ -617,9 +926,14 @@ def plot_optuna_parallel(
     """Parallel-coordinates plot of trials.
 
     Axes (left to right): ``min_cluster_size``, ``min_samples``,
-    ``n_clusters``, ``outlier_fraction``, ``persistence``, ``DBCV``.
-    Each trial is a polyline; colour encodes TPE iteration (viridis).
-    Shows search progress at a glance.
+    ``alpha``, ``cluster_selection_epsilon`` (``eps``),
+    ``cluster_selection_method`` (``method`` — eom vs leaf, shown as a
+    discrete 0/1 axis with tick labels), ``n_clusters``,
+    ``outlier_fraction``, ``persistence``, ``DBCV``. Axes that were
+    pinned (a constant in the search) are dropped automatically so the
+    plot never carries a redundant column. Each trial is a polyline;
+    colour encodes TPE iteration (viridis). Shows search progress at a
+    glance.
     """
     import matplotlib.pyplot as plt  # noqa: PLC0415
     from matplotlib.collections import LineCollection  # noqa: PLC0415
@@ -630,15 +944,30 @@ def plot_optuna_parallel(
     if n == 0:
         axis.text(0.5, 0.5, "no completed trials", ha="center", va="center")
         return axis
-    keys = ["mcs", "ms", "n_clusters", "outlier_fraction", "persistence", "dbcv"]
-    labels = [
-        "min_cluster_size",
-        "min_samples",
-        "n_clusters",
-        "outlier_fraction",
-        "persistence",
-        "DBCV",
+    candidates = [
+        ("mcs", "min_cluster_size"),
+        ("ms", "min_samples"),
+        ("alpha", "alpha"),
+        ("cluster_selection_epsilon", "eps"),
+        ("cluster_selection_method", "method"),
+        ("n_clusters", "n_clusters"),
+        ("outlier_fraction", "outlier_fraction"),
+        ("persistence", "persistence"),
+        ("dbcv", "DBCV"),
     ]
+    # Drop axes that were pinned (all-NaN) or constant — they carry no
+    # information and would otherwise render as flat lines.
+    keys: list[str] = []
+    labels: list[str] = []
+    for key, label in candidates:
+        col = data[key]
+        finite = col[np.isfinite(col)]
+        if finite.size == 0:
+            continue
+        if finite.size > 1 and np.allclose(finite, finite[0]):
+            continue
+        keys.append(key)
+        labels.append(label)
     cols = np.array([data[k] for k in keys], dtype=np.float64).T  # (n, k)
     col_min = np.nanmin(cols, axis=0)
     col_max = np.nanmax(cols, axis=0)
@@ -667,6 +996,18 @@ def plot_optuna_parallel(
     from matplotlib.colors import Normalize  # noqa: PLC0415
     for x in xs:
         axis.axvline(float(x), color="black", linewidth=0.5, alpha=0.3)
+    # Label the two ends of the categorical method axis so readers
+    # know which extreme is EOM vs leaf.
+    if "cluster_selection_method" in keys:
+        idx = keys.index("cluster_selection_method")
+        axis.text(
+            float(idx) + 0.05, -0.08, "eom",
+            ha="left", va="top", fontsize=8, color="0.4",
+        )
+        axis.text(
+            float(idx) + 0.05, 1.08, "leaf",
+            ha="left", va="bottom", fontsize=8, color="0.4",
+        )
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(1, max(n, 1)))
     sm.set_array([])
     plt.colorbar(sm, ax=axis, label="trial number")

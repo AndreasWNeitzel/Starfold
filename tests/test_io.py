@@ -74,6 +74,58 @@ def test_save_load_round_trip_with_baseline(
         result.noise_baseline.per_realisation_max,  # type: ignore[attr-defined]
         atol=0.0,
     )
+    np.testing.assert_array_equal(
+        loaded["noise_per_realisation_n_clusters"],
+        result.noise_baseline.per_realisation_n_clusters,  # type: ignore[attr-defined]
+    )
+    np.testing.assert_allclose(
+        loaded["noise_per_realisation_objective"],
+        result.noise_baseline.per_realisation_objective,  # type: ignore[attr-defined]
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        loaded["noise_null_cluster_persistence"],
+        result.noise_baseline.null_cluster_persistence,  # type: ignore[attr-defined]
+        atol=0.0,
+    )
+    np.testing.assert_array_equal(
+        loaded["noise_null_cluster_size"],
+        result.noise_baseline.null_cluster_size,  # type: ignore[attr-defined]
+    )
+    np.testing.assert_array_equal(
+        loaded["noise_null_cluster_realisation"],
+        result.noise_baseline.null_cluster_realisation,  # type: ignore[attr-defined]
+    )
+    assert "credibility" in loaded
+    cred = result.credibility  # type: ignore[attr-defined]
+    assert loaded["credibility"]["passes"] == cred.passes
+    assert loaded["credibility"]["alpha"] == pytest.approx(cred.alpha)
+    assert loaded["credibility"]["objective_name"] == cred.objective_name
+    assert loaded["credibility"]["n_clusters_pvalue"] == pytest.approx(cred.n_clusters_pvalue)
+    assert loaded["credibility"]["objective_pvalue"] == pytest.approx(cred.objective_pvalue)
+    assert loaded["credibility"]["max_persistence_pvalue"] == pytest.approx(
+        cred.max_persistence_pvalue
+    )
+    np.testing.assert_allclose(
+        loaded["credibility_observed_cluster_persistence"],
+        cred.observed_cluster_persistence,
+        atol=0.0,
+    )
+    np.testing.assert_allclose(
+        loaded["credibility_per_cluster_pvalue"],
+        cred.per_cluster_pvalue,
+        atol=0.0,
+    )
+    np.testing.assert_array_equal(
+        loaded["credibility_per_cluster_significant"],
+        cred.per_cluster_significant,
+    )
+    assert loaded["credibility"]["per_cluster_significant_count"] == int(
+        cred.per_cluster_significant.sum()
+    )
+    assert loaded["credibility"]["per_cluster_total"] == int(
+        cred.per_cluster_significant.size
+    )
 
 
 def test_scaler_round_trip_preserves_transform(

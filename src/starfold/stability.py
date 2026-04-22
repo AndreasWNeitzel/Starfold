@@ -104,6 +104,9 @@ def compute_subsample_stability(
     *,
     min_cluster_size: int,
     min_samples: int,
+    cluster_selection_method: str = "eom",
+    cluster_selection_epsilon: float = 0.0,
+    alpha: float = 1.0,
     n_subsamples: int = 50,
     subsample_fraction: float = 0.8,
     metric: str = "euclidean",
@@ -174,6 +177,9 @@ def compute_subsample_stability(
             min_cluster_size=int(min_cluster_size),
             min_samples=int(min_samples),
             metric=metric,
+            cluster_selection_method=cluster_selection_method,
+            cluster_selection_epsilon=cluster_selection_epsilon,
+            alpha=alpha,
             engine=resolved,
         )
         n_clusters[i] = int(sub.n_clusters)
