@@ -203,6 +203,38 @@ functions, or know anything about galactic archaeology. A biologist
 clustering single-cell RNA-seq data should find the tool as usable as
 an astronomer clustering stars.
 
+## Citation
+
+If `starfold` contributes to work you publish, please cite both the
+software and the methodological paper.
+
+The paper:
+
+```bibtex
+@article{neitzel2025_starfold,
+  author  = {Neitzel, Andreas W. and Campante, Tiago L.
+             and Bossini, Diego and Miglio, Andrea},
+  title   = {Unsupervised classification of simulated Milky Way-like
+             galaxies based on chrono-chemo-kinematic stellar properties},
+  journal = {Astronomy \& Astrophysics},
+  volume  = {695},
+  pages   = {A243},
+  year    = {2025},
+  doi     = {10.1051/0004-6361/202451718},
+  url     = {https://arxiv.org/abs/2501.16294},
+}
+```
+
+The software: `CITATION.cff` at the repo root is the canonical metadata
+file; GitHub renders it as a one-click **"Cite this repository"** entry
+on the sidebar, which exports BibTeX and APA.
+
 ## License
 
 MIT. See `LICENSE`.
+
+A citation to the methodological paper above is requested but not
+legally required. Treating the paper as an intellectual dependency —
+the way `scikit-learn` users cite Pedregosa+11 even though BSD does not
+compel it — is the community norm that keeps methodological work
+fundable.
