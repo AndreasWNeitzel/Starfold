@@ -119,7 +119,7 @@ caches each result on a SHA-256 of the inputs under
 
 ## 6. What is *not* in this package
 
-Items explicitly out of scope (from `CLAUDE.md` §1):
+Items explicitly out of scope:
 
 - The paper's two-run workflow (first on the full sample, then on
   each top-level component). This encodes the astronomer's prior that

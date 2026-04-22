@@ -50,3 +50,6 @@ uv.lock
 
 # Paper PDFs kept locally for reference
 *.pdf
+
+# Local-only scratch space (planning notes, reference PDFs, etc.)
+.local/
