@@ -54,9 +54,9 @@ def test_suggest_merges_returns_all_pairs_for_three_clusters() -> None:
 
 def test_well_separated_clusters_are_not_recommended_to_merge() -> None:
     rng = np.random.default_rng(1)
-    X = np.vstack(
-        [rng.normal(loc, 0.2, size=(50, 3)) for loc in ((-8, 0, 0), (8, 0, 0))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.2, size=(50, 3)) for loc in ((-8, 0, 0), (8, 0, 0))]).astype(
+        np.float64
+    )
     result = _cheap_pipeline().fit(X)
     if result.n_clusters < 2:
         pytest.skip("fixture produced < 2 clusters on this run")
@@ -76,9 +76,9 @@ def test_touching_clusters_flag_recommended_under_permissive_thresholds() -> Non
     # gap_ratio is small, recommended can be forced by relaxing the
     # thresholds.
     rng = np.random.default_rng(2)
-    X = np.vstack(
-        [rng.normal(loc, 0.6, size=(80, 2)) for loc in ((-0.8, 0), (0.8, 0))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.6, size=(80, 2)) for loc in ((-0.8, 0), (0.8, 0))]).astype(
+        np.float64
+    )
     result = _cheap_pipeline(
         umap_kwargs={"n_neighbors": 10, "n_epochs": 200},
         hdbscan_optuna_trials=10,
@@ -120,17 +120,15 @@ def test_sort_by_cohesion_orders_descending() -> None:
     if result.n_clusters < 3:
         pytest.skip("fixture produced < 3 clusters on this run")
     by_cohesion = suggest_merges(result.hierarchy, result.embedding)
-    finite_cohesions = [
-        s.cohesion_ratio for s in by_cohesion if np.isfinite(s.cohesion_ratio)
-    ]
+    finite_cohesions = [s.cohesion_ratio for s in by_cohesion if np.isfinite(s.cohesion_ratio)]
     assert finite_cohesions == sorted(finite_cohesions, reverse=True)
 
 
 def test_cohesion_and_gap_ratios_are_within_documented_bounds() -> None:
     rng = np.random.default_rng(5)
-    X = np.vstack(
-        [rng.normal(loc, 0.3, size=(40, 2)) for loc in ((-5, 0), (5, 0), (0, 5))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.3, size=(40, 2)) for loc in ((-5, 0), (5, 0), (0, 5))]).astype(
+        np.float64
+    )
     result = _cheap_pipeline().fit(X)
     if result.n_clusters < 2:
         pytest.skip("fixture produced < 2 clusters on this run")
@@ -145,8 +143,15 @@ def test_cohesion_and_gap_ratios_are_within_documented_bounds() -> None:
 def test_unavailable_hierarchy_raises_runtime_error() -> None:
     hierarchy = HierarchicalStructure(
         available=False,
-        edges=np.zeros(0, dtype=[("parent", "<i8"), ("child", "<i8"),
-                                 ("lambda_val", "<f8"), ("child_size", "<i8")]),
+        edges=np.zeros(
+            0,
+            dtype=[
+                ("parent", "<i8"),
+                ("child", "<i8"),
+                ("lambda_val", "<f8"),
+                ("child_size", "<i8"),
+            ],
+        ),
         flat_to_node=np.full(0, -1, dtype=np.intp),
         labels=np.zeros(10, dtype=np.intp),
         n_samples=10,
@@ -159,9 +164,9 @@ def test_unavailable_hierarchy_raises_runtime_error() -> None:
 
 def test_rejects_bad_sort_by() -> None:
     rng = np.random.default_rng(6)
-    X = np.vstack(
-        [rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]).astype(
+        np.float64
+    )
     result = _cheap_pipeline().fit(X)
     if result.n_clusters < 2:
         pytest.skip("fixture produced < 2 clusters on this run")
@@ -171,9 +176,9 @@ def test_rejects_bad_sort_by() -> None:
 
 def test_rejects_bad_thresholds() -> None:
     rng = np.random.default_rng(7)
-    X = np.vstack(
-        [rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]).astype(
+        np.float64
+    )
     result = _cheap_pipeline().fit(X)
     if result.n_clusters < 2:
         pytest.skip("fixture produced < 2 clusters on this run")
@@ -187,9 +192,9 @@ def test_rejects_bad_thresholds() -> None:
 
 def test_rejects_mismatched_embedding_shape() -> None:
     rng = np.random.default_rng(8)
-    X = np.vstack(
-        [rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]).astype(
+        np.float64
+    )
     result = _cheap_pipeline().fit(X)
     if result.n_clusters < 2:
         pytest.skip("fixture produced < 2 clusters on this run")
@@ -201,9 +206,9 @@ def test_rejects_mismatched_embedding_shape() -> None:
 
 def test_pipeline_result_suggest_merges_method_delegates() -> None:
     rng = np.random.default_rng(9)
-    X = np.vstack(
-        [rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(loc, 0.25, size=(40, 2)) for loc in ((-5, 0), (5, 0))]).astype(
+        np.float64
+    )
     result = _cheap_pipeline().fit(X)
     if result.n_clusters < 2:
         pytest.skip("fixture produced < 2 clusters on this run")
@@ -219,8 +224,9 @@ def test_pipeline_result_suggest_merges_method_delegates() -> None:
 def test_empty_hierarchy_returns_empty_list() -> None:
     # Synthesise a hierarchy with one flat cluster: no pairs to consider.
     labels = np.zeros(20, dtype=np.intp)
-    edges = np.zeros(0, dtype=[("parent", "<i8"), ("child", "<i8"),
-                               ("lambda_val", "<f8"), ("child_size", "<i8")])
+    edges = np.zeros(
+        0, dtype=[("parent", "<i8"), ("child", "<i8"), ("lambda_val", "<f8"), ("child_size", "<i8")]
+    )
     hierarchy = HierarchicalStructure(
         available=True,
         edges=edges,

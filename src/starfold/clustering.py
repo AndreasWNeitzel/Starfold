@@ -315,15 +315,11 @@ def run_hdbscan(
         raise ValueError(msg)
     if cluster_selection_method not in ("eom", "leaf"):
         msg = (
-            "cluster_selection_method must be 'eom' or 'leaf' "
-            f"(got {cluster_selection_method!r})."
+            f"cluster_selection_method must be 'eom' or 'leaf' (got {cluster_selection_method!r})."
         )
         raise ValueError(msg)
     if cluster_selection_epsilon < 0.0:
-        msg = (
-            "cluster_selection_epsilon must be >= 0.0 "
-            f"(got {cluster_selection_epsilon})."
-        )
+        msg = f"cluster_selection_epsilon must be >= 0.0 (got {cluster_selection_epsilon})."
         raise ValueError(msg)
     if alpha <= 0.0:
         msg = f"alpha must be > 0.0 (got {alpha})."
@@ -371,10 +367,7 @@ def _validate_search_inputs(
         msg = f"ms_range must satisfy 1 <= low <= high (got {ms_range})."
         raise ValueError(msg)
     if objective not in ("persistence_sum", "combined_geom"):
-        msg = (
-            "objective must be 'persistence_sum' or 'combined_geom' "
-            f"(got {objective!r})."
-        )
+        msg = f"objective must be 'persistence_sum' or 'combined_geom' (got {objective!r})."
         raise ValueError(msg)
     if not cluster_selection_methods:
         msg = "cluster_selection_methods must contain at least one method."
@@ -535,17 +528,13 @@ def search_hdbscan(
         n_samples = int(labels.shape[0])
         persistence = np.asarray(result.cluster_persistence, dtype=np.float64)
         return {
-            "relative_validity": (
-                _relative_validity(model) if model is not None else float("nan")
-            ),
+            "relative_validity": (_relative_validity(model) if model is not None else float("nan")),
             "n_clusters": float(result.n_clusters),
             "outlier_fraction": float((labels == -1).sum()) / float(max(n_samples, 1)),
             "persistence_sum": float(persistence.sum()) if persistence.size else 0.0,
             "persistence_max": float(persistence.max()) if persistence.size else 0.0,
             "persistence_mean": float(persistence.mean()) if persistence.size else 0.0,
-            "persistence_median": (
-                float(np.median(persistence)) if persistence.size else 0.0
-            ),
+            "persistence_median": (float(np.median(persistence)) if persistence.size else 0.0),
         }
 
     def _score(attrs: dict[str, float]) -> float:

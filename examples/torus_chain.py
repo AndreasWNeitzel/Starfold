@@ -27,6 +27,7 @@ tridiagonal + corners linking matrix (adjacent tori link with linking
 number +/-1, non-adjacent pairs link with zero). The eight tori form
 a topologically proper closed chain with no body overlaps.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -41,7 +42,10 @@ def _frame(theta: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 def _axes_radius(
-    k: int, theta: float, R_even: float, R_odd: float,
+    k: int,
+    theta: float,
+    R_even: float,
+    R_odd: float,
 ) -> tuple[np.ndarray, np.ndarray, float]:
     R_hat, T_hat, Z = _frame(theta)
     if k % 2 == 0:
@@ -159,9 +163,7 @@ def linking_number(
     centre_j = big_radius * R_hat_j
     u_j, v_j, major_j = _axes_radius(j, theta_j, major_even, major_odd)
     u = np.linspace(0.0, 2 * np.pi, n, endpoint=False) + np.pi / (2 * n)
-    ring_j = centre_j + major_j * (
-        np.cos(u)[:, None] * u_j + np.sin(u)[:, None] * v_j
-    )
+    ring_j = centre_j + major_j * (np.cos(u)[:, None] * u_j + np.sin(u)[:, None] * v_j)
 
     d = (ring_j - centre_i) @ n_i
     d_next = np.roll(d, -1)

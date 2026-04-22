@@ -114,12 +114,8 @@ class UncertaintyPropagation:
     def summary(self) -> str:
         """Short human-readable summary of instability statistics."""
         mean_instab = float(self.instability.mean()) if self.instability.size else 0.0
-        frac_high = (
-            float((self.instability > 0.5).mean()) if self.instability.size else 0.0
-        )
-        flipped = (
-            int((self.consensus_label >= 0).sum()) if self.consensus_label.size else 0
-        )
+        frac_high = float((self.instability > 0.5).mean()) if self.instability.size else 0.0
+        flipped = int((self.consensus_label >= 0).sum()) if self.consensus_label.size else 0
         return (
             f"uncertainty propagation over {self.n_draws} draws\n"
             f"  mean instability  {mean_instab:.4f}\n"
@@ -355,7 +351,8 @@ def propagate_uncertainty(
     if jobs == 1:
         label_rows = [
             _one_draw(
-                x, sigma_grid,
+                x,
+                sigma_grid,
                 scaler=scaler,
                 umap_model=umap_model,
                 hdbscan_model=hdbscan_model,
@@ -367,7 +364,8 @@ def propagate_uncertainty(
         label_rows = list(
             Parallel(n_jobs=jobs, backend="loky", prefer="processes")(
                 delayed(_one_draw)(
-                    x, sigma_grid,
+                    x,
+                    sigma_grid,
                     scaler=scaler,
                     umap_model=umap_model,
                     hdbscan_model=hdbscan_model,
@@ -468,9 +466,7 @@ def build_replica_augmented_matrix(
         msg = f"X must be a 2-D array (got shape {x.shape})."
         raise ValueError(msg)
     n_samples, n_features = x.shape
-    sigma_grid, _ = _broadcast_sigma(
-        sigma, n_samples=n_samples, n_features=n_features
-    )
+    sigma_grid, _ = _broadcast_sigma(sigma, n_samples=n_samples, n_features=n_features)
     if n_replicas == 0:
         return x.copy(), np.arange(n_samples, dtype=np.intp)
     rng = np.random.default_rng(random_state)
@@ -614,7 +610,6 @@ class UncertaintyAwareFit:
             f"starfold uncertainty-aware fit "
             f"(n_replicas={self.n_replicas}, "
             f"sigma mean={self.sigma_summary[0]:.4g}, "
-            f"max={self.sigma_summary[1]:.4g})\n"
-            + "=" * 32
+            f"max={self.sigma_summary[1]:.4g})\n" + "=" * 32
         )
         return f"{header}\n{fit_summary}\n\n{prop_summary}"

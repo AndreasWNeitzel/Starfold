@@ -123,9 +123,7 @@ def test_save_load_round_trip_with_baseline(
     assert loaded["credibility"]["per_cluster_significant_count"] == int(
         cred.per_cluster_significant.sum()
     )
-    assert loaded["credibility"]["per_cluster_total"] == int(
-        cred.per_cluster_significant.size
-    )
+    assert loaded["credibility"]["per_cluster_total"] == int(cred.per_cluster_significant.size)
 
 
 def test_scaler_round_trip_preserves_transform(

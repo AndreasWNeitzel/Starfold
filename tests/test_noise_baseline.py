@@ -66,9 +66,7 @@ def test_baseline_shapes_and_types() -> None:
     assert result.null_cluster_persistence.ndim == 1
     assert result.null_cluster_size.shape == result.null_cluster_persistence.shape
     assert result.null_cluster_realisation.shape == result.null_cluster_persistence.shape
-    assert result.null_cluster_persistence.size == int(
-        result.per_realisation_n_clusters.sum()
-    )
+    assert result.null_cluster_persistence.size == int(result.per_realisation_n_clusters.sum())
     # Sizes are positive integers; realisation indices are in range.
     if result.null_cluster_size.size:
         assert np.all(result.null_cluster_size >= 1)
@@ -109,22 +107,31 @@ def test_baseline_parallel_matches_sequential() -> None:
     serial = _baseline(random_state=7, n_realisations=4)
     parallel = _baseline(random_state=7, n_realisations=4, n_jobs=2)
     np.testing.assert_allclose(
-        serial.per_realisation_max, parallel.per_realisation_max, atol=0.0,
+        serial.per_realisation_max,
+        parallel.per_realisation_max,
+        atol=0.0,
     )
     np.testing.assert_array_equal(
-        serial.per_realisation_n_clusters, parallel.per_realisation_n_clusters,
+        serial.per_realisation_n_clusters,
+        parallel.per_realisation_n_clusters,
     )
     np.testing.assert_allclose(
-        serial.per_realisation_objective, parallel.per_realisation_objective, atol=0.0,
+        serial.per_realisation_objective,
+        parallel.per_realisation_objective,
+        atol=0.0,
     )
     np.testing.assert_allclose(
-        serial.null_cluster_persistence, parallel.null_cluster_persistence, atol=0.0,
+        serial.null_cluster_persistence,
+        parallel.null_cluster_persistence,
+        atol=0.0,
     )
     np.testing.assert_array_equal(
-        serial.null_cluster_size, parallel.null_cluster_size,
+        serial.null_cluster_size,
+        parallel.null_cluster_size,
     )
     np.testing.assert_array_equal(
-        serial.null_cluster_realisation, parallel.null_cluster_realisation,
+        serial.null_cluster_realisation,
+        parallel.null_cluster_realisation,
     )
 
 
@@ -145,13 +152,17 @@ def test_baseline_cache_round_trip(tmp_path: Path) -> None:
     second = _baseline(cache_dir=tmp_path)
     np.testing.assert_allclose(first.per_realisation_max, second.per_realisation_max, atol=0.0)
     np.testing.assert_allclose(
-        first.null_cluster_persistence, second.null_cluster_persistence, atol=0.0,
+        first.null_cluster_persistence,
+        second.null_cluster_persistence,
+        atol=0.0,
     )
     np.testing.assert_array_equal(
-        first.null_cluster_size, second.null_cluster_size,
+        first.null_cluster_size,
+        second.null_cluster_size,
     )
     np.testing.assert_array_equal(
-        first.null_cluster_realisation, second.null_cluster_realisation,
+        first.null_cluster_realisation,
+        second.null_cluster_realisation,
     )
     assert second.cache_path == first.cache_path
 

@@ -136,9 +136,7 @@ def _fit_umap_cpu(
     # is set so output is bit-reproducible. When the caller does not ask
     # for reproducibility (random_state is None), parallelise across all
     # cores by default -- this is the knn-graph bottleneck for large N.
-    resolved_n_jobs = (
-        n_jobs if n_jobs is not None else (1 if random_state is not None else -1)
-    )
+    resolved_n_jobs = n_jobs if n_jobs is not None else (1 if random_state is not None else -1)
     reducer = umap.UMAP(
         n_neighbors=n_neighbors,
         min_dist=min_dist,

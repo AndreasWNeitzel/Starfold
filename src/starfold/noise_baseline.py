@@ -167,15 +167,9 @@ def _load_cached(path: Path) -> NoiseBaselineResult | None:
             per_realisation = np.asarray(payload["per_realisation_max"], dtype=np.float64)
             # Legacy caches (pre-credibility / pre-percluster) are
             # invalidated by demanding every key be present.
-            per_n_clusters = np.asarray(
-                payload["per_realisation_n_clusters"], dtype=np.intp
-            )
-            per_objective = np.asarray(
-                payload["per_realisation_objective"], dtype=np.float64
-            )
-            null_pers = np.asarray(
-                payload["null_cluster_persistence"], dtype=np.float64
-            )
+            per_n_clusters = np.asarray(payload["per_realisation_n_clusters"], dtype=np.intp)
+            per_objective = np.asarray(payload["per_realisation_objective"], dtype=np.float64)
+            null_pers = np.asarray(payload["null_cluster_persistence"], dtype=np.float64)
             null_size = np.asarray(payload["null_cluster_size"], dtype=np.intp)
             null_real = np.asarray(payload["null_cluster_realisation"], dtype=np.intp)
             threshold = float(payload["threshold"])
@@ -530,9 +524,7 @@ def compute_noise_baseline(
         if per_pers.size:
             null_cluster_persistence_parts.append(per_pers)
             null_cluster_size_parts.append(per_sizes)
-            null_cluster_realisation_parts.append(
-                np.full(per_pers.size, k, dtype=np.intp)
-            )
+            null_cluster_realisation_parts.append(np.full(per_pers.size, k, dtype=np.intp))
 
     null_cluster_persistence = (
         np.concatenate(null_cluster_persistence_parts).astype(np.float64)

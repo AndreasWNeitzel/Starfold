@@ -109,9 +109,9 @@ def test_noncontiguous_labels_are_handled() -> None:
     # contiguous range. per_cluster must still be retrievable under the
     # original label values.
     rng = np.random.default_rng(5)
-    X = np.vstack(
-        [rng.normal(c, 0.25, size=(12, 2)) for c in ((-5, 0), (5, 0), (0, 5))]
-    ).astype(np.float64)
+    X = np.vstack([rng.normal(c, 0.25, size=(12, 2)) for c in ((-5, 0), (5, 0), (0, 5))]).astype(
+        np.float64
+    )
     labels = np.repeat([0, 3, 7], 12).astype(np.intp)
     ours = chunked_silhouette(X, labels, chunk_size=8)
     assert ours.per_cluster.shape == (8,)

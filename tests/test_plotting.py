@@ -187,8 +187,11 @@ def test_plot_credibility_returns_three_axes() -> None:
         config={"objective": "persistence_sum"},
     )
     report = compute_credibility(
-        n_clusters=6, best_objective=5.0, max_persistence=0.9,
-        baseline=baseline, alpha=0.05,
+        n_clusters=6,
+        best_objective=5.0,
+        max_persistence=0.9,
+        baseline=baseline,
+        alpha=0.05,
     )
     axes = plot_credibility(report)
     assert len(axes) == 3
@@ -212,7 +215,9 @@ def test_plot_credibility_rejects_wrong_axes_count() -> None:
         config={"objective": "persistence_sum"},
     )
     report = compute_credibility(
-        n_clusters=2, best_objective=0.5, max_persistence=0.5,
+        n_clusters=2,
+        best_objective=0.5,
+        max_persistence=0.5,
         baseline=baseline,
     )
     fig, ax = plt.subplots()
@@ -239,8 +244,12 @@ def test_plot_per_cluster_credibility_smoke() -> None:
     )
     observed = np.array([0.9, 0.2, 0.05])
     report = compute_credibility(
-        n_clusters=3, best_objective=3.0, max_persistence=0.9,
-        baseline=baseline, cluster_persistence=observed, alpha=0.05,
+        n_clusters=3,
+        best_objective=3.0,
+        max_persistence=0.9,
+        baseline=baseline,
+        cluster_persistence=observed,
+        alpha=0.05,
     )
     ax = plot_per_cluster_credibility(report)
     # One bar per cluster.
@@ -263,7 +272,9 @@ def test_plot_per_cluster_credibility_handles_no_clusters() -> None:
         config={"objective": "persistence_sum"},
     )
     report = compute_credibility(
-        n_clusters=0, best_objective=0.0, max_persistence=0.0,
+        n_clusters=0,
+        best_objective=0.0,
+        max_persistence=0.0,
         baseline=baseline,
     )
     ax = plot_per_cluster_credibility(report)
