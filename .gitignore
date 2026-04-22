@@ -50,3 +50,6 @@ uv.lock
 
 # Paper PDFs kept locally for reference
 *.pdf
+
+# Local files
+.local/
