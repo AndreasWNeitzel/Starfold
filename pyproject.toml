@@ -56,6 +56,11 @@ dev = [
     "pre-commit>=3.7",
     "nbstripout>=0.7",
     "jupyter>=1.0",
+    # hdbscan's ``relative_validity_`` (used as a per-trial diagnostic in
+    # search_hdbscan and rendered by plot_tuning_dashboard) internally
+    # requires pandas via ``minimum_spanning_tree_.to_pandas()``. Not a
+    # runtime dep: starfold's numerical API is pandas-free.
+    "pandas>=2.0",
 ]
 
 [project.urls]

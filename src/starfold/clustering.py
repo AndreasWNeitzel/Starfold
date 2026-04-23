@@ -174,10 +174,16 @@ def _fit_cpu_with_model(
 
 
 def _relative_validity(model: _hdbscan.HDBSCAN) -> float:
-    """Return HDBSCAN's MST-based DBCV proxy, or NaN if unavailable."""
+    """Return HDBSCAN's MST-based DBCV proxy, or NaN if unavailable.
+
+    ``hdbscan.HDBSCAN.relative_validity_`` materialises the minimum
+    spanning tree via pandas internally, so it raises ``ImportError``
+    when pandas is absent. Catch it so minimal installs degrade the
+    diagnostic to NaN instead of crashing the Optuna trial.
+    """
     try:
         return float(model.relative_validity_)
-    except (AttributeError, ValueError, ZeroDivisionError):
+    except (AttributeError, ImportError, ValueError, ZeroDivisionError):
         return float("nan")
 
 
