@@ -56,6 +56,9 @@ dev = [
     "pre-commit>=3.7",
     "nbstripout>=0.7",
     "jupyter>=1.0",
+    # Pair the .ipynb tutorials with .py:percent source-of-truth files
+    # so notebook diffs are reviewable as plain Python.
+    "jupytext>=1.16",
     # hdbscan's ``relative_validity_`` (used as a per-trial diagnostic in
     # search_hdbscan and rendered by plot_tuning_dashboard) internally
     # requires pandas via ``minimum_spanning_tree_.to_pandas()``. Not a
@@ -80,6 +83,7 @@ src = ["src", "tests"]
 extend-exclude = [
     "legacy",
     "docs/tutorial_*.ipynb",
+    "docs/tutorial_*.py",
     "build",
     "dist",
 ]
