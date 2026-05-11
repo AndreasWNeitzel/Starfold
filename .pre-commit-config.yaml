@@ -24,8 +24,20 @@ repos:
         args: ["--strict", "--ignore-missing-imports"]
         files: ^src/
 
+  - repo: https://github.com/mwouts/jupytext
+    rev: v1.16.4
+    hooks:
+      - id: jupytext
+        args: ["--sync"]
+        files: ^docs/tutorial_.*\.(ipynb|py)$
+
   - repo: https://github.com/kynan/nbstripout
     rev: 0.7.1
     hooks:
       - id: nbstripout
-        files: \.ipynb$
+        # Strip outputs from the legacy reference notebook only. The
+        # four tutorial notebooks deliberately keep their rendered
+        # outputs so GitHub's notebook viewer shows the full story; the
+        # .py:percent pair (paired via jupytext above) is the
+        # source-of-truth for code review.
+        files: ^legacy/.*\.ipynb$
