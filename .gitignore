@@ -53,3 +53,6 @@ uv.lock
 
 # Local files
 .local/
+
+# Local files
+reviews/
