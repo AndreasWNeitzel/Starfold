@@ -1075,7 +1075,11 @@ def plot_condensed_tree(
     except (AttributeError, ValueError) as exc:
         axis.text(0.5, 0.5, f"condensed tree unavailable\n({exc})", ha="center", va="center")
         return axis
-    axis.set_xlabel("")
+    # ``hdbscan.plots.CondensedTree.plot`` labels the y-axis itself as
+    # "$\lambda$ value" (the inverse density-merge distance) but leaves
+    # the x-axis empty -- the x-coordinate is just each cluster's
+    # position along the dendrogram layout.
+    axis.set_xlabel("cluster (dendrogram layout)")
     return axis
 
 

@@ -115,6 +115,12 @@ def empirical_upper_tail_pvalue(
     if arr.size == 0:
         msg = "null_samples must be non-empty."
         raise ValueError(msg)
+    # ``NaN >= x`` is always False in NumPy, so a non-finite observed
+    # value would silently return ``1 / (n + 1)``. Surface it as NaN so
+    # downstream credibility reports cannot mistake a failed upstream
+    # objective for a strong empirical p-value.
+    if not np.isfinite(float(observed)):
+        return float("nan")
     r = int(np.sum(arr >= observed))
     return float((r + 1) / (arr.size + 1))
 
