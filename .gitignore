@@ -53,3 +53,6 @@ uv.lock
 
 # Local-only scratch space (planning notes, reference PDFs, etc.)
 .local/
+
+# Subagent review reports (regenerated on demand, not committed)
+reviews/

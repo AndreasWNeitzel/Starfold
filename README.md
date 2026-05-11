@@ -93,21 +93,39 @@ embedding by instability.
 
 ## Install
 
+`starfold` is not on PyPI yet, so install directly from this
+repository. Python 3.11 or 3.12 is required.
+
+From GitHub, with `pip`:
+
 ```bash
-pip install starfold
+pip install "git+https://github.com/AndreasWNeitzel/Starfold.git"
 ```
 
-For development:
+Or with [`uv`](https://docs.astral.sh/uv/) (recommended):
 
 ```bash
-git clone https://github.com/AndreasWNeitzel/starfold
-cd starfold
+uv pip install "git+https://github.com/AndreasWNeitzel/Starfold.git"
+```
+
+To pin a specific commit (or tag), append `@<sha>`:
+
+```bash
+pip install "git+https://github.com/AndreasWNeitzel/Starfold.git@8a774f9"
+```
+
+For local development (editable install + linters, type-checker,
+tests, notebook tooling):
+
+```bash
+git clone https://github.com/AndreasWNeitzel/Starfold.git
+cd Starfold
 pip install -e ".[dev]"
 ```
 
-Python 3.11 or 3.12 is required. Optional GPU acceleration through
-`cuml` (RAPIDS) is used automatically when importable; CPU is the
-default and is always available.
+Optional GPU acceleration through `cuml` (RAPIDS) is picked up
+automatically when importable; CPU is the default and is always
+available.
 
 ## Quickstart
 
