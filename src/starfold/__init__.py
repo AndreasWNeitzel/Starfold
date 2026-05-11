@@ -12,9 +12,9 @@ The top-level namespace exposes the symbols a new user needs to go
 from ``X`` to a validated clustering with a single import: the
 pipeline classes, the four analytic building blocks (embedding,
 trustworthiness, clustering, noise baseline), the science extensions
-(credibility, uncertainty, merge, silhouette), a compact set of
-publication-ready plots, on-disk I/O, and the data-size-aware
-diagnostic helpers.
+(credibility, uncertainty, merge, silhouette, subsample stability), a
+compact set of publication-ready plots, on-disk I/O, and the
+data-size-aware diagnostic helpers.
 
 Advanced objects -- result dataclasses returned by the building
 blocks, dashboard-panel plot primitives, and the engine type alias --
@@ -48,6 +48,7 @@ from starfold.plotting import (
     plot_uncertainty_map,
 )
 from starfold.silhouette import chunked_silhouette
+from starfold.stability import compute_subsample_stability
 from starfold.trustworthiness import (
     continuity,
     continuity_curve,
@@ -63,6 +64,7 @@ __all__ = [
     "chunked_silhouette",
     "compute_credibility",
     "compute_noise_baseline",
+    "compute_subsample_stability",
     "continuity",
     "continuity_curve",
     "cuml_is_importable",

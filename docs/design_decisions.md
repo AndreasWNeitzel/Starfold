@@ -178,6 +178,26 @@ prop.confident_labels(0.8)`.
 | Preprocessing | `StandardScaler` inside `UnsupervisedPipeline` | The paper scales features before UMAP. Done once, inside the pipeline, so callers do not double-scale. |
 | `k` for trustworthiness | `n_neighbors` from UMAP | The paper reports $T(k)$ at $k = n_\text{neighbors}$. Capped to `max(1, (n_samples - 1) // 2)` so small samples do not divide by zero. |
 
+## Robustness diagnostics
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| `chunked_silhouette` chunk size | `512` (rows per chunk) | A 512×N float64 chunk is ~4 MB per chunk at N = 1 000. Big enough that BLAS-level vectorisation amortises Python overhead; small enough to keep the peak memory footprint bounded for N ≥ 10⁴. Users can override on either axis. |
+| Silhouette cross-check | `atol=1e-10` vs `sklearn.metrics.silhouette_score` | The chunked accumulator and sklearn's single-pass implementation must agree to numerical precision on the overall mean. The per-cluster aggregates are starfold-specific (sklearn returns only the overall score). |
+| Subsample-stability resamples | 20 subsamples × `subsample_fraction=0.8` | A small enough budget that the diagnostic is cheap relative to the fit, large enough that the ARI distribution is informative. The 80 % fraction matches the convention used in scikit-learn cross-validation defaults. |
+| Subsample-stability matching | Hungarian alignment on majority overlap | Cluster labels are arbitrary across refits; ARI is label-invariant but the per-cluster persistence comparison is not. Hungarian alignment on the contingency table is the standard cluster-matching choice. |
+
+## Plotting defaults
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Default figure size | `(6, 5)` inches for single-panel; constrained-layout multi-panel for dashboards | One-column on a Retina screen, 2:1 aspect-ratio for the typical scatter / curve plot. Dashboards override to match panel count. |
+| Colourmap for categorical labels | `tab10` (≤10 clusters) and `tab20` (≤20); fall back to viridis-derived sampling beyond | The Matplotlib defaults; chosen to remain distinguishable on colourblind palettes without rainbows. |
+| Colourmap for sequential data | `viridis`; diverging is `coolwarm` | Per CLAUDE.md global §3 (no rainbow defaults). |
+| Outlier colour | `lightgrey` | HDBSCAN outliers (label `-1`) should fade visually so the cluster signal dominates. |
+| Point size | `point_size=8` by default | Legible at 1 000–10 000 samples on a screen; users override on dense embeddings. |
+| Dashboard `constrained_layout=True` | Always | Avoids panel overlap without needing per-call `tight_layout` calls; matplotlib's recommended default for multi-axes figures. |
+
 ## Python / tooling
 
 | Decision | Choice | Rationale |
