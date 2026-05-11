@@ -117,7 +117,130 @@ this threshold. The baseline is deliberately expensive; `starfold`
 caches each result on a SHA-256 of the inputs under
 `platformdirs.user_cache_dir("starfold")`.
 
-## 6. What is *not* in this package
+---
+
+The five sections above are the paper-§3 core. The next four sections
+document the package's intentional extensions beyond paper §3. Each
+extension was added because the paper's per-cluster threshold and
+post-hoc workflow leave concrete questions unanswered for users who
+adopt the methodology in a new domain. They share the core pipeline's
+one-result-object idiom: every extension is either a method on
+`PipelineResult` or a free function that operates on one.
+
+## 6. Global credibility test
+
+The per-cluster `significant` flag (§5) asks one question: *is this
+cluster stronger than what noise typically produces?* It is silent on
+a strictly weaker question that users actually ask first: *is the run
+as a whole distinguishable from noise?* HDBSCAN returns at least one
+cluster on almost any input including pure noise; without a global
+test, a passing per-cluster flag can coexist with a run-level result
+that is no stronger than the noise null.
+
+`starfold.compute_credibility` (called automatically by
+`UnsupervisedPipeline.fit` whenever the noise baseline runs) computes
+an omnibus 3σ test on three per-run scalars:
+
+- the number of clusters HDBSCAN returns,
+- the best Optuna objective (sum of cluster persistences) the search reached,
+- the largest single-cluster persistence in the final fit.
+
+For each axis, the observed scalar is compared one-sided upper-tail
+against its empirical null — the distribution of the same scalar
+across the noise-baseline realisations — using the Phipson & Smyth
+(2010) finite-population correction
+$p = (r + 1) / (n + 1)$ where $r$ is the count of null samples that
+meet or exceed the observed value. The run "passes" at 3σ when all
+three axis p-values clear an ``alpha`` threshold (default
+$0.00135 \approx 1 - 0.997$, matching paper §3.3's one-sided 3σ gate).
+
+`starfold` *also* pools every cluster's persistence from every noise
+realisation into a single global null and computes a per-cluster
+upper-tail empirical p-value against it. The paper's binary threshold
+becomes one specific decision rule over a continuous credibility
+score; users who care about magnitude (rather than pass/fail) read
+the per-cluster p-values directly.
+
+This is paper-silent methodology. It is documented in
+`docs/design_decisions.md` and exposed in code as
+`compute_credibility` / `CredibilityReport`.
+
+## 7. Input-uncertainty handling
+
+The paper assumes a single feature value per sample. Many domains
+(stellar spectroscopy, single-cell RNA-seq, sensor measurements)
+carry per-feature 1σ error bars; the obvious question is
+*how confident is each sample's assignment under its own error
+cloud?* `starfold` answers this in two complementary modes.
+
+**Mode A — post-hoc propagation.** `result.propagate_uncertainty(X,
+sigma=...)` freezes a clean fit and Monte Carlos the input through
+the trained UMAP-and-HDBSCAN pipeline (via
+`hdbscan.approximate_predict`). For each Monte Carlo draw, the
+perturbed sample is projected into the existing embedding and queried
+against the fitted condensed tree; aggregating across draws gives a
+membership-probability vector per sample and an instability scalar.
+The result is "given the clustering I already trust, how robust is
+each individual assignment?"
+
+**Mode B — uncertainty-aware fit.** `pipeline.fit_with_uncertainty(X,
+sigma=..., n_replicas=...)` builds an augmented matrix of the clean
+samples stacked with `n_replicas` Gaussian replicas and feeds the
+whole thing through the full pipeline. UMAP and HDBSCAN therefore see
+the error bars as *spread* in the manifold rather than as a
+postprocessing concern, and the noise baseline and credibility test
+are computed against this enlarged sample. The result is "what
+clustering does the data support when its uncertainty is part of the
+fit?"
+
+`sigma` accepts a scalar, a per-feature vector, or a
+per-sample-per-feature matrix. Both modes are deterministic for fixed
+`random_state`. Neither is in the paper.
+
+## 8. Hierarchical refinement
+
+The paper's two-run workflow (fit the full sample, then refit each
+top-level component separately) is a *scientific* choice for the
+astronomy application: it encodes the prior that top-level structure
+is disk-vs-halo. As §10 below notes, the package does not bake this
+in; instead it provides the primitives that make any such workflow
+domain-agnostic:
+
+- `result.refit_subcluster(X, cluster_id=...)` runs the full pipeline
+  (UMAP, Optuna, noise baseline, credibility test) on the subset
+  `X[result.labels == cluster_id]`, returning a new `PipelineResult`
+  scoped to the refinement.
+- `result.suggest_merges()` flags cluster pairs where the HDBSCAN
+  condensed tree (density) *and* the 2-D embedding geometry
+  (centroid gap relative to intra-cluster dispersion) both agree the
+  clusters should be one. Disagreements are kept apart by design.
+- `starfold.hierarchy.HierarchicalStructure` exposes the condensed
+  tree as a first-class object so users can implement custom
+  traversals.
+
+The two-run paper workflow becomes one call to `refit_subcluster`
+per component of interest; the merge recommender solves the converse
+problem of over-splitting.
+
+## 9. Robustness diagnostics
+
+Two scalar diagnostics, paper-silent but cheap:
+
+- `chunked_silhouette` computes sklearn's silhouette coefficient *and*
+  the per-cluster aggregates without materialising the N×N distance
+  matrix. The user controls the chunk size explicitly (default
+  ``chunk_size=512``); cross-tested against
+  `sklearn.metrics.silhouette_score` at ``atol=1e-10``.
+- `compute_subsample_stability` refits HDBSCAN on random subsamples of
+  the fitted 2-D embedding and reports adjusted-Rand-index agreement
+  with the full-sample labels plus cluster-count variance across
+  resamples. Distinct from the noise baseline (which asks about
+  noise) and from the credibility test (which asks about the run as a
+  whole).
+
+## 10. What is *not* in this package
+
+Items explicitly out of scope:
 
 Items explicitly out of scope:
 
