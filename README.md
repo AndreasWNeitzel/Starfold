@@ -167,10 +167,13 @@ result.save("run_01/")
 
 ## Tutorials
 
-Four short, focused notebooks under `docs/`:
+The front door for a first-time user is the comprehensive
+walkthrough; the four focused notebooks are deep-dives that the
+walkthrough cross-references when you want more on a specific topic.
 
 | # | Notebook | What it covers |
 |---|---|---|
+| 0 | [`tutorial_00_walkthrough.ipynb`](docs/tutorial_00_walkthrough.ipynb) | **Start here.** Every public function, in order, with a visual demo for each. Zero prior knowledge assumed. Run top-to-bottom for a guided tour of the package. |
 | 1 | [`tutorial_01_quickstart.ipynb`](docs/tutorial_01_quickstart.ipynb) | 30-second story: fit the pipeline, read the summary, look at the embedding. Synthetic torus chain. |
 | 2 | [`tutorial_02_validation.ipynb`](docs/tutorial_02_validation.ipynb) | Noise baseline, 3σ credibility test, tuning and quality dashboards. |
 | 3 | [`tutorial_03_advanced.ipynb`](docs/tutorial_03_advanced.ipynb) | Chunked silhouette, merge recommender, sub-cluster refit, uncertainty propagation, uncertainty-aware fit. |
@@ -185,13 +188,17 @@ so the notebook runs offline.
 | Module | Purpose |
 |---|---|
 | `starfold.embedding` | Thin wrappers: `run_umap`, `run_tsne`, `run_pca`. |
-| `starfold.trustworthiness` | Venna & Kaski (2001) $T(k)$, cross-tested against `sklearn`. |
-| `starfold.clustering` | `run_hdbscan` and `search_hdbscan` (Optuna TPE over MCS/MS). |
+| `starfold.trustworthiness` | Venna & Kaski (2001) $T(k)$ and the dual continuity $C(k)$, both with vectorised `_curve` variants; cross-tested against `sklearn`. |
+| `starfold.clustering` | `run_hdbscan` and `search_hdbscan` (Optuna TPE over MCS, MS, cluster-selection-method, alpha, epsilon). |
 | `starfold.noise_baseline` | 99.7th-percentile persistence baseline with on-disk caching. |
 | `starfold.credibility` | Global 3σ credibility test and per-cluster p-values vs the noise null (`compute_credibility`, `CredibilityReport`). |
 | `starfold.uncertainty` | Input-uncertainty propagation *and* uncertainty-aware fitting: `propagate_uncertainty` / `UncertaintyPropagation` freeze a clean fit and Monte Carlo perturbations against it, while `UnsupervisedPipeline.fit_with_uncertainty` feeds an augmented replica matrix through the full pipeline and returns an `UncertaintyAwareFit`. |
-| `starfold.diagnostics` | Input validation (`validate_input_matrix`), fit diagnostics surfaced in `PipelineResult.flags` (`diagnose_fit`), data-size-aware defaults (`auto_mcs_upper`, `recommend_budget`). |
-| `starfold.pipeline` | `UnsupervisedPipeline` orchestrates all four steps. |
+| `starfold.hierarchy` | Public access to HDBSCAN's condensed tree (`HierarchicalStructure`, `extract_hierarchy`) so callers can walk the merge structure directly. |
+| `starfold.merge` | Cluster-merge recommender (`suggest_merges`) that requires density (tree cohesion) *and* embedding geometry (centroid gap) to agree before flagging a pair. |
+| `starfold.silhouette` | Memory-efficient silhouette (`chunked_silhouette`) returning overall, per-sample, and per-cluster aggregates without ever materialising the N x N distance matrix. |
+| `starfold.stability` | Subsample-stability diagnostic (`compute_subsample_stability`) reporting cluster-count variance and ARI across resampled embeddings. |
+| `starfold.diagnostics` | Input validation (`validate_input_matrix`), fit diagnostics surfaced in `PipelineResult.flags`, data-size-aware defaults (`auto_mcs_upper`, `recommend_budget`). |
+| `starfold.pipeline` | `UnsupervisedPipeline` and `PipelineResult` orchestrate the full sequence and own the audit trail. |
 | `starfold.plotting` | `plot_embedding`, `plot_trustworthiness_curve`, and a family of tuning / quality diagnostic panels composable into `PipelineResult.plot_tuning_dashboard` and `plot_quality_dashboard`. |
 | `starfold.io` | `PipelineResult.save` / `load_pipeline_result`. |
 
