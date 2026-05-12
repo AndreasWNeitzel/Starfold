@@ -18,25 +18,27 @@
 #
 # This notebook is the front door to the package. It takes you from
 # "I have a matrix of numbers" to "I have a clustering I trust, with
-# audit panels next to it, and I know what each piece of the pipeline
-# is doing". Run the cells top to bottom; you do not need to have read
-# the source first.
+# audit panels next to it" and explains each piece in between.
+# Run the cells top to bottom; you do not need to have read the
+# source first.
 #
-# **What you will meet, in order.**
+# **The story arc.**
 #
-# 1. A simple synthetic dataset to cluster.
-# 2. Input validation and sample-size-aware defaults.
+# 1. A real dataset to work with (8x8 handwritten digits).
+# 2. Input validation and sample-size budgets.
 # 3. The one-line `pipeline.fit(X)` and what comes back.
-# 4. The four core building blocks (UMAP / t-SNE / PCA, HDBSCAN, Optuna search, trustworthiness).
-# 5. The noise baseline and the global credibility test.
-# 6. Robustness diagnostics (chunked silhouette, subsample stability).
-# 7. Hierarchical refinement (merge suggestions, sub-cluster refit).
-# 8. Input-uncertainty handling (post-hoc Monte Carlo and uncertainty-aware fit).
-# 9. Saving, reloading, and one-line audit dashboards.
+# 4. The four core building blocks (UMAP/t-SNE/PCA, Optuna-tuned HDBSCAN, trustworthiness).
+# 5. Is this real? Noise baseline and the global credibility test.
+# 6. How stable is it? Chunked silhouette and subsample stability.
+# 7. Every dashboard panel, introduced individually.
+# 8. The two single-call audit dashboards (now every panel is familiar).
+# 9. Refinement after the audit, with a before-and-after comparison.
+# 10. Input-uncertainty handling.
+# 11. Save and reload.
 #
-# Every public function in `starfold.__all__` is demonstrated at least
-# once. We use small, reproducible parameters so the notebook runs in
-# a few minutes on a laptop; production budgets are noted in prose.
+# Every public function in `starfold.__all__` is demonstrated at
+# least once. Demo budgets are intentionally small so the notebook
+# runs in a few minutes; production budgets are flagged in prose.
 
 # %% [markdown]
 # ## Set-up
@@ -48,7 +50,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.datasets import make_blobs
 
 import starfold as sf
 
@@ -76,61 +77,68 @@ print(f"GPU backend importable: {sf.cuml_is_importable()}")
 # the CPU path when cuml is not present.
 
 # %% [markdown]
-# ## §1. The dataset
+# ## §1. The dataset: 1 797 hand-written digits
 #
-# We start with a `(600, 5)` feature matrix drawn from three Gaussian
-# clumps that overlap mildly along most axes. Five dimensions is
-# enough that visual inspection of any two raw features is misleading
-# (clusters look smeared) but few enough that we can build intuition
-# along the way.
+# We will cluster sklearn's built-in `digits` dataset: 1 797 small
+# 8×8 grey-scale images of the digits 0-9. Each image is flattened
+# to a 64-dimensional feature vector before clustering. The task is
+# **unsupervised**: starfold never sees the ground-truth digit
+# labels.
+#
+# This is a more compelling demo than synthetic blobs because the
+# clusters are *real classes*, the dimensionality is high enough that
+# UMAP earns its place, and a few of the digit pairs (4/9, 1/7, 3/8)
+# are visually confusable, so the clustering will not just return
+# ten clean classes.
 
 # %%
-X, y_truth = make_blobs(
-    n_samples=600,
-    n_features=5,
-    centers=3,
-    cluster_std=1.6,
-    random_state=0,
-)
-print(f"X shape:     {X.shape}")
-print(f"feature ranges (min..max per column):")
-for i, (lo, hi) in enumerate(zip(X.min(axis=0), X.max(axis=0))):
-    print(f"  col {i}:  {lo:+.2f} .. {hi:+.2f}")
+from sklearn.datasets import load_digits  # noqa: E402
 
-# %% [markdown]
-# `y_truth` is the ground-truth label vector. The pipeline never sees
-# it; we keep it only to colour reference plots at the end.
+digits = load_digits()
+X = digits.data.astype(np.float64)          # (1797, 64) — feature matrix
+y_truth = digits.target.astype(np.intp)     # (1797,)    — ground-truth digit, used only for reference plots
+images = digits.images                      # (1797, 8, 8) — image form, for visualisation
+
+print(f"X shape:       {X.shape}")
+print(f"y_truth shape: {y_truth.shape}")
+print(f"unique classes: {np.unique(y_truth).tolist()}")
+print(f"pixel value range: {X.min():.1f} .. {X.max():.1f}")
 
 # %% [markdown]
 # ### What the raw data looks like
-#
-# Two pairwise-feature scatters of the same 600 samples, coloured by
-# the *true* component. Adjacent panels disagree on how separable the
-# clusters look. This is exactly why dimensionality reduction earns
-# its place.
 
 # %%
-fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.5), constrained_layout=True)
-for ax, (i, j) in zip(axes, [(0, 1), (2, 3)]):
-    ax.scatter(X[:, i], X[:, j], c=y_truth, cmap="tab10", s=10, alpha=0.85)
-    ax.set_xlabel(f"feature {i}")
-    ax.set_ylabel(f"feature {j}")
-    ax.set_title(f"raw features {i} vs {j} (coloured by truth)")
-fig.savefig(FIGURE_DIR / "01_raw_data.png")
+fig, axes = plt.subplots(2, 10, figsize=(11.5, 2.6), constrained_layout=True)
+for digit_id in range(10):
+    matches = np.where(y_truth == digit_id)[0]
+    for row, idx in enumerate(matches[:2]):
+        ax = axes[row, digit_id]
+        ax.imshow(images[idx], cmap="Greys", vmin=0, vmax=16)
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.grid(False)
+        if row == 0:
+            ax.set_title(str(digit_id), fontsize=10)
+fig.suptitle("two samples per digit (greyscale, 8x8 pixels)", y=1.04)
+fig.savefig(FIGURE_DIR / "01_raw_digits.png")
 plt.show()
 
 # %% [markdown]
+# The pixel-intensity range is `0..16` (an artefact of sklearn's
+# 4x4-pixel binning during dataset construction). Clusters in 64-dim
+# pixel space exist — same-digit images are similar in raw pixel
+# distance — but they are noisy and overlap. That is exactly the
+# setting in which a UMAP-and-HDBSCAN pipeline pays off.
+
+# %% [markdown]
 # ## §2. Before fitting: input validation and budgets
-#
-# Three small helpers run before any expensive work.
 
 # %% [markdown]
 # ### `validate_input_matrix`
 #
-# Catches the obvious mistakes (`X` is not 2-D, has NaN or inf, has a
-# constant column, or has fewer rows than `n_neighbors`). The
-# pipeline calls this internally; you can also call it yourself to
-# get a clear error before paying for a fit.
+# Catches the obvious mistakes (`X` is not 2-D, has NaN or inf, has
+# a constant column, has fewer rows than `n_neighbors`). The pipeline
+# calls this internally; you can also call it yourself to get a
+# clear error before paying for a fit.
 
 # %%
 sf.validate_input_matrix(X, n_neighbors=15)
@@ -141,8 +149,8 @@ print("input matrix validated.")
 #
 # Returns a dictionary of Optuna / noise-baseline budgets that scale
 # with `n_samples`. The paper's defaults (100 Optuna trials, 1 000
-# noise realisations with 20 sub-trials each) are right for a
-# production run on a workstation; smaller samples can use much less.
+# noise realisations × 20 sub-trials each) are right for a production
+# run on a workstation; smaller samples can use much less.
 
 # %%
 print(sf.recommend_budget(n_samples=X.shape[0]))
@@ -165,24 +173,22 @@ print(f"auto MCS upper bound for N={X.shape[0]}: {sf.auto_mcs_upper(X.shape[0])}
 # credibility test) and returns a single `PipelineResult` that owns
 # the audit trail.
 #
-# For this walkthrough we use small, fast budgets:
+# For this walkthrough we use small budgets:
 #
-# * `n_epochs=200` for UMAP (the paper default is 10 000; the demo
-#   converges fine on 200 because the clusters are well-separated),
-# * 30 Optuna trials,
-# * 15 noise realisations with 5 sub-trials each (paper: 1 000 × 20).
-#
-# Larger values give tighter intervals but take longer.
+# * `n_epochs=200` for UMAP (paper default is 10 000 for safety; 200
+#   converges fine on this dataset),
+# * 40 Optuna trials,
+# * 12 noise realisations × 5 sub-trials each (paper: 1 000 × 20).
 
 # %%
 import time  # noqa: E402
 
 pipeline = sf.UnsupervisedPipeline(
     umap_kwargs=dict(n_neighbors=15, min_dist=0.0, n_epochs=200),
-    hdbscan_optuna_trials=30,
+    hdbscan_optuna_trials=40,
     random_state=0,
     noise_baseline_kwargs=dict(
-        n_realisations=15,
+        n_realisations=12,
         per_realisation_trials=5,
     ),
 )
@@ -192,51 +198,61 @@ result = pipeline.fit(X)
 print(f"pipeline.fit took {time.perf_counter() - t0:.1f}s")
 
 # %% [markdown]
-# `result.summary()` is the printable verdict.
+# ### `result.summary()` — the printable verdict
 
 # %%
 print(result.summary())
 
 # %% [markdown]
-# ### A look at the embedding
+# ### The embedding, coloured by HDBSCAN label
 #
-# `plot_embedding` is the workhorse: scatter of the 2-D UMAP layout,
-# coloured by HDBSCAN label, outliers in grey.
+# `plot_embedding` is the workhorse: a scatter of the 2-D UMAP
+# layout, coloured by HDBSCAN cluster, outliers in grey.
 
 # %%
-fig, ax = plt.subplots(figsize=(7.0, 5.5), constrained_layout=True)
-sf.plot_embedding(result.embedding, result.labels, ax=ax)
-ax.set_title(f"UMAP embedding, {result.n_clusters} HDBSCAN clusters")
+fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.0), constrained_layout=True)
+sf.plot_embedding(result.embedding, result.labels, ax=axes[0])
+axes[0].set_title(f"UMAP embedding, {result.n_clusters} HDBSCAN clusters")
+axes[1].scatter(result.embedding[:, 0], result.embedding[:, 1],
+                c=y_truth, cmap="tab10", s=8, alpha=0.85)
+axes[1].set_xlabel("component 1"); axes[1].set_ylabel("component 2")
+axes[1].set_title("same embedding, coloured by true digit label")
 fig.savefig(FIGURE_DIR / "02_pipeline_embedding.png")
 plt.show()
 
 # %% [markdown]
+# Left: HDBSCAN's unsupervised labels. Right: the same points,
+# coloured by the *true* digit. The pipeline recovers most digit
+# classes; the visually-confusable pairs (e.g. 1/9, 4/9, 3/8) may
+# be merged into single clusters or split unevenly.
+
+# %% [markdown]
 # ### What lives on the result
 #
-# `PipelineResult` is an immutable dataclass that holds every artefact
+# `PipelineResult` is an immutable dataclass that owns every artefact
 # the pipeline produced. The most-used attributes:
 
 # %%
-print(f"embedding shape:      {result.embedding.shape}")
-print(f"labels (unique):      {np.unique(result.labels).tolist()}")
-print(f"persistence:          {[float(p) for p in result.persistence]}")
-print(f"trustworthiness:      {result.trustworthiness:.4f}")
-print(f"continuity:           {result.continuity:.4f}")
-print(f"n outliers:           {int(np.sum(result.labels == -1))}")
-print(f"flags (empty if OK):  {result.flags or '(none)'}")
+print(f"embedding shape:    {result.embedding.shape}")
+print(f"labels (unique):    {np.unique(result.labels).tolist()}")
+print(f"persistence:        {[round(float(p), 3) for p in result.persistence]}")
+print(f"trustworthiness:    {result.trustworthiness:.4f}")
+print(f"continuity:         {result.continuity:.4f}")
+print(f"n outliers:         {int(np.sum(result.labels == -1))}")
+print(f"flags (empty if OK): {result.flags or '(none)'}")
 
 # %% [markdown]
 # ## §4. The four core building blocks
 #
-# The pipeline orchestrates four independent primitives. Each is also
-# a public function you can call directly, with the same kwargs.
+# The pipeline orchestrates four independent primitives. Each is
+# also a public function callable with the same kwargs.
 
 # %% [markdown]
 # ### §4a. Manifold learning: `run_umap`, `run_tsne`, `run_pca`
 #
-# All three live in `starfold.embedding` and are thin wrappers around
-# the standard implementations. Below we project the *standardised*
-# `X` with each, then compare their layouts side by side.
+# All three live in `starfold.embedding`. They are thin wrappers
+# around the standard implementations and exist mainly to thread the
+# `random_state` and the GPU `engine` selector through consistently.
 #
 # Note: `run_umap` does not standardise its input (the pipeline does
 # this via `StandardScaler` before calling it). For a fair side-by-side
@@ -251,38 +267,35 @@ emb_umap = sf.run_umap(X_scaled, n_neighbors=15, min_dist=0.0, n_epochs=200, ran
 emb_tsne = sf.run_tsne(X_scaled, perplexity=30, n_iter=1_000, random_state=0)
 emb_pca = sf.run_pca(X_scaled, n_components=2, random_state=0)
 
-fig, axes = plt.subplots(1, 3, figsize=(15.0, 4.5), constrained_layout=True)
+fig, axes = plt.subplots(1, 3, figsize=(15.0, 4.7), constrained_layout=True)
 for ax, (name, emb) in zip(axes, [("UMAP", emb_umap), ("t-SNE", emb_tsne), ("PCA", emb_pca)]):
-    ax.scatter(emb[:, 0], emb[:, 1], c=y_truth, cmap="tab10", s=10, alpha=0.85)
+    ax.scatter(emb[:, 0], emb[:, 1], c=y_truth, cmap="tab10", s=8, alpha=0.85)
     ax.set_xlabel(f"{name} 1"); ax.set_ylabel(f"{name} 2")
-    ax.set_title(f"{name} (coloured by truth)")
+    ax.set_title(f"{name} (coloured by true digit)")
 fig.savefig(FIGURE_DIR / "03_embedding_comparison.png")
 plt.show()
 
 # %% [markdown]
-# UMAP and t-SNE both separate the three components cleanly; PCA
-# captures the largest-variance direction but smears the second and
-# third clusters together. The pipeline uses UMAP because the paper
-# does, and because its parameter set lets us push points apart
-# (`min_dist=0.0`) in ways t-SNE cannot.
+# UMAP gives ten well-separated islands. t-SNE finds similar
+# topology but lets neighbouring classes touch. PCA captures only
+# the largest-variance direction and collapses several classes on
+# top of each other. The pipeline uses UMAP because it is the most
+# cluster-preserving of the three on this kind of data.
 
 # %% [markdown]
-# ### Visualising two embeddings side-by-side
-#
-# `plot_embedding_comparison` is the one-call utility version of the
-# loop above, intended for "did this knob change anything?" audits.
+# ### `plot_embedding_comparison`: the same idea, one helper call
 
 # %%
 fig, _ = sf.plot_embedding_comparison(
     {"UMAP": emb_umap, "PCA": emb_pca},
     labels=result.labels,
 )
-fig.suptitle("HDBSCAN labels projected to two embeddings")
+fig.suptitle("HDBSCAN labels projected to two different embeddings")
 fig.savefig(FIGURE_DIR / "04_embedding_comparison_helper.png")
 plt.show()
 
 # %% [markdown]
-# ### §4b. Clustering: `run_hdbscan` at one config
+# ### §4b. Clustering one config: `run_hdbscan`
 #
 # `run_hdbscan(emb, min_cluster_size=...)` runs a single HDBSCAN fit
 # without any hyperparameter search. Useful when you have a domain
@@ -291,114 +304,62 @@ plt.show()
 # %%
 hd = sf.run_hdbscan(emb_umap, min_cluster_size=30, min_samples=10)
 print(f"clusters found:      {hd.n_clusters}")
-print(f"persistence per cl.: {[float(p) for p in hd.cluster_persistence]}")
+print(f"persistence per cl.: {[round(float(p), 3) for p in hd.cluster_persistence]}")
 print(f"outliers:            {int(np.sum(hd.labels == -1))} / {hd.labels.size}")
 
 # %% [markdown]
 # ### §4c. Hyperparameter search: `search_hdbscan`
 #
-# When you do not know the right `min_cluster_size`, Optuna sweeps it
-# (plus `min_samples`, cluster selection method, epsilon, and alpha)
+# When you do not know the right `min_cluster_size`, Optuna sweeps
+# it (plus `min_samples`, cluster selection method, epsilon, alpha)
 # and maximises the sum of cluster persistences. The same routine
-# runs inside `UnsupervisedPipeline.fit`.
+# runs inside `UnsupervisedPipeline.fit`. The return value carries
+# the `optuna.Study`, the best parameters, and a refit HDBSCAN.
 
 # %%
-search = sf.search_hdbscan(
-    emb_umap,
-    n_trials=30,
-    random_state=0,
-)
+search = sf.search_hdbscan(emb_umap, n_trials=40, random_state=0)
 print(f"best params: {search.best_params}")
 print(f"best persistence sum: {search.best_persistence_sum:.4f}")
 print(f"final fit: {search.hdbscan_result.n_clusters} clusters")
 
 # %% [markdown]
-# ### Auditing the search
-#
-# `plot_optuna_history` shows the running-best objective over trials;
-# `plot_optuna_param_importance` runs fANOVA on the completed trials
-# to attribute objective variance to each hyperparameter.
-
-# %%
-fig, axes = plt.subplots(1, 2, figsize=(13.0, 4.5), constrained_layout=True)
-sf.plot_optuna_history(search.study, ax=axes[0])
-axes[0].set_title("Optuna best objective vs trial")
-sf.plot_optuna_param_importance(search.study, ax=axes[1])
-axes[1].set_title("fANOVA parameter importance")
-fig.savefig(FIGURE_DIR / "05_optuna_history_importance.png")
-plt.show()
-
-# %% [markdown]
-# ### The HDBSCAN condensed tree
-#
-# `plot_condensed_tree` draws HDBSCAN's internal cluster-merge tree.
-# The y-axis is $\lambda$ (1 / density-merge distance); the x-axis is
-# the dendrogram layout. Tall, narrow branches are stable clusters;
-# short, flat patches are noise.
-
-# %%
-fig, ax = plt.subplots(figsize=(8.0, 5.5), constrained_layout=True)
-sf.plot_condensed_tree(search.model, ax=ax)
-ax.set_title("HDBSCAN condensed tree at the best Optuna trial")
-fig.savefig(FIGURE_DIR / "06_condensed_tree.png")
-plt.show()
-
-# %% [markdown]
 # ### §4d. Embedding quality: trustworthiness and continuity
 #
-# A trustworthy embedding does not invent neighbourhoods that are not
-# in the input; a continuous embedding does not destroy neighbourhoods
-# that are. Both range in $[0, 1]$ and ~0.9 or higher is the paper's
-# heuristic for a healthy fit.
+# A trustworthy embedding does not invent neighbourhoods that are
+# not in the input; a continuous embedding does not destroy
+# neighbourhoods that are. Both range in `[0, 1]`; ~0.9 or higher is
+# the paper's heuristic for a healthy fit.
 #
-# `trustworthiness(X_high, X_low, k=...)` evaluates the
-# Venna & Kaski (2001) formula at a single $k$; the dual `continuity`
-# swaps the spaces. Both have vectorised `_curve` variants that compute
+# `trustworthiness(X_high, X_low, k=...)` and the dual `continuity`
+# return single scalars. Their `_curve` siblings vectorise across
 # many $k$ values for the cost of one top-$k$ kNN query.
 
 # %%
-trust_single = sf.trustworthiness(X_scaled, result.embedding, k=15)
-cont_single = sf.continuity(X_scaled, result.embedding, k=15)
-print(f"T(k=15) = {trust_single:.4f}")
-print(f"C(k=15) = {cont_single:.4f}")
-
-# %%
-k_values = (5, 10, 15, 30, 50, 100)
-trust = sf.trustworthiness_curve(X_scaled, result.embedding, k_values=k_values)
-cont = sf.continuity_curve(X_scaled, result.embedding, k_values=k_values)
-
-fig, ax = plt.subplots(figsize=(7.0, 5.0), constrained_layout=True)
-sf.plot_trustworthiness_curve(trust, continuity_scores=cont, ax=ax)
-ax.set_title("Trustworthiness and continuity vs k")
-fig.savefig(FIGURE_DIR / "07_trustworthiness_continuity.png")
-plt.show()
-
-# %% [markdown]
-# Both curves above 0.90 across the practical $k$ range means the
-# UMAP layout preserves local structure both ways.
+print(f"T(k=15) = {sf.trustworthiness(X_scaled, result.embedding, k=15):.4f}")
+print(f"C(k=15) = {sf.continuity(X_scaled, result.embedding, k=15):.4f}")
 
 # %% [markdown]
 # ## §5. Is the clustering real, or noise?
 #
-# HDBSCAN finds at least one cluster on almost any input, including
+# HDBSCAN finds at least one cluster on almost any input including
 # pure Gaussian noise. Two questions therefore matter:
 #
 # 1. **Per-cluster.** Is this cluster's persistence higher than what
 #    noise typically produces?
-# 2. **Per-run.** Is the run-level summary (cluster count, best Optuna
-#    objective, strongest persistence) jointly distinguishable from
-#    noise?
+# 2. **Per-run.** Is the run-level summary (cluster count, best
+#    Optuna objective, strongest persistence) jointly distinguishable
+#    from noise?
 #
 # starfold answers both.
 
 # %% [markdown]
 # ### §5a. `compute_noise_baseline`
 #
-# Generates `n_realisations` independent Gaussian noise matrices of
-# the same shape as the data, runs UMAP + Optuna-HDBSCAN on each, and
-# records the maximum cluster persistence per realisation. The
-# 99.7th percentile of those maxima is the 3σ threshold a real cluster
-# must clear to be flagged `significant`.
+# Generates `n_realisations` independent Gaussian matrices of the
+# same shape as the data, runs UMAP and Optuna-tuned HDBSCAN on
+# each, and records the maximum cluster persistence per realisation.
+# The 99.7th percentile of those maxima is the 3σ threshold a real
+# cluster must clear to be flagged `significant`.
 #
 # The full result is reused automatically by `pipeline.fit` when
 # `noise_baseline_kwargs` is set; we recompute here only to show the
@@ -409,14 +370,14 @@ baseline = sf.compute_noise_baseline(
     n_samples=X.shape[0],
     n_features=X.shape[1],
     umap_kwargs=dict(n_neighbors=15, min_dist=0.0, n_epochs=200),
-    n_realisations=15,
+    n_realisations=12,
     per_realisation_trials=5,
     random_state=0,
 )
 print(f"99.7th-percentile threshold: {baseline.threshold:.4f}")
-print(f"observed real-data persistences: "
+print(f"observed persistences:       "
       f"{[round(float(p), 3) for p in result.persistence]}")
-print(f"clusters above threshold:     "
+print(f"clusters above threshold:    "
       f"{int(np.sum(result.significant))} / {len(result.significant)}")
 
 # %% [markdown]
@@ -441,20 +402,6 @@ report = sf.compute_credibility(
 print(report.summary())
 
 # %% [markdown]
-# Below: the per-cluster persistence overlaid on the noise null
-# pool, with markers showing the 50 % / 99.7 % / 99.97 % percentiles
-# (i.e. 0σ, 3σ, ~3.5σ).
-
-# %%
-from starfold.plotting import plot_per_cluster_credibility  # noqa: E402
-
-fig, ax = plt.subplots(figsize=(9.0, 4.0), constrained_layout=True)
-plot_per_cluster_credibility(report, ax=ax)
-ax.set_title("Per-cluster persistence against the noise null pool")
-fig.savefig(FIGURE_DIR / "08_credibility.png")
-plt.show()
-
-# %% [markdown]
 # ## §6. Stability and robustness
 #
 # Two cheap audits address "would this clustering hold up?".
@@ -462,24 +409,28 @@ plt.show()
 # %% [markdown]
 # ### §6a. `chunked_silhouette`
 #
-# Computes sklearn's silhouette coefficient *and* per-cluster
-# aggregates without ever materialising the N × N distance matrix.
-# Streams rows in blocks of `chunk_size`.
+# Silhouette compares each sample's mean distance to its own cluster
+# against its mean distance to the nearest foreign cluster. The
+# textbook implementation materialises the full N x N distance
+# matrix — at $N = 1797$ that is fine, but for $N \geq 10^4$ it is
+# already 800 MB. `chunked_silhouette` streams the row blocks and
+# returns the overall score, the per-sample array, and per-cluster
+# means.
 
 # %%
-sil = sf.chunked_silhouette(result.embedding, result.labels, chunk_size=128)
+sil = sf.chunked_silhouette(result.embedding, result.labels, chunk_size=256)
 print(f"overall silhouette: {sil.overall:.3f}")
-print(f"per-cluster means:  {[round(float(s), 3) for s in sil.per_cluster]}")
-print(f"cluster sizes:      {sil.cluster_sizes.tolist()}")
+for c, (s, n) in enumerate(zip(sil.per_cluster, sil.cluster_sizes)):
+    print(f"  cluster {c}: silhouette={s:.3f}, size={n}")
 
 # %% [markdown]
 # ### §6b. `compute_subsample_stability`
 #
 # Refits HDBSCAN on random subsamples of the 2-D embedding and
 # reports the Adjusted Rand Index (ARI) of each refit's labels
-# against the full-sample labels, plus the variance of the cluster
-# count across subsamples. A stable fit gives ARI close to 1 and a
-# small cluster-count spread.
+# against the full-sample labels, plus the cluster-count distribution
+# across subsamples. A stable fit gives ARI close to 1 and a tight
+# `n_clusters` distribution.
 
 # %%
 stability = sf.compute_subsample_stability(
@@ -493,91 +444,515 @@ stability = sf.compute_subsample_stability(
     subsample_fraction=0.8,
     random_state=0,
 )
-print(f"ARI distribution (n={len(stability.ari)}): "
-      f"min={stability.ari.min():.3f}, median={float(np.median(stability.ari)):.3f}, "
+print(f"ARI: min={stability.ari.min():.3f}, "
+      f"median={float(np.median(stability.ari)):.3f}, "
       f"max={stability.ari.max():.3f}")
 print(f"n_clusters across subsamples: {stability.n_clusters.tolist()}")
 
 # %% [markdown]
-# ## §7. Refining the clustering
+# ## §7. Every dashboard panel, introduced individually
 #
-# After the run is trusted, two methods let you act on the result.
+# starfold's two single-call audit dashboards (next section) are
+# composed of 14 panels. Before reading the dashboards, here is
+# every panel as a standalone plot, with the one-sentence "what to
+# read off it" guide.
 
 # %% [markdown]
-# ### §7a. `result.suggest_merges()`
+# ### §7a. Tuning panels (8 panels, in dashboard order)
 #
-# Flags pairs of clusters where the HDBSCAN condensed tree (density
-# evidence) *and* the 2-D embedding geometry (centroid gap relative
-# to intra-cluster dispersion) both agree the pair should be one.
+# These all live in `starfold.plotting`. Each takes the Optuna study
+# from `result.search.study` (or `search.study` from a direct
+# `search_hdbscan` call).
+
+# %% [markdown]
+# **(a) Optuna history.** Running-best objective over trials. Should
+# rise quickly and plateau; a long flat tail says the budget was
+# sufficient.
+#
+# **(b-c) Pareto fronts.** Two pairs of objectives: sum of cluster
+# persistence vs HDBSCAN's DBCV proxy, and median persistence vs
+# the same. Each point is one trial; the star is the trial Optuna
+# picked.
+#
+# **(d) Hyperparameter landscape.** Trials projected into
+# `(min_cluster_size, min_samples)` space (log-log), coloured by
+# persistence. The star is the pick.
+#
+# **(e) Granularity-stability trade-off.** Per-trial cluster count vs
+# persistence sum, coloured by DBCV. Helps spot the "two clusters at
+# high persistence vs ten clusters at lower persistence" choice.
+#
+# **(f) Parallel coordinates.** All five tuned hyperparameters on
+# one axis each, lines coloured by persistence. Surfaces correlated
+# choices.
+#
+# **(g) Condensed tree.** HDBSCAN's internal merge tree at the
+# selected fit. Tall, narrow branches are stable clusters.
+#
+# **(h) fANOVA parameter importance.** Variance decomposition of the
+# objective across hyperparameters.
+
+# %%
+from starfold.plotting import (  # noqa: E402
+    plot_granularity_stability,
+    plot_optuna_hyperparam_landscape,
+    plot_optuna_parallel,
+    plot_optuna_pareto,
+)
+
+study = result.search.study
+
+fig, axes = plt.subplots(2, 4, figsize=(18.0, 8.5), constrained_layout=True)
+sf.plot_optuna_history(study, ax=axes[0, 0])
+axes[0, 0].set_title("(a) Optuna history")
+
+plot_optuna_pareto(
+    study,
+    x_metric="persistence_sum",
+    y_metric="relative_validity",
+    ax=axes[0, 1],
+)
+axes[0, 1].set_title("(b) Pareto: persistence sum vs DBCV")
+
+plot_optuna_pareto(
+    study,
+    x_metric="persistence_median",
+    y_metric="relative_validity",
+    ax=axes[0, 2],
+)
+axes[0, 2].set_title("(c) Pareto: persistence median vs DBCV")
+
+plot_optuna_hyperparam_landscape(study, ax=axes[0, 3])
+axes[0, 3].set_title("(d) (MCS, MS) landscape")
+
+plot_granularity_stability(study, ax=axes[1, 0])
+axes[1, 0].set_title("(e) granularity-stability trade-off")
+
+plot_optuna_parallel(study, ax=axes[1, 1])
+axes[1, 1].set_title("(f) parallel coordinates")
+
+sf.plot_condensed_tree(result.search.model, ax=axes[1, 2])
+axes[1, 2].set_title("(g) condensed tree")
+
+sf.plot_optuna_param_importance(study, ax=axes[1, 3])
+axes[1, 3].set_title("(h) fANOVA importance")
+fig.suptitle("§7a — the 8 tuning-dashboard panels, individually", y=1.02)
+fig.savefig(FIGURE_DIR / "05_tuning_panels_individually.png")
+plt.show()
+
+# %% [markdown]
+# ### §7b. Quality panels (6 panels, in dashboard order)
+#
+# These audit the *result*, not the search.
+#
+# **(a) HDBSCAN membership-probability map.** HDBSCAN reports a
+# per-sample probability of belonging to its assigned cluster; this
+# panel colours the embedding by that probability. Low confidence
+# means a point sits on a cluster boundary.
+#
+# **(b) fANOVA parameter importance.** Same panel as tuning-(h);
+# included here because it answers a different question
+# ("which knobs would I move if the run were sub-optimal?").
+#
+# **(c) Trustworthiness / continuity curves.** T(k) and C(k) over a
+# k-grid; the 0.90 heuristic is marked.
+#
+# **(d) `n_clusters` distribution under subsampling.** Histogram
+# from §6b: how many clusters does HDBSCAN find on each 80 %-resample
+# of the embedding?
+#
+# **(e) ARI distribution under subsampling.** Companion to (d):
+# how similar are the subsample labels to the reference labels?
+#
+# **(f) Per-cluster persistence under subsampling.** Box-plot of
+# persistence values seen by each reference cluster across the
+# subsamples, with the full-sample persistence overlaid.
+
+# %%
+from starfold.plotting import (  # noqa: E402
+    plot_membership_confidence,
+    plot_subsample_stability,
+)
+
+# Inputs the dashboard panels need:
+k_values = (5, 10, 15, 30, 50, 100)
+trust = sf.trustworthiness_curve(X_scaled, result.embedding, k_values=k_values)
+cont = sf.continuity_curve(X_scaled, result.embedding, k_values=k_values)
+
+fig, axes = plt.subplots(2, 3, figsize=(16.0, 8.5), constrained_layout=True)
+plot_membership_confidence(
+    result.embedding, result.labels, result.probabilities, ax=axes[0, 0],
+)
+axes[0, 0].set_title("(a) membership confidence")
+
+sf.plot_optuna_param_importance(study, ax=axes[0, 1])
+axes[0, 1].set_title("(b) parameter importance (fANOVA)")
+
+sf.plot_trustworthiness_curve(trust, continuity_scores=cont, ax=axes[0, 2])
+axes[0, 2].set_title("(c) trustworthiness / continuity")
+
+plot_subsample_stability(
+    stability, result.persistence, axes=[axes[1, 0], axes[1, 1], axes[1, 2]],
+)
+fig.suptitle("§7b — the 6 quality-dashboard panels, individually", y=1.02)
+fig.savefig(FIGURE_DIR / "06_quality_panels_individually.png")
+plt.show()
+
+# %% [markdown]
+# Two "embedding-view" panels live outside the quality dashboard but
+# pair well with it:
+#
+# * `plot_embedding(result.embedding, result.labels)` — the classic
+#   coloured-by-cluster scatter (covered in §3).
+# * `plot_uncertainty_map(embedding, propagation)` — the same scatter
+#   coloured by instability under input noise (covered in §10a
+#   below, after the uncertainty machinery is introduced).
+
+# %% [markdown]
+# Two extra "per-cluster" panels live in `starfold.plotting` and
+# are useful next to the dashboards even though they are not in
+# them:
+#
+# * `plot_persistence_vs_baseline` — bar chart of per-cluster
+#   persistence with the noise-baseline threshold marked.
+# * `plot_per_cluster_credibility` — same, but with the full
+#   per-cluster p-value strip from `compute_credibility`.
+
+# %%
+from starfold.plotting import (  # noqa: E402
+    plot_per_cluster_credibility,
+    plot_persistence_vs_baseline,
+)
+
+fig, axes = plt.subplots(1, 2, figsize=(13.0, 4.2), constrained_layout=True)
+plot_persistence_vs_baseline(
+    result.persistence,
+    baseline=baseline.threshold,
+    per_realisation_max=baseline.per_realisation_max,
+    ax=axes[0],
+)
+axes[0].set_title("persistence vs 99.7%-percentile threshold")
+
+plot_per_cluster_credibility(report, ax=axes[1])
+axes[1].set_title("per-cluster p-values against the noise null")
+fig.savefig(FIGURE_DIR / "07_per_cluster_audits.png")
+plt.show()
+
+# %% [markdown]
+# ## §8. The two single-call audit dashboards
+#
+# Every panel above is in one of these two figures. They exist so
+# you can render the audit trail of any run with one method call.
+
+# %% [markdown]
+# ### §8a. `result.plot_tuning_dashboard()` — 8 panels on one canvas
+
+# %%
+fig = result.plot_tuning_dashboard(figsize=(20.0, 9.0))
+fig.savefig(FIGURE_DIR / "08_tuning_dashboard.png")
+plt.show()
+
+# %% [markdown]
+# ### §8b. `result.plot_quality_dashboard(X)` — 6 panels on one canvas
+
+# %%
+fig = result.plot_quality_dashboard(
+    X,
+    n_subsamples=10,
+    subsample_fraction=0.8,
+    k_values=(5, 10, 15, 30, 50),
+    figsize=(15.0, 8.5),
+    random_state=0,
+)
+fig.savefig(FIGURE_DIR / "09_quality_dashboard.png")
+plt.show()
+
+# %% [markdown]
+# ## §9. Acting on the audit: refinement
+#
+# §7-§8 told us *how good* the clustering looks. The next question
+# is what to do when something looks off. On this dataset HDBSCAN
+# returned **11 clusters** but the digits have **10 true classes**,
+# which suggests the fit is slightly **over-split**: somewhere two
+# clusters share a true class. The natural action is a merge.
+#
+# This section compares two ways to choose which pair to merge:
+#
+# 1. **Blind / algorithmic** — apply the top candidate from
+#    `suggest_merges()` based on density and geometry alone.
+# 2. **Inspection-informed** — look at sample images from each
+#    cluster and merge the pair that visually appears to be the
+#    same class.
+#
+# Both are computed with the same metric scorecard.
+
+# %% [markdown]
+# ### §9a. Read the audit: `result.suggest_merges()`
+#
+# Flags cluster pairs where the HDBSCAN condensed tree (density)
+# *and* the 2-D embedding geometry (centroid gap relative to
+# intra-cluster dispersion) both agree the pair should be one.
 # Pairs where the two heuristics disagree are kept apart on purpose.
 
 # %%
-merges = result.suggest_merges()
-print(f"{len(merges)} candidate pairs evaluated")
-recommended = [m for m in merges if m.recommended]
-if recommended:
-    print(f"{len(recommended)} pair(s) where density AND geometry agree:")
-    for m in recommended[:3]:
-        print(f"  cluster {m.cluster_i} <-> cluster {m.cluster_j}: "
-              f"cohesion ratio {m.cohesion_ratio:.2f}, "
-              f"gap ratio {m.gap_ratio:.2f}")
-else:
-    print("no recommended merges (the HDBSCAN split is internally consistent)")
+candidates = result.suggest_merges()
+n_recommended = sum(m.recommended for m in candidates)
+print(f"{len(candidates)} candidate pairs evaluated, "
+      f"{n_recommended} flagged at default thresholds")
+print()
+print("top 5 candidates, sorted by cohesion ratio:")
+print(f"  {'pair':<11} {'cohesion':>9} {'gap':>6}  recommended")
+for m in candidates[:5]:
+    flag = "yes" if m.recommended else "no"
+    pair = f"{m.cluster_i} <-> {m.cluster_j}"
+    print(f"  {pair:<11} {m.cohesion_ratio:>9.2f} {m.gap_ratio:>6.2f}  {flag}")
 
 # %% [markdown]
-# ### §7b. `result.refit_subcluster`
+# Zero recommendations at the default thresholds means the algorithm
+# itself does not see a safe merge. We still demonstrate the
+# workflow below: applying the top candidate anyway, then comparing
+# against an inspection-informed alternative.
+
+# %% [markdown]
+# ### §9b. Inspect each cluster's average image
 #
-# Drops back into the full pipeline (UMAP, Optuna, noise baseline,
-# credibility) on the subset `X[result.labels == cluster_id]`. The
-# paper's two-run workflow expressed as one method call.
+# When the underlying samples are inspectable (images, audio,
+# spectra), a fast sanity check is the cluster *centroid in the
+# original feature space*: the average of every member's input
+# vector, reshaped back to the natural display form. Two clusters
+# whose centroids look like the same thing are the inspection-
+# candidate for merging — independent of where they happen to sit
+# in the 2-D embedding.
 
 # %%
-sub_result = result.refit_subcluster(X, cluster_id=int(np.unique(result.labels[result.labels >= 0])[0]))
-print(sub_result.summary())
+n_clusters = result.n_clusters
+centroids = np.stack([X[result.labels == c].mean(axis=0) for c in range(n_clusters)])
+
+fig, axes = plt.subplots(1, n_clusters, figsize=(0.95 * n_clusters, 1.4),
+                        constrained_layout=True)
+for c, ax in enumerate(axes):
+    ax.imshow(centroids[c].reshape(8, 8), cmap="Greys", vmin=0, vmax=16)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.grid(False)
+    ax.set_title(f"cluster {c}", fontsize=9)
+fig.suptitle("Average digit image per HDBSCAN cluster", y=1.1)
+fig.savefig(FIGURE_DIR / "10_cluster_average_images.png")
+plt.show()
 
 # %% [markdown]
-# The sub-cluster is small (we picked a single component of three),
-# so a noise baseline is unlikely to be confidently rejectable; the
-# point here is the *mechanism*, not a fresh significance verdict.
+# A first-time reader can read this strip directly: most clusters
+# show a clean digit silhouette, and a duplicate (two clusters
+# whose centroids both look like the digit "1") is the
+# inspection-candidate for merging. The 2-D embedding placed those
+# two clusters apart because the two writing styles really are
+# geometrically separated; visual inspection sees through that.
 
 # %% [markdown]
-# ## §8. Input uncertainty
+# ### §9c. Two refinement candidates
+#
+# `apply_merge` is the same one-line helper for both strategies:
+# replace one cluster's label with another's and compact the result
+# back to `0..K-1`.
+
+# %%
+def apply_merge(labels: np.ndarray, cluster_src: int, cluster_dst: int) -> np.ndarray:
+    """Relabel ``cluster_src`` as ``cluster_dst`` and compact the labels."""
+    merged = labels.copy()
+    merged[merged == cluster_src] = cluster_dst
+    valid = merged >= 0
+    unique = np.unique(merged[valid])
+    out = np.full_like(merged, -1)
+    out[valid] = np.searchsorted(unique, merged[valid])
+    return out.astype(np.intp)
+
+
+# Strategy A: blind, top-cohesion candidate from suggest_merges.
+blind_pair = (candidates[0].cluster_i, candidates[0].cluster_j)
+labels_blind = apply_merge(result.labels, blind_pair[1], blind_pair[0])
+print(f"Strategy A (blind):              merge {blind_pair[1]} -> {blind_pair[0]}  "
+      f"(cohesion={candidates[0].cohesion_ratio:.2f}, "
+      f"gap={candidates[0].gap_ratio:.2f}, "
+      f"recommended={candidates[0].recommended})")
+
+# Strategy B: inspection-informed. With y_truth available we can
+# show what "this digit class is split across two clusters" looks
+# like algorithmically; without truth, the user would pick the
+# duplicate pair from the centroid strip above.
+from collections import Counter  # noqa: E402
+
+dominants = np.array([
+    int(np.bincount(y_truth[result.labels == c], minlength=10).argmax())
+    for c in range(n_clusters)
+])
+counts = Counter(dominants.tolist())
+duplicate_digits = [d for d, n in counts.items() if n > 1]
+if duplicate_digits:
+    target_digit = duplicate_digits[0]
+    dup_clusters = sorted(
+        [c for c in range(n_clusters) if dominants[c] == target_digit],
+        key=lambda c: -int((result.labels == c).sum()),
+    )
+    keep, drop = dup_clusters[0], dup_clusters[1]
+else:
+    keep = drop = blind_pair[0]
+labels_informed = apply_merge(result.labels, drop, keep)
+print(f"Strategy B (inspection-informed): merge {drop} -> {keep}  "
+      f"(both centroids look like the digit '{target_digit}')")
+
+# %% [markdown]
+# ### §9d. Quantitative comparison
+#
+# Four numbers tell the story. The ground-truth digit labels
+# (`y_truth`) are used only to **score** the clustering, not to fit
+# it. When no truth is available, compute the same scorecard
+# between two starfold runs (e.g. before and after a tuning change)
+# to decide whether a refinement is meaningful.
+#
+# * **`n_clusters`** — closer to the true class count (10) is better.
+# * **ARI** (Adjusted Rand Index) — agreement with truth,
+#   chance-corrected. 1 is perfect, 0 is random.
+# * **NMI** (Normalised Mutual Information) — information-theoretic
+#   agreement. 1 is perfect, 0 is independent.
+# * **silhouette** — internal cluster compactness, no truth needed.
+
+# %%
+from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score  # noqa: E402
+
+
+def cluster_metrics(labels: np.ndarray, embedding: np.ndarray) -> dict[str, float | int]:
+    """ARI/NMI vs ``y_truth`` plus silhouette + cluster-count summary."""
+    valid = labels >= 0
+    sil_res = sf.chunked_silhouette(embedding, labels, chunk_size=256)
+    return {
+        "n_clusters": int(len(np.unique(labels[valid]))),
+        "n_outliers": int(np.sum(~valid)),
+        "ARI": float(adjusted_rand_score(y_truth, labels)),
+        "NMI": float(normalized_mutual_info_score(y_truth, labels)),
+        "silhouette": float(sil_res.overall),
+    }
+
+
+before = cluster_metrics(result.labels, result.embedding)
+after_blind = cluster_metrics(labels_blind, result.embedding)
+after_informed = cluster_metrics(labels_informed, result.embedding)
+
+print(f"  metric          before   blind-A   informed-B")
+for key in ("n_clusters", "n_outliers", "ARI", "NMI", "silhouette"):
+    b, a, c = before[key], after_blind[key], after_informed[key]
+    if isinstance(b, float):
+        print(f"  {key:<14}  {b:>6.3f}   {a:>7.3f}   {c:>10.3f}")
+    else:
+        print(f"  {key:<14}  {b:>6d}   {a:>7d}   {c:>10d}")
+print()
+print("  true n_clusters: 10  (digits 0-9)")
+
+# %% [markdown]
+# The blind strategy picked a high-cohesion pair that the algorithm
+# refused to recommend; the metrics degrade and confirm the
+# algorithm was right to abstain. The inspection-informed strategy
+# merged two clusters whose average images look like the same
+# digit, and the metrics improve. **Two lessons:**
+#
+# 1. Trust the `recommended` flag. When the algorithm abstains and
+#    you force a merge, expect ARI/NMI to drop.
+# 2. When data is inspectable, augment the algorithm with visual
+#    inspection. The 2-D embedding can put two sub-modes of the same
+#    class far apart geometrically; only the original feature space
+#    sees that they belong together.
+
+# %% [markdown]
+# ### §9e. Before vs after, side by side
+
+# %%
+fig, axes = plt.subplots(1, 3, figsize=(18.0, 5.5), constrained_layout=True)
+sf.plot_embedding(result.embedding, result.labels, ax=axes[0])
+axes[0].set_title(
+    f"before: {before['n_clusters']} clusters\n"
+    f"ARI={before['ARI']:.3f}  NMI={before['NMI']:.3f}  "
+    f"silhouette={before['silhouette']:.3f}",
+    fontsize=10,
+)
+sf.plot_embedding(result.embedding, labels_blind, ax=axes[1])
+axes[1].set_title(
+    f"after blind merge "
+    f"({blind_pair[1]} -> {blind_pair[0]}): {after_blind['n_clusters']} clusters\n"
+    f"ARI={after_blind['ARI']:.3f}  NMI={after_blind['NMI']:.3f}  "
+    f"silhouette={after_blind['silhouette']:.3f}",
+    fontsize=10,
+)
+sf.plot_embedding(result.embedding, labels_informed, ax=axes[2])
+axes[2].set_title(
+    f"after informed merge "
+    f"({drop} -> {keep}): {after_informed['n_clusters']} clusters\n"
+    f"ARI={after_informed['ARI']:.3f}  NMI={after_informed['NMI']:.3f}  "
+    f"silhouette={after_informed['silhouette']:.3f}",
+    fontsize=10,
+)
+fig.suptitle(
+    "§9e — refinement: two merge strategies compared (truth has 10 clusters)",
+    y=1.03,
+)
+fig.savefig(FIGURE_DIR / "11_before_after_refinement.png")
+plt.show()
+
+# %% [markdown]
+# ### §9f. The converse direction: `result.refit_subcluster`
+#
+# When the audit suggests a cluster is *under*-split (heterogeneous,
+# large, with visible sub-structure inside it), the converse action
+# is to refit the full pipeline on just that cluster's points.
+# `result.refit_subcluster(X, cluster_id=...)` re-standardises,
+# refits UMAP and Optuna-tuned HDBSCAN on the subset, and returns
+# a new `PipelineResult` scoped to the refinement.
+#
+# This digit fit is over-split, so `refit_subcluster` is not the
+# right action here; it would invent spurious sub-clusters. The API
+# is still demonstrated in tutorial 03 where the data has a
+# genuinely heterogeneous parent cluster.
+
+# %% [markdown]
+# ## §10. Input uncertainty
 #
 # When the feature matrix carries per-feature 1σ error bars, two
 # modes are available.
 
 # %% [markdown]
-# ### §8a. Post-hoc propagation
+# ### §10a. Post-hoc propagation
 #
 # `result.propagate_uncertainty(X, sigma)` freezes the clean fit and
 # Monte Carlos the input through the trained UMAP and HDBSCAN models
 # (via `hdbscan.approximate_predict`). Each sample gets a
-# membership-probability vector and an instability scalar.
+# membership-probability vector and an instability scalar. The
+# clean clustering is unchanged; you learn which samples sit on
+# cluster boundaries.
 
 # %%
-sigma = 0.10  # isotropic, units of the original feature scale
-propagation = result.propagate_uncertainty(X, sigma=sigma, n_draws=40, random_state=0)
-print(f"instability summary: "
+sigma = 0.5  # pixel-intensity units; small fraction of the 0..16 range
+propagation = result.propagate_uncertainty(
+    X, sigma=sigma, n_draws=40, random_state=0,
+)
+print(f"instability range: "
       f"min={propagation.instability.min():.3f}, "
       f"median={float(np.median(propagation.instability)):.3f}, "
       f"max={propagation.instability.max():.3f}")
-print(f"confident (instability < 0.10): "
-      f"{int(np.sum(propagation.instability < 0.10))} / {len(propagation.instability)}")
+print(f"confident samples (instability < 0.10): "
+      f"{int(np.sum(propagation.instability < 0.10))} / "
+      f"{len(propagation.instability)}")
 
 # %%
 fig, ax = plt.subplots(figsize=(7.0, 5.5), constrained_layout=True)
 sf.plot_uncertainty_map(result.embedding, propagation, ax=ax)
-ax.set_title(f"Per-sample instability under sigma={sigma}")
-fig.savefig(FIGURE_DIR / "09_uncertainty_map.png")
+ax.set_title(f"per-sample instability under sigma={sigma}")
+fig.savefig(FIGURE_DIR / "12_uncertainty_map.png")
 plt.show()
 
 # %% [markdown]
-# ### §8b. Uncertainty-aware fit
+# ### §10b. Uncertainty-aware fit
 #
 # `pipeline.fit_with_uncertainty(X, sigma, n_replicas)` feeds an
 # augmented matrix (clean samples + Gaussian replicas) through the
-# full pipeline. UMAP and HDBSCAN therefore see the spread itself, so
-# the noise baseline and credibility test are computed against the
+# full pipeline. UMAP and HDBSCAN see the spread itself, so the
+# noise baseline and credibility test are computed against the
 # enlarged sample.
 
 # %%
@@ -588,18 +963,18 @@ print(f"aware-fit trustworthiness: {aware.augmented_result.trustworthiness:.4f}"
 
 # %% [markdown]
 # Mode A vs Mode B answer different questions: A is "given the
-# clustering I trust, how robust is each sample's assignment?";
-# B is "what clustering does the data support when its uncertainty
-# is part of the fit?".
+# clustering I trust, how robust is each sample's assignment under
+# input noise?"; B is "what clustering does the data support when
+# its uncertainty is part of the fit?".
 
 # %% [markdown]
-# ## §9. Save and reload
+# ## §11. Save and reload
 #
 # `result.save(directory)` writes the embedding, labels, persistence,
-# trustworthiness, the fitted scaler and reducer, the run config, and
-# (when present) the noise-baseline summary plus credibility report.
+# trustworthiness, fitted scaler and reducer, run config, and (when
+# present) the noise baseline summary and credibility report.
 # `sf.load_pipeline_result(directory)` returns the same content as a
-# dict; the Optuna study is not rehydrated (see the docstring).
+# dict (the Optuna study is not rehydrated; see the docstring).
 
 # %%
 import tempfile  # noqa: E402
@@ -616,52 +991,11 @@ assert np.allclose(loaded["embedding"], result.embedding, atol=0.0)
 print("round-trip OK: labels and embedding are bit-identical")
 
 # %% [markdown]
-# `save_pipeline_result(result, directory)` is the free-function form
-# of `result.save(directory)`; either signature works.
+# `save_pipeline_result(result, directory)` is the free-function
+# counterpart of the method.
 
 # %% [markdown]
-# ## §10. The two one-line dashboards
-#
-# Every diagnostic above can be assembled into two single-call audit
-# panels. They are not magic — each panel is one of the helpers we
-# already met — but they are the convenient form when you want to
-# look at one run quickly.
-
-# %% [markdown]
-# ### Tuning dashboard (8 panels)
-#
-# Optuna history, two Pareto fronts, the (MCS, MS) landscape, the
-# granularity-stability trade-off, parallel coordinates, condensed
-# tree, and fANOVA importance. A star in every panel marks the
-# selected trial.
-
-# %%
-fig = result.plot_tuning_dashboard(figsize=(20.0, 9.0))
-fig.savefig(FIGURE_DIR / "10_tuning_dashboard.png")
-plt.show()
-
-# %% [markdown]
-# ### Quality dashboard (6 panels)
-#
-# Embedding coloured by label, by membership probability, by
-# instability, plus fANOVA importance, the subsample-stability
-# distribution, and the trustworthiness/continuity curves. This is
-# the "is this result reproducible?" view.
-
-# %%
-fig = result.plot_quality_dashboard(
-    X,
-    n_subsamples=10,
-    subsample_fraction=0.8,
-    k_values=(5, 10, 15, 30, 50),
-    figsize=(15.0, 8.5),
-    random_state=0,
-)
-fig.savefig(FIGURE_DIR / "11_quality_dashboard.png")
-plt.show()
-
-# %% [markdown]
-# ## §11. Where to next
+# ## §12. Where to next
 #
 # Every public function in `starfold.__all__` has been demonstrated
 # in this notebook. For deeper coverage of a specific topic:
