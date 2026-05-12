@@ -96,6 +96,13 @@ print(f"pipeline.fit took {time.perf_counter() - t0:.1f}s "
       f"→ {result.n_clusters} clusters")
 
 # %% [markdown]
+# # Part A — post-hoc refinement on a clean fit
+#
+# §§ 3.1–3.3 below all operate on the `PipelineResult` returned by
+# `pipeline.fit(X)`. The clean fit is frozen; the methods audit, query,
+# or narrow it.
+
+# %% [markdown]
 # ## 3.1 Chunked silhouette
 #
 # The silhouette coefficient
@@ -248,6 +255,15 @@ fig.savefig(FIGURE_DIR / "03_subcluster_refit.png")
 plt.show()
 print()
 print(sub_result.summary())
+
+# %% [markdown]
+# # Part B — uncertainty handling
+#
+# §§ 3.4–3.5 below treat the input feature matrix as carrying per-feature
+# error bars and ask two complementary questions: *given a clean fit,
+# how robust is each sample's assignment?* (§3.4) and *what clustering
+# does the data support when its uncertainty is part of the fit?*
+# (§3.5). Both modes are deterministic for fixed `random_state`.
 
 # %% [markdown]
 # ## 3.4 Input-uncertainty propagation

@@ -239,15 +239,46 @@ fig.savefig(FIGURE_DIR / "05_quality_dashboard.png")
 plt.show()
 
 # %% [markdown]
-# ## 2.6 Takeaways
+# ## 2.6 Trustworthiness and continuity curves
+#
+# The quality dashboard plots T(k) and C(k) together. They are also
+# available as free functions when a single audit number is needed
+# (e.g. when comparing two embedding choices side-by-side without
+# rendering eight panels). Both are vectorised across `k_values`: the
+# top-k_max kNN query is computed once and reused for every k, so
+# scanning the full curve costs only marginally more than evaluating
+# at a single k.
+
+# %%
+k_values = (5, 10, 15, 30, 50)
+X_scaled = (X - X.mean(axis=0)) / X.std(axis=0, ddof=0)
+trust = sf.trustworthiness_curve(X_scaled, result.embedding, k_values=k_values)
+cont = sf.continuity_curve(X_scaled, result.embedding, k_values=k_values)
+
+print("k    T(k)     C(k)")
+for k in k_values:
+    print(f"{k:>3}  {trust[k]:.4f}  {cont[k]:.4f}")
+
+# %% [markdown]
+# T(k) close to 1 means the embedding does not invent neighbourhoods;
+# C(k) close to 1 means it does not destroy them. Both above ~0.9 is
+# the paper's heuristic for a healthy fit. A T(k) that drops faster
+# than C(k) with k indicates the embedding tightens too aggressively;
+# the reverse means it spreads out and loses local structure.
+
+# %% [markdown]
+# ## 2.7 Takeaways
 #
 # * `noise_baseline_kwargs` flips the per-cluster significance gate on.
 #   The cache keys on the hash of shape + UMAP kwargs, so re-running
 #   the notebook is free once the baseline is built.
-# * `compute_credibility` is the omnibus 3σ test — cheap because it
+# * `compute_credibility` is the omnibus 3σ test, cheap because it
 #   reuses the noise baseline.
 # * `plot_tuning_dashboard` and `plot_quality_dashboard` are the two
 #   one-line audit panels. Save them next to every run.
+# * `trustworthiness_curve` and `continuity_curve` give the same
+#   embedding-quality information as the dashboard panel, as plain
+#   numbers, vectorised across k.
 #
-# Next up: **[3. Refinement](tutorial_03_advanced.ipynb)** — what to
-# do once you trust the clustering.
+# Next up: **[3. Refinement](tutorial_03_advanced.ipynb)** for what to
+# do once the clustering is trusted.
