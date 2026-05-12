@@ -138,6 +138,19 @@ print(result.summary())
 # real data earns its keep: if the run doesn't clear the null on at
 # least *some* clusters, the downstream astronomy plots are
 # premature.
+#
+# **A note on FAIL verdicts.** The 3σ global gate is intentionally
+# strict; on tabulated stellar data the run will sometimes FAIL on the
+# *omnibus* statistics (cluster count or best Optuna objective) even
+# though *individual* clusters clear the per-cluster persistence
+# threshold. That outcome is not a bug — it tells the user "the
+# clustering as a whole is not categorically stronger than what
+# correlated Gaussian noise produces at this sample size; the
+# significant clusters you do see are conditional on the choice of
+# features." For galactic-archaeology readers: this is the difference
+# between "the bulk of stars look field-like" (FAIL run, some
+# significant chemodynamic clumps) and "the population is
+# unambiguously substructured" (PASS run, almost never on real data).
 
 # %%
 credibility = result.credibility
@@ -151,7 +164,46 @@ fig.savefig(FIGURE_DIR / "01_credibility.png")
 plt.show()
 
 # %% [markdown]
-# ## 4.4 The embedding
+# ## 4.4 Post-fit refinement on real data
+#
+# The refinement tools demonstrated on the synthetic torus chain in
+# notebook 3 work identically on the real-data fit. Two cheap audits:
+#
+# 1. **`chunked_silhouette`** scores how compact each cluster is
+#    relative to its nearest foreign cluster, without materialising the
+#    N×N distance matrix that a textbook silhouette implementation
+#    would build (~700 MB at this sample size). The per-cluster mean
+#    flags the loosest clusters as candidates for further refit.
+# 2. **`result.suggest_merges()`** flags cluster pairs where the
+#    HDBSCAN condensed tree (density) *and* the 2-D embedding geometry
+#    (centroid gap vs intra-cluster dispersion) both agree that the
+#    pair should be one. Disagreements are kept apart by design.
+
+# %%
+sil = result.silhouette(chunk_size=512)
+print(f"overall silhouette = {sil.overall:.3f} "
+      f"(median per-cluster = {float(np.median(sil.per_cluster)):.3f})")
+loosest = int(np.argmin(sil.per_cluster))
+print(f"loosest cluster   = id {loosest} "
+      f"(silhouette {sil.per_cluster[loosest]:.3f})")
+
+merges = result.suggest_merges()
+recommended = [m for m in merges if m.recommended]
+if recommended:
+    print()
+    print("merge candidates where density and geometry both agree:")
+    for m in recommended[:3]:
+        print(f"  cluster {m.cluster_i} <-> cluster {m.cluster_j}: "
+              f"cohesion ratio {m.cohesion_ratio:.2f}, "
+              f"gap ratio {m.gap_ratio:.2f}")
+else:
+    print()
+    print(f"{len(merges)} pairs evaluated; none clear the cohesion AND gap "
+          "thresholds at the current settings, i.e. the HDBSCAN split is "
+          "internally consistent with the embedding.")
+
+# %% [markdown]
+# ## 4.5 The embedding
 #
 # The 2-D UMAP layout coloured by HDBSCAN label, plus a reference
 # map coloured by `[Fe/H]` so the chemical gradient across the
@@ -177,7 +229,7 @@ fig.savefig(FIGURE_DIR / "02_embedding.png")
 plt.show()
 
 # %% [markdown]
-# ## 4.5 Chemical abundance plane
+# ## 4.6 Chemical abundance plane
 #
 # The $[\alpha/\mathrm{M}]$ vs $[\mathrm{Fe/H}]$ plane separates the
 # thin and thick discs on a chemical basis. HDBSCAN had no knowledge
@@ -203,7 +255,7 @@ fig.savefig(FIGURE_DIR / "03_chemical_plane.png")
 plt.show()
 
 # %% [markdown]
-# ## 4.6 Action-space diagram
+# ## 4.7 Action-space diagram
 #
 # A Toomre-like view of orbit kinematics: total non-circular action
 # $\sqrt{J_R^2 + J_z^2}$ (proxy for orbital heat) against azimuthal
@@ -230,7 +282,7 @@ fig.savefig(FIGURE_DIR / "04_action_space.png")
 plt.show()
 
 # %% [markdown]
-# ## 4.7 Caveats
+# ## 4.8 Caveats
 #
 # * The sample is a 9 242-star slice of a larger chemo-dynamical
 #   pipeline output (the notebook subsamples it further). Selection

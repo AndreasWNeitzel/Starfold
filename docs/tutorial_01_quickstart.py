@@ -193,6 +193,31 @@ print(f"best HDBSCAN params: {result.best_params}")
 print(f"flags:               {result.flags or 'none'}")
 
 # %% [markdown]
+# ## 1.5 Save and reload the full fit
+#
+# `result.save(path)` writes the embedding, labels, persistence,
+# trustworthiness, fitted scaler, run config, and (when computed) the
+# noise-baseline summary plus credibility report into a directory.
+# `sf.load_pipeline_result(path)` returns the same content as a plain
+# dict (the Optuna study is not rehydrated; see the docstring). The
+# numerical-array round-trip is bit-faithful, so a saved fit is the
+# canonical archive of a clustering run.
+
+# %%
+import tempfile
+from pathlib import Path
+
+with tempfile.TemporaryDirectory() as tmp:
+    run_dir = Path(tmp) / "torus_chain_run"
+    result.save(run_dir)
+    loaded = sf.load_pipeline_result(run_dir)
+
+assert np.array_equal(loaded["labels"], result.labels)
+assert np.allclose(loaded["embedding"], result.embedding, atol=0.0)
+assert loaded["best_params"] == result.best_params
+print("round-trip OK: labels, embedding, and best_params identical")
+
+# %% [markdown]
 # ## Next
 #
 # * **[2. Validation](tutorial_02_validation.ipynb)** — is any of this
