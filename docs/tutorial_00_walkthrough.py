@@ -56,16 +56,18 @@ import starfold as sf
 FIGURE_DIR = Path("figures") / "tutorial_00_walkthrough"
 FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
-plt.rcParams.update({
-    "figure.dpi": 110,
-    "savefig.dpi": 150,
-    "savefig.bbox": "tight",
-    "font.size": 11,
-    "axes.grid": True,
-    "grid.alpha": 0.25,
-    "axes.spines.top": False,
-    "axes.spines.right": False,
-})
+plt.rcParams.update(
+    {
+        "figure.dpi": 110,
+        "savefig.dpi": 150,
+        "savefig.bbox": "tight",
+        "font.size": 11,
+        "axes.grid": True,
+        "grid.alpha": 0.25,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+    }
+)
 
 print(f"starfold {sf.__version__}")
 print(f"public API: {len(sf.__all__)} symbols")
@@ -95,9 +97,11 @@ print(f"GPU backend importable: {sf.cuml_is_importable()}")
 from sklearn.datasets import load_digits  # noqa: E402
 
 digits = load_digits()
-X = digits.data.astype(np.float64)          # (1797, 64) — feature matrix
-y_truth = digits.target.astype(np.intp)     # (1797,)    — ground-truth digit, used only for reference plots
-images = digits.images                      # (1797, 8, 8) — image form, for visualisation
+X = digits.data.astype(np.float64)  # (1797, 64) — feature matrix
+y_truth = digits.target.astype(
+    np.intp
+)  # (1797,)    — ground-truth digit, used only for reference plots
+images = digits.images  # (1797, 8, 8) — image form, for visualisation
 
 print(f"X shape:       {X.shape}")
 print(f"y_truth shape: {y_truth.shape}")
@@ -114,7 +118,8 @@ for digit_id in range(10):
     for row, idx in enumerate(matches[:2]):
         ax = axes[row, digit_id]
         ax.imshow(images[idx], cmap="Greys", vmin=0, vmax=16)
-        ax.set_xticks([]); ax.set_yticks([])
+        ax.set_xticks([])
+        ax.set_yticks([])
         ax.grid(False)
         if row == 0:
             ax.set_title(str(digit_id), fontsize=10)
@@ -213,9 +218,11 @@ print(result.summary())
 fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.0), constrained_layout=True)
 sf.plot_embedding(result.embedding, result.labels, ax=axes[0])
 axes[0].set_title(f"UMAP embedding, {result.n_clusters} HDBSCAN clusters")
-axes[1].scatter(result.embedding[:, 0], result.embedding[:, 1],
-                c=y_truth, cmap="tab10", s=8, alpha=0.85)
-axes[1].set_xlabel("component 1"); axes[1].set_ylabel("component 2")
+axes[1].scatter(
+    result.embedding[:, 0], result.embedding[:, 1], c=y_truth, cmap="tab10", s=8, alpha=0.85
+)
+axes[1].set_xlabel("component 1")
+axes[1].set_ylabel("component 2")
 axes[1].set_title("same embedding, coloured by true digit label")
 fig.savefig(FIGURE_DIR / "02_pipeline_embedding.png")
 plt.show()
@@ -270,7 +277,8 @@ emb_pca = sf.run_pca(X_scaled, n_components=2, random_state=0)
 fig, axes = plt.subplots(1, 3, figsize=(15.0, 4.7), constrained_layout=True)
 for ax, (name, emb) in zip(axes, [("UMAP", emb_umap), ("t-SNE", emb_tsne), ("PCA", emb_pca)]):
     ax.scatter(emb[:, 0], emb[:, 1], c=y_truth, cmap="tab10", s=8, alpha=0.85)
-    ax.set_xlabel(f"{name} 1"); ax.set_ylabel(f"{name} 2")
+    ax.set_xlabel(f"{name} 1")
+    ax.set_ylabel(f"{name} 2")
     ax.set_title(f"{name} (coloured by true digit)")
 fig.savefig(FIGURE_DIR / "03_embedding_comparison.png")
 plt.show()
@@ -375,10 +383,8 @@ baseline = sf.compute_noise_baseline(
     random_state=0,
 )
 print(f"99.7th-percentile threshold: {baseline.threshold:.4f}")
-print(f"observed persistences:       "
-      f"{[round(float(p), 3) for p in result.persistence]}")
-print(f"clusters above threshold:    "
-      f"{int(np.sum(result.significant))} / {len(result.significant)}")
+print(f"observed persistences:       {[round(float(p), 3) for p in result.persistence]}")
+print(f"clusters above threshold:    {int(np.sum(result.significant))} / {len(result.significant)}")
 
 # %% [markdown]
 # ### §5b. `compute_credibility` (the omnibus 3σ test)
@@ -444,9 +450,11 @@ stability = sf.compute_subsample_stability(
     subsample_fraction=0.8,
     random_state=0,
 )
-print(f"ARI: min={stability.ari.min():.3f}, "
-      f"median={float(np.median(stability.ari)):.3f}, "
-      f"max={stability.ari.max():.3f}")
+print(
+    f"ARI: min={stability.ari.min():.3f}, "
+    f"median={float(np.median(stability.ari)):.3f}, "
+    f"max={stability.ari.max():.3f}"
+)
 print(f"n_clusters across subsamples: {stability.n_clusters.tolist()}")
 
 # %% [markdown]
@@ -581,7 +589,10 @@ cont = sf.continuity_curve(X_scaled, result.embedding, k_values=k_values)
 
 fig, axes = plt.subplots(2, 3, figsize=(16.0, 8.5), constrained_layout=True)
 plot_membership_confidence(
-    result.embedding, result.labels, result.probabilities, ax=axes[0, 0],
+    result.embedding,
+    result.labels,
+    result.probabilities,
+    ax=axes[0, 0],
 )
 axes[0, 0].set_title("(a) membership confidence")
 
@@ -592,7 +603,9 @@ sf.plot_trustworthiness_curve(trust, continuity_scores=cont, ax=axes[0, 2])
 axes[0, 2].set_title("(c) trustworthiness / continuity")
 
 plot_subsample_stability(
-    stability, result.persistence, axes=[axes[1, 0], axes[1, 1], axes[1, 2]],
+    stability,
+    result.persistence,
+    axes=[axes[1, 0], axes[1, 1], axes[1, 2]],
 )
 fig.suptitle("§7b — the 6 quality-dashboard panels, individually", y=1.02)
 fig.savefig(FIGURE_DIR / "06_quality_panels_individually.png")
@@ -697,8 +710,7 @@ plt.show()
 # %%
 candidates = result.suggest_merges()
 n_recommended = sum(m.recommended for m in candidates)
-print(f"{len(candidates)} candidate pairs evaluated, "
-      f"{n_recommended} flagged at default thresholds")
+print(f"{len(candidates)} candidate pairs evaluated, {n_recommended} flagged at default thresholds")
 print()
 print("top 5 candidates, sorted by cohesion ratio:")
 print(f"  {'pair':<11} {'cohesion':>9} {'gap':>6}  recommended")
@@ -728,11 +740,11 @@ for m in candidates[:5]:
 n_clusters = result.n_clusters
 centroids = np.stack([X[result.labels == c].mean(axis=0) for c in range(n_clusters)])
 
-fig, axes = plt.subplots(1, n_clusters, figsize=(0.95 * n_clusters, 1.4),
-                        constrained_layout=True)
+fig, axes = plt.subplots(1, n_clusters, figsize=(0.95 * n_clusters, 1.4), constrained_layout=True)
 for c, ax in enumerate(axes):
     ax.imshow(centroids[c].reshape(8, 8), cmap="Greys", vmin=0, vmax=16)
-    ax.set_xticks([]); ax.set_yticks([])
+    ax.set_xticks([])
+    ax.set_yticks([])
     ax.grid(False)
     ax.set_title(f"cluster {c}", fontsize=9)
 fig.suptitle("Average digit image per HDBSCAN cluster", y=1.1)
@@ -754,6 +766,7 @@ plt.show()
 # replace one cluster's label with another's and compact the result
 # back to `0..K-1`.
 
+
 # %%
 def apply_merge(labels: np.ndarray, cluster_src: int, cluster_dst: int) -> np.ndarray:
     """Relabel ``cluster_src`` as ``cluster_dst`` and compact the labels."""
@@ -769,10 +782,12 @@ def apply_merge(labels: np.ndarray, cluster_src: int, cluster_dst: int) -> np.nd
 # Strategy A: blind, top-cohesion candidate from suggest_merges.
 blind_pair = (candidates[0].cluster_i, candidates[0].cluster_j)
 labels_blind = apply_merge(result.labels, blind_pair[1], blind_pair[0])
-print(f"Strategy A (blind):              merge {blind_pair[1]} -> {blind_pair[0]}  "
-      f"(cohesion={candidates[0].cohesion_ratio:.2f}, "
-      f"gap={candidates[0].gap_ratio:.2f}, "
-      f"recommended={candidates[0].recommended})")
+print(
+    f"Strategy A (blind):              merge {blind_pair[1]} -> {blind_pair[0]}  "
+    f"(cohesion={candidates[0].cohesion_ratio:.2f}, "
+    f"gap={candidates[0].gap_ratio:.2f}, "
+    f"recommended={candidates[0].recommended})"
+)
 
 # Strategy B: inspection-informed. With y_truth available we can
 # show what "this digit class is split across two clusters" looks
@@ -780,10 +795,12 @@ print(f"Strategy A (blind):              merge {blind_pair[1]} -> {blind_pair[0]
 # duplicate pair from the centroid strip above.
 from collections import Counter  # noqa: E402
 
-dominants = np.array([
-    int(np.bincount(y_truth[result.labels == c], minlength=10).argmax())
-    for c in range(n_clusters)
-])
+dominants = np.array(
+    [
+        int(np.bincount(y_truth[result.labels == c], minlength=10).argmax())
+        for c in range(n_clusters)
+    ]
+)
 counts = Counter(dominants.tolist())
 duplicate_digits = [d for d, n in counts.items() if n > 1]
 if duplicate_digits:
@@ -796,8 +813,10 @@ if duplicate_digits:
 else:
     keep = drop = blind_pair[0]
 labels_informed = apply_merge(result.labels, drop, keep)
-print(f"Strategy B (inspection-informed): merge {drop} -> {keep}  "
-      f"(both centroids look like the digit '{target_digit}')")
+print(
+    f"Strategy B (inspection-informed): merge {drop} -> {keep}  "
+    f"(both centroids look like the digit '{target_digit}')"
+)
 
 # %% [markdown]
 # ### §9d. Quantitative comparison
@@ -929,15 +948,22 @@ plt.show()
 # %%
 sigma = 0.5  # pixel-intensity units; small fraction of the 0..16 range
 propagation = result.propagate_uncertainty(
-    X, sigma=sigma, n_draws=40, random_state=0,
+    X,
+    sigma=sigma,
+    n_draws=40,
+    random_state=0,
 )
-print(f"instability range: "
-      f"min={propagation.instability.min():.3f}, "
-      f"median={float(np.median(propagation.instability)):.3f}, "
-      f"max={propagation.instability.max():.3f}")
-print(f"confident samples (instability < 0.10): "
-      f"{int(np.sum(propagation.instability < 0.10))} / "
-      f"{len(propagation.instability)}")
+print(
+    f"instability range: "
+    f"min={propagation.instability.min():.3f}, "
+    f"median={float(np.median(propagation.instability)):.3f}, "
+    f"max={propagation.instability.max():.3f}"
+)
+print(
+    f"confident samples (instability < 0.10): "
+    f"{int(np.sum(propagation.instability < 0.10))} / "
+    f"{len(propagation.instability)}"
+)
 
 # %%
 fig, ax = plt.subplots(figsize=(7.0, 5.5), constrained_layout=True)
@@ -957,8 +983,9 @@ plt.show()
 
 # %%
 aware = pipeline.fit_with_uncertainty(X, sigma=sigma, n_replicas=3)
-print(f"aware-fit clusters: {aware.augmented_result.n_clusters} "
-      f"(clean-fit was {result.n_clusters})")
+print(
+    f"aware-fit clusters: {aware.augmented_result.n_clusters} (clean-fit was {result.n_clusters})"
+)
 print(f"aware-fit trustworthiness: {aware.augmented_result.trustworthiness:.4f}")
 
 # %% [markdown]
@@ -966,6 +993,268 @@ print(f"aware-fit trustworthiness: {aware.augmented_result.trustworthiness:.4f}"
 # clustering I trust, how robust is each sample's assignment under
 # input noise?"; B is "what clustering does the data support when
 # its uncertainty is part of the fit?".
+
+# %% [markdown]
+# ### §10c. A topology-stress test: torus chain with growing uncertainty
+#
+# Well-separated blobs are an easy case for uncertainty propagation:
+# as long as `sigma` stays smaller than the inter-cluster gap, the
+# membership matrix is near one-hot and the instability map is dark.
+# The interesting regime is when neighbouring structures are
+# *topologically interconnected* and a growing `sigma` blurs the
+# boundary between them. The membership probability matrix is exactly
+# how we *quantify the reliability* of each sample's assignment in
+# that regime.
+#
+# Build a four-torus closed Hopf chain in 3-D: adjacent rings thread
+# each other's holes, non-adjacent rings do not link. Augment with two
+# heteroscedastic "metadata" features at very different scales to make
+# the problem 5-D. The metadata is uncorrelated noise, so a real
+# pipeline should learn to rely on the three spatial features for the
+# clustering. The per-feature `sigma` vector reflects what a measurer
+# would actually report: small uncertainty on the precise features,
+# larger on the loose ones.
+
+# %%
+import sys  # noqa: PLC0415
+
+for _candidate in (Path("examples"), Path("../examples"), Path.cwd() / "examples"):
+    if (_candidate / "torus_chain.py").exists():
+        sys.path.insert(0, str(_candidate.resolve()))
+        break
+from torus_chain import make_torus_chain  # noqa: E402
+
+X_torus3, y_torus = make_torus_chain(
+    n_links=4,
+    points_per_link=500,
+    big_radius=4.0,
+    major_even=2.0,
+    major_odd=2.5,
+    minor_radius=0.30,
+    noise_std=0.01,
+    solid=True,
+    random_state=0,
+)
+
+# Add two extra features at deliberately mismatched scales so the
+# per-feature sigma vector has something to distinguish.
+rng_5d = np.random.default_rng(1)
+extra_a = rng_5d.normal(0.0, 0.05, size=X_torus3.shape[0])  # very precise
+extra_b = rng_5d.normal(0.0, 30.0, size=X_torus3.shape[0])  # very loose
+X_torus = np.column_stack([X_torus3, extra_a, extra_b])
+
+# Per-feature one-sigma measurement uncertainty. Spatial coords are
+# precise (think positions); extra_a is also precise; extra_b is
+# loose (think a poorly constrained derived quantity). These are
+# baseline values; we will scale them in a moment.
+sigma_baseline = np.array([0.05, 0.05, 0.05, 0.02, 10.0])
+
+print(f"X shape:           {X_torus.shape}")
+print(f"feature ranges:")
+ranges = X_torus.max(axis=0) - X_torus.min(axis=0)
+for j, (rng_, sig) in enumerate(zip(ranges, sigma_baseline, strict=False)):
+    print(
+        f"  feat_{j}: range={rng_:8.2f}   sigma_baseline={sig:7.2f}   sigma/range={sig / rng_:6.1%}"
+    )
+
+# %% [markdown]
+# Look at the 3-D chain coloured by ring label. Adjacent rings
+# interlock through each other; far-side rings do not touch.
+
+# %%
+fig = plt.figure(figsize=(7.0, 5.5), constrained_layout=True)
+ax3d = fig.add_subplot(111, projection="3d")
+cmap_chain = plt.get_cmap("tab10")
+for k in range(int(y_torus.max()) + 1):
+    m = y_torus == k
+    ax3d.scatter(
+        X_torus[m, 0],
+        X_torus[m, 1],
+        X_torus[m, 2],
+        s=2.0,
+        color=cmap_chain(k),
+        alpha=0.75,
+        label=f"ring {k}",
+    )
+ax3d.set_xlabel("x")
+ax3d.set_ylabel("y")
+ax3d.set_zlabel("z")
+ax3d.set_title("four Hopf-linked tori (truth)")
+ax3d.set_box_aspect((1, 1, 0.55))
+ax3d.legend(fontsize=8, loc="upper right")
+fig.savefig(FIGURE_DIR / "13_torus_chain_truth.png")
+plt.show()
+
+# %% [markdown]
+# Fit the pipeline once on the observed matrix. Each ring should land
+# as its own cluster (HDBSCAN may split a torus into two arcs because
+# UMAP cannot embed a circle in 2-D without tearing; that is a known
+# topology artefact, not an uncertainty effect).
+
+# %%
+pipeline_torus = sf.UnsupervisedPipeline(
+    umap_kwargs={"n_neighbors": 30, "min_dist": 0.0, "n_epochs": 500},
+    hdbscan_optuna_trials=40,
+    mcs_range=(60, 400),
+    ms_range=(5, 30),
+    skip_noise_baseline=True,
+    random_state=0,
+)
+result_torus = pipeline_torus.fit(X_torus)
+print(result_torus.summary())
+
+# %% [markdown]
+# #### The sigma sweep
+#
+# Run `propagate_uncertainty` three times, scaling the baseline
+# `sigma` vector by 1x, 5x, and 15x. At 1x, each sample's membership
+# row should be nearly one-hot. At 15x, the perturbations are large
+# enough to push samples across ring boundaries: the membership
+# matrix smears out and the instability map lights up at exactly the
+# link regions where adjacent tori thread each other.
+
+# %%
+scales = [1.0, 5.0, 15.0]
+propagations: list[sf.uncertainty.UncertaintyPropagation] = []
+for s in scales:
+    prop = result_torus.propagate_uncertainty(
+        X_torus,
+        sigma=sigma_baseline * s,
+        n_draws=80,
+        random_state=0,
+    )
+    propagations.append(prop)
+    n_clusters = prop.membership.shape[1] - 1
+    print(
+        f"sigma x{s:>4.1f}:  mean instability = {prop.instability.mean():.3f}   "
+        f"frac confident (instab<0.1) = {(prop.instability < 0.10).mean():.1%}   "
+        f"frac high-doubt (instab>0.5) = {(prop.instability > 0.50).mean():.1%}"
+    )
+
+# %% [markdown]
+# Visualise the breakdown. Left: the clean embedding coloured by
+# label. Right three panels: instability map at growing sigma. Watch
+# how the bright "uncertain" regions concentrate at the link points
+# between adjacent rings as sigma grows, then engulf entire rings.
+
+# %%
+fig, axes = plt.subplots(1, 4, figsize=(18.0, 4.6), constrained_layout=True)
+sf.plot_embedding(result_torus.embedding, result_torus.labels, ax=axes[0])
+axes[0].set_title(f"clean fit: {result_torus.n_clusters} clusters")
+for ax, scale, prop in zip(axes[1:], scales, propagations, strict=True):
+    sf.plot_uncertainty_map(result_torus.embedding, prop, ax=ax)
+    ax.set_title(
+        f"sigma x{scale:.1f}  mean={prop.instability.mean():.2f}  "
+        f"P(stays)>0.8: {(prop.instability < 0.20).mean():.0%}"
+    )
+fig.savefig(FIGURE_DIR / "14_torus_uncertainty_sweep.png")
+plt.show()
+
+# %% [markdown]
+# #### Per-sample reliability: same boundary sample, three sigma regimes
+#
+# Pick the sample with the highest instability at the largest sigma.
+# Track its membership row across the three regimes. This is the
+# quantitative answer to "how reliable is this sample's cluster
+# assignment given the input uncertainty?"
+
+# %%
+worst_idx = int(np.argmax(propagations[-1].instability))
+n_cols = propagations[0].membership.shape[1]
+header = [f"P(c{k})" for k in range(n_cols - 1)] + ["P(out)"]
+print(
+    f"sample {worst_idx} (hard label = {int(result_torus.labels[worst_idx])}, "
+    f"true ring = {int(y_torus[worst_idx])})"
+)
+print(f"  {'sigma':>8}  {'instab.':>8}  " + "  ".join(f"{h:>6}" for h in header))
+for scale, prop in zip(scales, propagations, strict=True):
+    row = prop.membership[worst_idx]
+    probs = "  ".join(f"{p:>6.2f}" for p in row)
+    print(f"  x{scale:>5.1f}    {prop.instability[worst_idx]:>8.3f}  {probs}")
+
+# %% [markdown]
+# At low sigma the row is concentrated on one cluster. At high
+# sigma, probability mass spreads across several clusters (and the
+# outlier column), which is the *reliability quantification* the
+# user asked for: a probability distribution over cluster identities
+# rather than a hard label.
+#
+# Per-cluster aggregates tell the same story at the group level: as
+# sigma grows, the median `P(stays)` for each ring drops, and the
+# fraction of confident samples (instability < 0.1) collapses.
+
+# %%
+print(
+    f"{'cluster':>8}  {'size':>5}  "
+    + "  ".join(f"{'P_stay@x' + str(s):>10}" for s in [1.0, 5.0, 15.0])
+    + "  "
+    + "  ".join(f"{'conf@x' + str(s):>9}" for s in [1.0, 5.0, 15.0])
+)
+for k in range(result_torus.n_clusters):
+    mask = result_torus.labels == k
+    if not mask.any():
+        continue
+    line = f"{k:>8}  {int(mask.sum()):>5}"
+    for prop in propagations:
+        line += f"  {np.median(prop.membership[mask, k]):>10.3f}"
+    for prop in propagations:
+        line += f"  {(prop.instability[mask] < 0.10).mean():>9.1%}"
+    print(line)
+
+# %% [markdown]
+# #### Uncertainty-aware fit on the high-sigma regime
+#
+# At the highest sigma the post-hoc analysis says "boundaries are
+# unreliable, treat half the assignments as uncertain". The next
+# question is what clustering the *pipeline* itself would produce
+# if it saw the uncertainty cloud during fitting. Run
+# `fit_with_uncertainty` at the same 15x sigma with three replicas.
+# If adjacent rings truly become indistinguishable to UMAP+HDBSCAN
+# under that noise level, the aware fit returns fewer clusters than
+# the clean fit.
+
+# %%
+aware_torus = pipeline_torus.fit_with_uncertainty(
+    X_torus,
+    sigma=sigma_baseline * 15.0,
+    n_replicas=3,
+)
+print(f"{'metric':<22} {'clean fit':>10}  {'aware fit (x15)':>17}")
+print(
+    f"{'n_clusters':<22} {result_torus.n_clusters:>10d}  "
+    f"{aware_torus.augmented_result.n_clusters:>17d}"
+)
+print(
+    f"{'trustworthiness':<22} {result_torus.trustworthiness:>10.4f}  "
+    f"{aware_torus.augmented_result.trustworthiness:>17.4f}"
+)
+print(
+    f"{'mean instability':<22} {float(propagations[-1].instability.mean()):>10.3f}  "
+    f"{float(aware_torus.propagation.instability.mean()):>17.3f}"
+)
+
+# %% [markdown]
+# Mode A (post-hoc, the three panels above) and mode B
+# (`fit_with_uncertainty`) answer different questions. Mode A
+# *audits* the clean fit: "given this clustering, how stable is each
+# label?". Mode B *renegotiates* the clustering itself: "what
+# structure does the data support when its uncertainty cloud is part
+# of the fitting input?".
+#
+# The two modes can disagree directionally and *that disagreement is
+# itself a signal*. At low sigma the rings stay clearly separated in
+# both modes. At very large sigma mode B does not necessarily produce
+# fewer clusters than the clean fit; on a Hopf chain at x15 the
+# augmented matrix carries so many perturbation-driven density
+# splinters that HDBSCAN fragments into tens of micro-clusters around
+# the chain. Mode A says "boundaries are smeared, treat them with
+# care" via the membership matrix; mode B says "the density landscape
+# itself is unstable" via an inflated, run-to-run-varying cluster
+# count. Both are reasons to distrust the hard label. The right
+# action in either case is the same: filter on
+# `propagation.confident_labels(threshold=0.8)` and report the
+# membership matrix alongside the hard assignments rather than the
+# hard assignments alone.
 
 # %% [markdown]
 # ## §11. Save and reload
