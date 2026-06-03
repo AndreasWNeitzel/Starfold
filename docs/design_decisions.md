@@ -193,7 +193,7 @@ prop.confident_labels(0.8)`.
 |---|---|---|
 | Default figure size | `(6, 5)` inches for single-panel; constrained-layout multi-panel for dashboards | One-column on a Retina screen, 2:1 aspect-ratio for the typical scatter / curve plot. Dashboards override to match panel count. |
 | Colourmap for categorical labels | `tab10` (≤10 clusters) and `tab20` (≤20); fall back to viridis-derived sampling beyond | The Matplotlib defaults; chosen to remain distinguishable on colourblind palettes without rainbows. |
-| Colourmap for sequential data | `viridis`; diverging is `coolwarm` | Per CLAUDE.md global §3 (no rainbow defaults). |
+| Colourmap for sequential data | `viridis`; diverging is `coolwarm` | Perceptually uniform; rainbow colourmaps are avoided. |
 | Outlier colour | `lightgrey` | HDBSCAN outliers (label `-1`) should fade visually so the cluster signal dominates. |
 | Point size | `point_size=8` by default | Legible at 1 000–10 000 samples on a screen; users override on dense embeddings. |
 | Dashboard `constrained_layout=True` | Always | Avoids panel overlap without needing per-call `tight_layout` calls; matplotlib's recommended default for multi-axes figures. |
