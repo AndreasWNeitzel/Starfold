@@ -21,6 +21,7 @@ that subset.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
@@ -649,8 +650,20 @@ class PipelineResult:
         ax_imp.set_title("(b) parameter importance (fANOVA)")
 
         ax_trust = fig.add_subplot(gs[0, 2])
-        scores = trustworthiness_curve(x_scaled, self.embedding, k_values=k_values)
-        cont_scores = continuity_curve(x_scaled, self.embedding, k_values=k_values)
+        n_samples_dash = int(x_scaled.shape[0])
+        max_k = max(1, (n_samples_dash - 1) // 2)
+        k_values_safe = tuple(k for k in k_values if 1 <= k <= max_k)
+        if not k_values_safe:
+            k_values_safe = (max_k,)
+        if k_values_safe != tuple(k_values):
+            warnings.warn(
+                f"plot_quality_dashboard clamped k_values to {k_values_safe} from "
+                f"{tuple(k_values)} because trustworthiness requires k < n_samples / 2 "
+                f"(n_samples={n_samples_dash}).",
+                stacklevel=2,
+            )
+        scores = trustworthiness_curve(x_scaled, self.embedding, k_values=k_values_safe)
+        cont_scores = continuity_curve(x_scaled, self.embedding, k_values=k_values_safe)
         plot_trustworthiness_curve(
             scores,
             continuity_scores=cont_scores,
@@ -909,6 +922,14 @@ class UnsupervisedPipeline:
 
         k = int(self.umap_kwargs.get("n_neighbors", 15))
         k_eff = min(k, max(1, (n_samples - 1) // 2))
+        if k_eff < k:
+            warnings.warn(
+                f"trustworthiness/continuity were computed at k={k_eff} rather than the "
+                f"requested n_neighbors={k} because n_samples={n_samples} is too small to "
+                f"evaluate at k={k} (constraint: k < n_samples / 2). Increase n_samples or "
+                f"lower n_neighbors to remove this clamp.",
+                stacklevel=2,
+            )
         trust = trustworthiness(x_scaled, embedding, k=k_eff, metric=self.metric)
         cont = continuity(x_scaled, embedding, k=k_eff, metric=self.metric)
 

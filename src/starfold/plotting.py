@@ -155,8 +155,8 @@ def plot_embedding(
                 label=f"cluster {int(u)}",
             )
 
-    axis.set_xlabel("component 1")
-    axis.set_ylabel("component 2")
+    axis.set_xlabel("embedding 1")
+    axis.set_ylabel("embedding 2")
     if title is not None:
         axis.set_title(title)
     axis.set_aspect("equal", adjustable="datalim")
@@ -535,8 +535,8 @@ def plot_uncertainty_map(
         f"uncertainty map  ({propagation.n_draws} draws, "
         f"mean={mean_instab:.3f}, >0.5: {frac_high:.1%})"
     )
-    ax.set_xlabel("UMAP 1")
-    ax.set_ylabel("UMAP 2")
+    ax.set_xlabel("embedding 1")
+    ax.set_ylabel("embedding 2")
     return ax
 
 
@@ -1125,8 +1125,8 @@ def plot_membership_confidence(
         vmax=1.0,
     )
     plt.colorbar(sc, ax=axis, label="cluster-membership probability")
-    axis.set_xlabel("component 1")
-    axis.set_ylabel("component 2")
+    axis.set_xlabel("embedding 1")
+    axis.set_ylabel("embedding 2")
     axis.set_aspect("equal", adjustable="datalim")
     return axis
 

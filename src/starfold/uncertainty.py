@@ -66,6 +66,31 @@ __all__ = [
 class UncertaintyPropagation:
     """Result of propagating feature uncertainties through a fit.
 
+    Statistical interpretation
+    --------------------------
+    The ``membership`` matrix is an empirical Monte Carlo *stability
+    score*, not a posterior probability. Specifically, ``membership[i,
+    j]`` is the fraction of Monte Carlo draws (out of ``n_draws``) in
+    which sample ``i`` was assigned to cluster ``j`` under the
+    Gaussian perturbation specified by ``sigma``. This is a
+    frequentist coverage proxy under the assumed input-noise model;
+    it carries no Bayesian prior or model evidence. The Monte Carlo
+    standard error on a single ``membership[i, j]`` is approximately
+    ``sqrt(p (1 - p) / n_draws)`` (binomial), so near the
+    decision-boundary ``p = 0.5`` and ``n_draws = 100`` the SE is
+    around 0.05. Raise ``n_draws`` if quantitative downstream
+    analysis depends on precision below that.
+
+    The outlier column (index ``n_clusters``) deserves its own
+    semantics: ``membership[i, n_clusters] > 0`` means sample ``i``
+    was assigned ``label = -1`` in some draws. A sample whose
+    consensus is ``-1`` *and* whose instability is small is
+    consistently-outlier; a sample whose consensus is ``-1`` *and*
+    whose instability is large is boundary-ambiguous (between an
+    outlier and a real cluster). The two cases require different
+    interpretation in downstream filtering; see
+    :meth:`confident_labels`.
+
     Parameters
     ----------
     membership
@@ -86,7 +111,9 @@ class UncertaintyPropagation:
     sigma_shape
         Shape of the ``sigma`` argument that produced this propagation
         (``"scalar"``, ``"per_feature"``, or ``"per_sample_feature"``).
-        Kept for diagnostic plotting.
+        Only diagonal sigma is supported; correlated feature errors
+        would require a per-sample Cholesky factor, which is not yet
+        on the API.
     config
         Frozen record of the propagation inputs (``n_draws``,
         ``random_state``, ``sigma_shape``, ``sigma_summary``) so

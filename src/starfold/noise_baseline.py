@@ -39,6 +39,7 @@ import gc
 import hashlib
 import json
 import os
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -469,7 +470,10 @@ def compute_noise_baseline(
         if cached is not None:
             return cached
 
-    base_seed = 0 if random_state is None else int(random_state)
+    if random_state is None:
+        base_seed = int.from_bytes(os.urandom(4), "little")
+    else:
+        base_seed = int(random_state)
     per_realisation_max = np.empty(n_realisations, dtype=np.float64)
     per_realisation_n_clusters = np.empty(n_realisations, dtype=np.intp)
     per_realisation_objective = np.empty(n_realisations, dtype=np.float64)
@@ -543,6 +547,17 @@ def compute_noise_baseline(
     )
 
     threshold = float(np.percentile(per_realisation_max, percentile))
+    if threshold == 0.0 and not np.any(per_realisation_max > 0.0):
+        warnings.warn(
+            "DEGENERATE NOISE BASELINE: every noise realisation produced zero clusters, "
+            f"so the {percentile}th-percentile threshold is 0.0. The per-cluster significance "
+            "flag will accept every real cluster vacuously. This usually means "
+            "`mcs_range` is too aggressive for the chosen `n_samples`, or the noise "
+            "matrix is too small to support any density structure under HDBSCAN. "
+            "Either lower the `min_cluster_size` upper bound, raise `n_samples`, or raise "
+            "`per_realisation_trials` so Optuna has more room to find structure.",
+            stacklevel=2,
+        )
     result = NoiseBaselineResult(
         threshold=threshold,
         per_realisation_max=per_realisation_max,
