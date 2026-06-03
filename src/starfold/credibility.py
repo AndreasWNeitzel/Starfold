@@ -52,6 +52,7 @@ are needed. See ``docs/design_decisions.md``.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -279,6 +280,25 @@ def compute_credibility(
         If ``alpha`` is not in ``(0, 1)``, if ``baseline`` has no
         realisations, or if ``cluster_persistence`` is not 1-D or
         disagrees in length with ``n_clusters``.
+
+    Notes
+    -----
+    The ``passes`` flag uses the *conjunction* of three upper-tail
+    p-values (cluster count, Optuna objective, max persistence). A
+    conjunctive screen is conservative: its joint type-I error
+    under the null is bounded by the smallest individual p-value,
+    so no explicit Bonferroni or Sidak multiplicity correction is
+    applied. The three scalars are not independent (more clusters
+    tend to produce both higher objective and higher max
+    persistence), so a product-style joint p-value would
+    understate the joint significance. The conservative
+    conjunction is the intended behaviour.
+
+    When any observed scalar is non-finite (e.g. Optuna returns
+    ``-inf`` because no trial completed), the corresponding
+    p-value is ``NaN``; ``passes`` is forced to ``False`` and a
+    ``UserWarning`` is emitted so the caller does not silently
+    treat the result as inconclusive.
     """
     if not 0.0 < alpha < 1.0:
         msg = f"alpha must be in (0, 1) (got {alpha})."
@@ -296,7 +316,22 @@ def compute_credibility(
     max_persistence_p = empirical_upper_tail_pvalue(
         float(max_persistence), baseline.per_realisation_max
     )
-    passes = bool(n_clusters_p < alpha and objective_p < alpha and max_persistence_p < alpha)
+    all_finite = (
+        np.isfinite(n_clusters_p) and np.isfinite(objective_p) and np.isfinite(max_persistence_p)
+    )
+    passes = bool(
+        all_finite and n_clusters_p < alpha and objective_p < alpha and max_persistence_p < alpha
+    )
+    if not all_finite:
+        warnings.warn(
+            "compute_credibility received a non-finite observed value "
+            f"(n_clusters_p={n_clusters_p!r}, objective_p={objective_p!r}, "
+            f"max_persistence_p={max_persistence_p!r}). The 'passes' verdict has been forced "
+            "to False because the run cannot be meaningfully compared to the noise null when "
+            "any observed scalar is NaN or infinite (e.g. Optuna's best_value when no trial "
+            "completed). Inspect the upstream search and noise baseline before reading the report.",
+            stacklevel=2,
+        )
 
     if cluster_persistence is None:
         observed_cluster = np.zeros(0, dtype=np.float64)

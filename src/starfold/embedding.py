@@ -88,6 +88,25 @@ def _as_2d_float(X: ArrayLike) -> NDArray[np.floating[Any]]:
     return x
 
 
+def _validate_umap_dims(x: NDArray[np.floating[Any]], n_components: int) -> None:
+    """Reject obviously degenerate UMAP requests before calling umap-learn.
+
+    umap-learn itself accepts (n_features=2, n_components=10) and then
+    produces meaningless output; catch the contradiction here so the
+    caller sees a clear error.
+    """
+    n_features = int(x.shape[1])
+    if n_components < 1:
+        msg = f"n_components must be >= 1 (got {n_components})."
+        raise ValueError(msg)
+    if n_components > n_features:
+        msg = (
+            f"n_components={n_components} exceeds n_features={n_features}. "
+            f"UMAP cannot embed into more dimensions than the input has."
+        )
+        raise ValueError(msg)
+
+
 def _run_umap_cpu(
     x: NDArray[np.floating[Any]],
     *,
@@ -100,6 +119,7 @@ def _run_umap_cpu(
     low_memory: bool,
     n_jobs: int | None,
 ) -> NDArray[np.floating[Any]]:
+    _validate_umap_dims(x, n_components)
     emb, _ = _fit_umap_cpu(
         x,
         n_neighbors=n_neighbors,

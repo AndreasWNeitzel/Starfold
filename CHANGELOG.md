@@ -101,6 +101,51 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - `pandas` declared as a dev dep so CI can compute hdbscan's
   `relative_validity_` (which requires `to_pandas` internally) without
   the 55 setup failures observed on the first post-release CI run.
+- `compute_noise_baseline(random_state=None)` now uses an
+  OS-random seed so consecutive calls produce independent
+  realisations (previously `base_seed=0` made `None`-seeded
+  calls bit-identical, violating the docstring contract).
+- `PipelineResult.plot_quality_dashboard(X)` no longer crashes
+  on small samples. The hardcoded
+  `k_values=(5, 10, 15, 30, 50, 100)` is now filtered to
+  `k <= n_samples // 2 - 1`; any dropped value is reported via
+  `UserWarning`.
+- `UnsupervisedPipeline.fit` now warns when trustworthiness
+  is computed at a clamped `k < n_neighbors` (instead of
+  silently using the clamped `k` without notice).
+- `compute_noise_baseline` warns when every realisation
+  produces zero clusters (degenerate baseline; the threshold
+  is `0.0` and every real cluster passes vacuously). The
+  warning explains the likely cause and remediation.
+- `compute_credibility` now warns and forces `passes=False`
+  when any observed scalar is non-finite (e.g. Optuna returns
+  `-inf` because no trial completed); previously the verdict
+  would default to `False` for the wrong reason, with no
+  indication that the run could not be evaluated.
+- `run_umap` validates `n_components >= 1` and
+  `n_components <= n_features` before dispatching to
+  `umap-learn`; previously a degenerate request would produce
+  meaningless output without error.
+
+### Changed
+- Embedding-plot axis labels are now "embedding 1" /
+  "embedding 2" consistently across `plot_embedding`,
+  `plot_uncertainty_map`, and `plot_membership_confidence`
+  (previously mixed "component 1/2" and "UMAP 1/2"). The
+  generic label is accurate regardless of which reducer
+  produced the embedding.
+- `UncertaintyPropagation` docstring now opens with an
+  explicit "Statistical interpretation" section framing the
+  membership matrix as an empirical Monte Carlo stability
+  score (not a Bayesian posterior probability), naming the
+  binomial MC standard error, and distinguishing
+  "consistently-outlier" from "boundary-ambiguous" samples.
+  The outlier-column semantics are now spelled out for
+  downstream filtering.
+- `compute_credibility` docstring now includes a `Notes`
+  section explaining why no Bonferroni/Sidak multiplicity
+  correction is applied to the three-way conjunctive
+  screen, and documenting the NaN-handling guarantee.
 
 ### Removed
 - Nothing yet -- this is the pre-release milestone.
