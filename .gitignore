@@ -56,3 +56,6 @@ uv.lock
 
 # Subagent review reports (regenerated on demand, not committed)
 reviews/
+
+# Local review/lessons notes (not for GitHub push)
+notes/
