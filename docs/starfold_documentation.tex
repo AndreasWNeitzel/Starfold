@@ -282,12 +282,12 @@ When the user's feature matrix carries per-feature 1-sigma error bars, \textsf{s
 \paragraph{The two modes answer different questions.}
 Mode A audits an existing clustering: ``given this fit, how stable is each label?''. Mode B renegotiates the clustering itself: ``what structure does the data support when its uncertainty cloud is part of the fitting input?''. The two can disagree directionally and that disagreement is itself a reliability signal.
 
-\paragraph{A topology-stress demonstration.} Well-separated blobs are not a good test of uncertainty propagation: as long as sigma stays smaller than the inter-cluster gap, the membership matrix is near one-hot. A closed chain of four Hopf-linked tori (\Cref{fig:torus-truth}) is the natural stress test: adjacent rings thread each other's holes, so they share a boundary region that uncertainty can blur.
+\paragraph{A topology-stress demonstration.} Well-separated blobs are not a good test of uncertainty propagation: as long as sigma stays smaller than the inter-cluster gap, the membership matrix is near one-hot. A closed chain of eight Hopf-linked tori (\Cref{fig:torus-truth}) is the natural stress test: adjacent rings thread each other's holes (linking number \(\pm 1\), verified by \texttt{examples.torus\_chain.linking\_matrix}), so they share a boundary region that uncertainty can blur.
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=0.65\textwidth]{13_torus_chain_truth.png}
-  \caption{Four-torus closed Hopf chain in 3D. Adjacent rings link; non-adjacent rings do not. Augmented with two heteroscedastic ``metadata'' features to make the pipeline see a 5-D feature matrix.}
+  \caption{Eight-torus closed Hopf chain in 3D. Alternating vertical and horizontal rings around a backbone circle of radius 4; the linking matrix is tridiagonal \(\pm 1\) with corner wraparound (adjacent rings link, non-adjacent rings do not). Augmented with two heteroscedastic ``metadata'' features to make the pipeline see a 5-D feature matrix.}
   \label{fig:torus-truth}
 \end{figure}
 
@@ -295,15 +295,15 @@ Running \texttt{propagate\_uncertainty} at three sigma scales (\(\times 1\), \(\
 
 \begin{table}[h]
   \centering
-  \caption{Reliability under growing per-feature uncertainty on the four-torus chain.}
+  \caption{Reliability under growing per-feature uncertainty on the eight-torus chain (\(N = 2400\) samples, seed 0). The confident-sample fraction degrades monotonically as sigma grows. Mean instability is non-monotonic by design: at very large sigma the membership mass collapses onto the outlier column (samples become confident outliers), which lowers max-probability ambiguity even as cluster assignment becomes unrecoverable. Read both columns together.}
   \label{tab:sigma-sweep}
   \begin{tabular}{rrrr}
     \toprule
     sigma & mean instability & confident (\(<0.1\)) & high-doubt (\(>0.5\)) \\
     \midrule
-    \(\times 1.0\)  & 0.011 & 96.4\% & 0.0\% \\
-    \(\times 5.0\)  & 0.070 & 79.5\% & small \\
-    \(\times 15.0\) & 0.317 & 19.4\% & substantial \\
+    \(\times 1.0\)  & 0.10 & 67.2\% &  1.6\% \\
+    \(\times 5.0\)  & 0.35 & 10.1\% & 22.0\% \\
+    \(\times 15.0\) & 0.27 &  2.5\% &  1.3\% \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -311,11 +311,11 @@ Running \texttt{propagate\_uncertainty} at three sigma scales (\(\times 1\), \(\
 \begin{figure}[h]
   \centering
   \includegraphics[width=\textwidth]{14_torus_uncertainty_sweep.png}
-  \caption{Topology stress test. Left: clean fit embedding coloured by HDBSCAN label. Right three panels: instability map at growing sigma. Bright regions concentrate at the link points between adjacent rings, then engulf entire rings.}
+  \caption{Topology stress test. Left: clean fit embedding coloured by HDBSCAN label (HDBSCAN fragments the chain into more than eight clusters because UMAP cannot embed a torus chain in 2-D without tearing the rings, a known topology artefact, not an uncertainty effect). Right three panels: instability map at \(\sigma\) scaled by 1, 5, 15. Bright regions concentrate at link points between adjacent rings; at the largest \(\sigma\) the outlier column dominates membership and the bright fraction drops accordingly.}
   \label{fig:torus-sweep}
 \end{figure}
 
-At \(\times 15\) a single boundary sample's membership row reads \(P(c_2) = 0.28,\ P(c_3) = 0.26,\ P(c_4) = 0.25,\ P(\mathrm{out}) = 0.20\): assignment is essentially uniform across three adjacent rings plus the outlier column. This is the quantitative reliability statement the user can report alongside the hard label.
+The confident-sample fraction \((\mathrm{instability} < 0.1)\) is the more reliable summary statistic across the sweep: it falls from \(67\%\) at \(\sigma\times 1\) through \(10\%\) at \(\times 5\) to \(2.5\%\) at \(\times 15\). The mean and the high-doubt fraction reverse direction at the largest \(\sigma\) because the failure mode shifts from boundary-blur (mass spread across several clusters) to outlier-collapse (mass concentrated on the outlier column). Both signals carry information; report both alongside the hard label, not just one.
 
 \subsection{Hierarchical refinement: \texttt{suggest\_merges}}
 \label{sec:merges}
