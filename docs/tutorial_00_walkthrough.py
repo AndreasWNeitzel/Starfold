@@ -1006,8 +1006,12 @@ print(f"aware-fit trustworthiness: {aware.augmented_result.trustworthiness:.4f}"
 # how we *quantify the reliability* of each sample's assignment in
 # that regime.
 #
-# Build a four-torus closed Hopf chain in 3-D: adjacent rings thread
-# each other's holes, non-adjacent rings do not link. Augment with two
+# Build an eight-torus closed Hopf chain in 3-D: adjacent rings thread
+# each other's holes (linking number +/-1), non-adjacent rings do not
+# link. The geometry alternates vertical and horizontal rings around
+# a backbone circle; the parameters below are the configuration whose
+# linking matrix is tridiagonal +/-1 with corner wraparound, verified
+# by `examples.torus_chain.linking_matrix`. Augment with two
 # heteroscedastic "metadata" features at very different scales to make
 # the problem 5-D. The metadata is uncorrelated noise, so a real
 # pipeline should learn to rely on the three spatial features for the
@@ -1025,8 +1029,8 @@ for _candidate in (Path("examples"), Path("../examples"), Path.cwd() / "examples
 from torus_chain import make_torus_chain  # noqa: E402
 
 X_torus3, y_torus = make_torus_chain(
-    n_links=4,
-    points_per_link=500,
+    n_links=8,
+    points_per_link=300,
     big_radius=4.0,
     major_even=2.0,
     major_odd=2.5,
@@ -1079,9 +1083,9 @@ for k in range(int(y_torus.max()) + 1):
 ax3d.set_xlabel("x")
 ax3d.set_ylabel("y")
 ax3d.set_zlabel("z")
-ax3d.set_title("four Hopf-linked tori (truth)")
-ax3d.set_box_aspect((1, 1, 0.55))
-ax3d.legend(fontsize=8, loc="upper right")
+ax3d.set_title("eight Hopf-linked tori (truth)")
+ax3d.set_box_aspect((1, 1, 0.45))
+ax3d.legend(fontsize=7, loc="upper right", ncol=2)
 fig.savefig(FIGURE_DIR / "13_torus_chain_truth.png")
 plt.show()
 

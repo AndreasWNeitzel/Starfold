@@ -126,6 +126,25 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `n_components <= n_features` before dispatching to
   `umap-learn`; previously a degenerate request would produce
   meaningless output without error.
+- Tutorial 00 §10c torus chain is now actually a chain. The
+  walkthrough called `make_torus_chain(n_links=4, ...)` with the
+  geometry parameters that the example module documents and
+  verifies only for `n_links=8`. At `N=4` the four torus centres
+  sit `4 sqrt 2 ~ 5.66` apart on the backbone, beyond the reach
+  of the horizontal rings (major radius 2.5), so the linking
+  matrix is identically zero. The shipped `13_torus_chain_truth.png`
+  showed four parallel disjoint rings rather than a Hopf chain,
+  contradicting every accompanying prose claim about adjacent
+  rings threading each other and link-point blurring. The
+  walkthrough now uses `n_links=8` (linking matrix verified
+  tridiagonal `+/-1` with corner wraparound), the two PNG figures
+  are regenerated, and the sigma-sweep table in
+  `docs/starfold_documentation.tex` carries the actual `N=8`
+  numbers and notes the non-monotonic mean-instability behaviour
+  (mass collapses onto the outlier column at the largest sigma).
+  The PDF documentation's figure 5 was the visible symptom.
+  Embedded outputs in `docs/tutorial_00_walkthrough.ipynb` will
+  match once the notebook is re-executed.
 
 ### Changed
 - Embedding-plot axis labels are now "embedding 1" /
