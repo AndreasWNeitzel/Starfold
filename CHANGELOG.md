@@ -1,174 +1,19 @@
 # Changelog
 
-All notable changes to `starfold` are documented in this file.
+## 0.2.0 (unreleased)
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
-and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+New code base and API. Code written for 0.0.1 needs porting.
 
-## [Unreleased]
+- `starfold.recover(X)` replaces `UnsupervisedPipeline().fit(X)`. It searches UMAP and HDBSCAN settings with Optuna, fits the selected setting on all rows and refits it on 32 random subsets. The `Result` holds labels, per-row support, group recurrence, a group-count interval, a consensus check, flags and provenance.
+- Settings are scored without labels: held-out prediction agreement, coverage and input-space modularity, each relative to a structureless copy of the table. The group count is never scored.
+- Trial 0 is always the library defaults. 16 Sobol points explore, then TPE converges.
+- The calibration test is opt-in: `starfold.null_test(...)`, or `Config(null_families=("gaussian_copula",))`. It costs up to 1,938 fits at the default settings, about six times the rest of a run.
+- On cuML every fit, neighbour search, label transfer, modularity and co-association runs on the GPU. `engine="auto"` warns when it falls back to the CPU; `engine="cuml"` raises instead.
+- `X_err` or `measurement_sampler` carry per-value uncertainties into every refit.
+- `save` and `load` write checksummed JSON and NumPy arrays and re-derive the flags on load. Results saved by 0.0.1 do not load.
+- Removed: `UnsupervisedPipeline`, `PipelineResult`, and every 0.0.1 helper, plotting function and dashboard.
+- The APOGEE DR19 example table is now `bench/data/stellar_chemokinematics_apogee_dr19.npz`, read with `bench.datasets.example_table()` from a clone.
 
-### Added
-- Comprehensive front-door tutorial `docs/tutorial_00_walkthrough.ipynb`
-  that walks a first-time user through every public function with
-  visual demonstrations. The existing four tutorials remain as
-  focused deep-dives.
-- `compute_subsample_stability` exported from the top-level
-  namespace, bringing the subsample-stability diagnostic to the same
-  public-surface tier as credibility, uncertainty, silhouette, and
-  merge suggestions.
-- `docs/methodology.md` extensions narrative (§§6-9) covering the
-  global credibility test, input-uncertainty handling, hierarchical
-  refinement, and robustness diagnostics. The out-of-scope list
-  moves to §10.
-- `docs/design_decisions.md` blocks for "Robustness diagnostics"
-  (chunked-silhouette chunk size, subsample-stability resamples and
-  matching) and "Plotting defaults" (figure size, colour maps,
-  outlier colour, dashboard layout).
-- Jupytext `.py:percent` pairs for the four tutorial notebooks under
-  `docs/`, plus a `jupytext --sync` pre-commit hook that keeps
-  `.ipynb` and `.py` in lockstep. The `nbstripout` hook is now scoped
-  to `legacy/` so rendered tutorial outputs survive for GitHub's
-  notebook viewer.
-- Science extensions on top of the paper's methodology: input-uncertainty
-  propagation (`propagate_uncertainty`, `UnsupervisedPipeline.fit_with_uncertainty`),
-  statistical credibility test (`compute_credibility`), cluster-merge
-  recommendations (`suggest_merges`), chunked silhouette
-  (`chunked_silhouette`), and subsample stability
-  (`compute_subsample_stability`).
-- Optional GPU engine: `engine="cuml"` / `"auto"` on
-  `UnsupervisedPipeline`, `run_umap`, `run_hdbscan`, and the noise
-  baseline. Falls back to CPU automatically when `cuml` is not
-  importable.
-- Data-size-aware defaults: `auto_mcs_upper` picks a
-  `min_cluster_size` search range proportional to `n_samples`, and
-  `recommend_budget` returns starfold-recommended trial/realisation
-  budgets.
-- Input validation (`validate_input_matrix`) and fit diagnostics
-  (`diagnose_fit`) surfaced as `PipelineResult.flags`.
-- On-disk noise-baseline cache keyed on `(n_samples, n_features,
-  umap_kwargs, random_state, n_realisations, per_realisation_trials)`
-  under `platformdirs.user_cache_dir("starfold")`.
-- `noise_baseline_kwargs={"umap_kwargs": {...}}` escape hatch:
-  override the noise-fit UMAP config independently of the main
-  pipeline's `umap_kwargs`. Useful for running the baseline at low
-  `n_epochs` (structureless noise has no manifold to converge to)
-  while the main fit still uses the paper-default 10 000.
-- Second Optuna objective `combined_geom` (geometric mean of DBCV and
-  persistence sum); `persistence_sum` remains the default.
-- Four-notebook tutorial arc under `docs/`:
-  `tutorial_01_quickstart` (minimal end-to-end fit on a synthetic
-  Hopf torus chain), `tutorial_02_validation` (noise baseline,
-  credibility test, tuning and quality dashboards),
-  `tutorial_03_advanced` (silhouette, merge recommender,
-  subcluster refit, uncertainty propagation and uncertainty-aware
-  fitting), and `tutorial_04_astronomy` (case study on a bundled
-  9 242-star APOGEE DR19 x Gaia DR3 sample, notebook-only, no
-  `astropy` dependency).
-- Diagnostic plot family (`plot_optuna_history`,
-  `plot_optuna_param_importance`, `plot_condensed_tree`,
-  `plot_uncertainty_map`, ...) plus composable tuning / quality
-  dashboards on `PipelineResult`.
+## 0.0.1
 
-### Changed
-- Top-level public API now exports 30 symbols (was 29 in the previous
-  pre-release; `compute_subsample_stability` is the newcomer). Result
-  dataclasses (`HDBSCANResult`, `NoiseBaselineResult`,
-  `CredibilityReport`, ...) and dashboard-panel plot primitives
-  (`plot_credibility`, `plot_persistence_vs_baseline`, ...) remain
-  importable from their submodules
-  (`from starfold.clustering import HDBSCANResult`,
-  `from starfold.plotting import plot_credibility`).
-- Diagnostics helpers moved from the private `starfold._diagnostics`
-  to the public `starfold.diagnostics` module. `validate_input_matrix`,
-  `auto_mcs_upper`, and `recommend_budget` are still exported at the
-  top level.
-- `_relative_validity` (`src/starfold/clustering.py`) now catches
-  `ImportError` in addition to `AttributeError` / `ValueError` /
-  `ZeroDivisionError`. `hdbscan.HDBSCAN.relative_validity_` requires
-  pandas internally; on a minimal install the diagnostic degrades to
-  NaN instead of crashing the Optuna trial.
-- `empirical_upper_tail_pvalue` (`src/starfold/credibility.py`) now
-  surfaces a NaN observed value as a NaN p-value. NumPy's
-  ``NaN >= x`` is always False, so a divergent Optuna best could have
-  silently produced a misleadingly favourable credibility verdict.
-- `plot_condensed_tree` now labels the x-axis "cluster (dendrogram
-  layout)"; the y-axis label (lambda) is set by hdbscan itself.
-- README install instructions now point at the from-GitHub recipe
-  (pip / uv) instead of the placeholder `pip install starfold`, since
-  the package is not yet on PyPI.
-
-### Fixed
-- `pandas` declared as a dev dep so CI can compute hdbscan's
-  `relative_validity_` (which requires `to_pandas` internally) without
-  the 55 setup failures observed on the first post-release CI run.
-- `compute_noise_baseline(random_state=None)` now uses an
-  OS-random seed so consecutive calls produce independent
-  realisations (previously `base_seed=0` made `None`-seeded
-  calls bit-identical, violating the docstring contract).
-- `PipelineResult.plot_quality_dashboard(X)` no longer crashes
-  on small samples. The hardcoded
-  `k_values=(5, 10, 15, 30, 50, 100)` is now filtered to
-  `k <= n_samples // 2 - 1`; any dropped value is reported via
-  `UserWarning`.
-- `UnsupervisedPipeline.fit` now warns when trustworthiness
-  is computed at a clamped `k < n_neighbors` (instead of
-  silently using the clamped `k` without notice).
-- `compute_noise_baseline` warns when every realisation
-  produces zero clusters (degenerate baseline; the threshold
-  is `0.0` and every real cluster passes vacuously). The
-  warning explains the likely cause and remediation.
-- `compute_credibility` now warns and forces `passes=False`
-  when any observed scalar is non-finite (e.g. Optuna returns
-  `-inf` because no trial completed); previously the verdict
-  would default to `False` for the wrong reason, with no
-  indication that the run could not be evaluated.
-- `run_umap` validates `n_components >= 1` and
-  `n_components <= n_features` before dispatching to
-  `umap-learn`; previously a degenerate request would produce
-  meaningless output without error.
-- Tutorial 00 §10c torus chain is now actually a chain. The
-  walkthrough called `make_torus_chain(n_links=4, ...)` with the
-  geometry parameters that the example module documents and
-  verifies only for `n_links=8`. At `N=4` the four torus centres
-  sit `4 sqrt 2 ~ 5.66` apart on the backbone, beyond the reach
-  of the horizontal rings (major radius 2.5), so the linking
-  matrix is identically zero. The shipped `13_torus_chain_truth.png`
-  showed four parallel disjoint rings rather than a Hopf chain,
-  contradicting every accompanying prose claim about adjacent
-  rings threading each other and link-point blurring. The
-  walkthrough now uses `n_links=8` (linking matrix verified
-  tridiagonal `+/-1` with corner wraparound), the two PNG figures
-  are regenerated, and the sigma-sweep table in
-  `docs/starfold_documentation.tex` carries the actual `N=8`
-  numbers and notes the non-monotonic mean-instability behaviour
-  (mass collapses onto the outlier column at the largest sigma).
-  The PDF documentation's figure 5 was the visible symptom.
-  Embedded outputs in `docs/tutorial_00_walkthrough.ipynb` will
-  match once the notebook is re-executed.
-
-### Changed
-- Embedding-plot axis labels are now "embedding 1" /
-  "embedding 2" consistently across `plot_embedding`,
-  `plot_uncertainty_map`, and `plot_membership_confidence`
-  (previously mixed "component 1/2" and "UMAP 1/2"). The
-  generic label is accurate regardless of which reducer
-  produced the embedding.
-- `UncertaintyPropagation` docstring now opens with an
-  explicit "Statistical interpretation" section framing the
-  membership matrix as an empirical Monte Carlo stability
-  score (not a Bayesian posterior probability), naming the
-  binomial MC standard error, and distinguishing
-  "consistently-outlier" from "boundary-ambiguous" samples.
-  The outlier-column semantics are now spelled out for
-  downstream filtering.
-- `compute_credibility` docstring now includes a `Notes`
-  section explaining why no Bonferroni/Sidak multiplicity
-  correction is applied to the three-way conjunctive
-  screen, and documenting the NaN-handling guarantee.
-
-### Removed
-- Nothing yet -- this is the pre-release milestone.
-
-## [0.0.1]
-Initial scaffold (pre-release). Package name, repo layout, CI, and
-public API contract.
+First public version: `UnsupervisedPipeline` with a UMAP embedding, Optuna-tuned HDBSCAN and a noise baseline.

@@ -1,265 +1,112 @@
-# starfold
+# Starfold
 
-[![CI](https://github.com/AndreasWNeitzel/starfold/actions/workflows/ci.yml/badge.svg)](https://github.com/AndreasWNeitzel/starfold/actions/workflows/ci.yml)
-[![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![arXiv:2501.16294](https://img.shields.io/badge/arXiv-2501.16294-b31b1b.svg)](https://arxiv.org/abs/2501.16294)
+Starfold finds groups in a numeric table without labels, then measures how far those groups can be trusted. It searches UMAP and HDBSCAN settings with Optuna, and the library defaults (clipped into any bounds you set) are always the first setting tried. Each setting is scored without labels on three things: its groups must predict rows the fit never saw, it must assign most rows, and its groups must be neighbourhoods in the input columns. Each score is taken relative to the same setting on a copy of the table that keeps every column's values and their correlations but has no groups. The best setting is fitted once on all rows, then refitted on 32 random 80 percent subsets to measure how often each row and each group comes back. An optional test asks whether such copies score as high as the real table. Anything the evidence does not support comes back as a flag.
 
-A general-purpose unsupervised clustering tool. It applies UMAP manifold
-learning followed by Optuna-tuned HDBSCAN clustering, and validates the
-output with a trustworthiness score and a statistical noise baseline.
-Input is any numerical feature matrix; it is not tied to any domain.
+![Digits: true classes, Starfold, library defaults](docs/figures/digits_partitions.png)
 
-The methodology follows §3 of Neitzel, Campante, Bossini & Miglio (2025),
-*Astronomy & Astrophysics* **695**, A243
-([arXiv:2501.16294](https://arxiv.org/abs/2501.16294)). Please cite the
-paper if you use this tool; see `CITATION.cff`.
-
----
-
-## At a glance
-
-`starfold`'s quickstart dataset is a closed chain of eight Hopf-linked
-tori in 3D — adjacent tori interlock through each other's central
-holes, non-adjacent tori don't. It is a topologically non-trivial
-point cloud that exposes what the pipeline does to real structure.
-
-![Eight Hopf-linked tori in 3D, two views](docs/figures/tutorial_01_quickstart/01_torus_chain_3d.png)
-
-One call (`pipeline.fit(X)`) standardises the features, learns a 2-D
-UMAP embedding, tunes HDBSCAN with an Optuna TPE sampler, and scores
-the result with trustworthiness and continuity:
-
-![UMAP embedding and the 3D chain recoloured by HDBSCAN cluster](docs/figures/tutorial_01_quickstart/02_embedding_and_3d.png)
-
-The final clusters are compared against a 99.7th-percentile
-structureless-noise baseline; clusters whose persistence sits above
-the threshold are flagged `significant`:
-
-![Per-cluster persistence vs 99.7 % noise threshold](docs/figures/tutorial_02_validation/01_persistence_vs_baseline.png)
-
-Because HDBSCAN returns at least two clusters even on pure noise,
-`starfold` also runs a global **credibility test**: three
-per-realisation scalars (cluster count, best Optuna objective,
-strongest persistence) are compared against their noise nulls with
-empirical upper-tail p-values, and the run "passes" at 3σ when all
-three clear `alpha`. Every real-data cluster is *also* given a
-per-cluster p-value against the pool of every noise cluster's
-persistence across every realisation:
-
-![Credibility: three-axis null distributions with observed overlay](docs/figures/tutorial_02_validation/02_credibility_three_axes.png)
-
-![Per-cluster persistence vs null distribution (50 / 99.7 / 99.97 %)](docs/figures/tutorial_02_validation/03_per_cluster_credibility.png)
-
-Two single-call dashboards put every diagnostic on one canvas:
-`result.plot_tuning_dashboard()` audits the Optuna search —
-
-![HDBSCAN tuning dashboard, 8 panels](docs/figures/tutorial_02_validation/04_tuning_dashboard.png)
-
-— and `result.plot_quality_dashboard(X)` audits the result's
-stability under subsampling:
-
-![Pipeline-quality dashboard, 6 panels](docs/figures/tutorial_02_validation/05_quality_dashboard.png)
-
-When the clustering looks trustworthy, a refinement toolkit takes
-over. `chunked_silhouette` computes `sklearn`'s silhouette score
-without ever materialising an `N × N` distance matrix;
-`suggest_merges` flags cluster pairs that density *and* embedding
-geometry agree should be one:
-
-![Chunked silhouette per-cluster and per-sample](docs/figures/tutorial_03_advanced/01_silhouette.png)
-
-![Cluster-merge recommendations on the embedding](docs/figures/tutorial_03_advanced/02_merge_recommendations.png)
-
-When samples carry per-feature 1σ error bars, starfold offers two
-complementary tools.  `result.propagate_uncertainty(X, sigma=...)`
-freezes the clean fit and asks "how confident is each sample's
-assignment under its error cloud?":
-
-![Per-sample instability and confident-labels mask](docs/figures/tutorial_03_advanced/04_uncertainty_propagation.png)
-
-`pipeline.fit_with_uncertainty(X, sigma=..., n_replicas=10)` is the
-uncertainty-aware *fit*: the pipeline sees an augmented matrix of
-the clean samples stacked with Gaussian replicas, so UMAP and
-HDBSCAN adapt their manifold and density estimates to the error
-bars rather than ignoring them.
-
-`sigma` accepts a scalar, a per-feature vector, or a
-per-sample-per-feature matrix;
-`plot_uncertainty_map(result.embedding, propagation)` colours the
-embedding by instability.
-
----
+*Handwritten digits (1,797 rows, 64 pixels) on a 2-D UMAP display: the true digits, which Starfold never sees; Starfold's groups, faded where support is low; the UMAP and HDBSCAN defaults.*
 
 ## Install
 
-`starfold` is not on PyPI yet, so install directly from this
-repository. Python 3.11 or 3.12 is required.
-
-From GitHub, with `pip`:
+Python 3.11 or 3.12.
 
 ```bash
-pip install "git+https://github.com/AndreasWNeitzel/Starfold.git"
+pip install "starfold @ git+https://github.com/AndreasWNeitzel/Starfold"             # CPU
+pip install "starfold[gpu-cu13] @ git+https://github.com/AndreasWNeitzel/Starfold"   # NVIDIA GPU, CUDA 13
+pip install "starfold[gpu-cu12] @ git+https://github.com/AndreasWNeitzel/Starfold"   # NVIDIA GPU, CUDA 12
 ```
 
-Or with [`uv`](https://docs.astral.sh/uv/) (recommended):
+The GPU extras install RAPIDS cuML (Linux or WSL2). Install the one that matches the CUDA version `nvidia-smi` reports. With cuML, UMAP, HDBSCAN and the scoring run on the GPU; only the final consensus cut runs on the CPU.
 
-```bash
-uv pip install "git+https://github.com/AndreasWNeitzel/Starfold.git"
-```
-
-To pin a specific commit (or tag), append `@<sha>`:
-
-```bash
-pip install "git+https://github.com/AndreasWNeitzel/Starfold.git@8a774f9"
-```
-
-For local development (editable install + linters, type-checker,
-tests, notebook tooling):
-
-```bash
-git clone https://github.com/AndreasWNeitzel/Starfold.git
-cd Starfold
-pip install -e ".[dev]"
-```
-
-Optional GPU acceleration through `cuml` (RAPIDS) is picked up
-automatically when importable; CPU is the default and is always
-available.
-
-## Quickstart
+## Use
 
 ```python
-import numpy as np
-import starfold as sf
+import starfold
+from sklearn.datasets import load_digits
 
-X = np.random.default_rng(0).normal(size=(3_000, 5))
+X = load_digits().data                                 # 1,797 rows, 64 columns; the digit labels are not used
+result = starfold.recover(X, random_state=0)
 
-pipeline = sf.UnsupervisedPipeline(
-    umap_kwargs=dict(n_neighbors=15, min_dist=0.0),
-    hdbscan_optuna_trials=100,
-    random_state=42,
-)
-result = pipeline.fit(X)
-
-result.embedding            # (n_samples, 2)
-result.labels               # (n_samples,) with -1 for outliers
-result.persistence          # (n_clusters,)
-result.significant          # (n_clusters,) bool, vs noise baseline
-result.credibility          # CredibilityReport, or None if noise baseline was skipped
-result.trustworthiness      # float in [0, 1]
-result.flags                # list[str] — diagnostic warnings, empty on a healthy fit
-print(result.summary())     # flags surface at the top so they cannot be missed
-sf.plot_embedding(result.embedding, result.labels)
-
-# One-line diagnostic dashboards:
-result.plot_tuning_dashboard()      # 8-panel HDBSCAN tuning canvas
-result.plot_quality_dashboard(X)    # 6-panel pipeline-quality canvas
-
-# Two-run "zoom in on a cluster" pattern:
-sub = result.refit_subcluster(X, cluster_id=0)
-
-# Sample-size-aware budget suggestion:
-sf.recommend_budget(n_samples=X.shape[0])   # -> {"hdbscan_optuna_trials": ..., ...}
-
-result.save("run_01/")
+print(result.flags)                                    # read these first
+print(result.n_groups, result.worlds.count_interval)   # groups found; 5 to 95 percent range over refits
+result.labels                                          # -1 is unassigned; one entry per row in result.kept_rows
+result.support                                         # per row and group: how often the refits agree
+starfold.save(result, "runs/digits")                   # starfold.load("runs/digits") reads it back
 ```
 
-## Tutorials
+`recover` skips the calibration test by default. The test costs 102 fits per copy at the default settings and up to 19 copies (1,938 fits), about six times the fits of the rest of a run, so run it once, on the result you report, with the same `config`, `random_state` and `engine` that `recover` used:
 
-The front door for a first-time user is the comprehensive
-walkthrough; the four focused notebooks are deep-dives that the
-walkthrough cross-references when you want more on a specific topic.
+```python
+null = starfold.null_test(X[result.kept_rows], result.search, random_state=0)
+print(null.p_value, null.structure_supported)
+```
 
-| # | Notebook | What it covers |
-|---|---|---|
-| 0 | [`tutorial_00_walkthrough.ipynb`](docs/tutorial_00_walkthrough.ipynb) | **Start here.** Every public function, in order, with a visual demo for each. Zero prior knowledge assumed. Run top-to-bottom for a guided tour of the package. |
-| 1 | [`tutorial_01_quickstart.ipynb`](docs/tutorial_01_quickstart.ipynb) | 30-second story: fit the pipeline, read the summary, look at the embedding. Synthetic torus chain. |
-| 2 | [`tutorial_02_validation.ipynb`](docs/tutorial_02_validation.ipynb) | Noise baseline, 3σ credibility test, tuning and quality dashboards. |
-| 3 | [`tutorial_03_advanced.ipynb`](docs/tutorial_03_advanced.ipynb) | Chunked silhouette, merge recommender, sub-cluster refit, uncertainty propagation, uncertainty-aware fit. |
-| 4 | [`tutorial_04_astronomy.ipynb`](docs/tutorial_04_astronomy.ipynb) | Real-data case study: 9 242 Milky Way stars from APOGEE DR19 + Gaia DR3 orbital actions (bundled parquet, no survey download at runtime). |
+To run it inside `recover` instead, pass `config=starfold.Config(null_families=("gaussian_copula",))` and read `result.null.p_value`. On Digits, `recover` makes 314 fits (a few minutes on a laptop GPU) and `null_test` up to 1,938.
 
-The data for tutorial 4 ships as a ~0.5 MB parquet under
-[`docs/data/`](docs/data/stellar_chemokinematics_apogee_dr19.provenance.md)
-so the notebook runs offline.
+`engine="auto"` uses cuML when it imports and sees a device; otherwise it warns and runs on the CPU. `engine="cuml"` raises instead of falling back. On the CPU, `n_jobs` sets the number of worker processes. If you have real per-value uncertainties, pass them as `X_err` (same shape as `X`); every refit redraws the table from them.
 
-## What's inside the package
+## What a result holds
 
-| Module | Purpose |
+| attribute | meaning |
 |---|---|
-| `starfold.embedding` | Thin wrappers: `run_umap`, `run_tsne`, `run_pca`. |
-| `starfold.trustworthiness` | Venna & Kaski (2001) $T(k)$ and the dual continuity $C(k)$, both with vectorised `_curve` variants; cross-tested against `sklearn`. |
-| `starfold.clustering` | `run_hdbscan` and `search_hdbscan` (Optuna TPE over MCS, MS, cluster-selection-method, alpha, epsilon). |
-| `starfold.noise_baseline` | 99.7th-percentile persistence baseline with on-disk caching. |
-| `starfold.credibility` | Global 3σ credibility test and per-cluster p-values vs the noise null (`compute_credibility`, `CredibilityReport`). |
-| `starfold.uncertainty` | Input-uncertainty propagation *and* uncertainty-aware fitting: `propagate_uncertainty` / `UncertaintyPropagation` freeze a clean fit and Monte Carlo perturbations against it, while `UnsupervisedPipeline.fit_with_uncertainty` feeds an augmented replica matrix through the full pipeline and returns an `UncertaintyAwareFit`. |
-| `starfold.hierarchy` | Public access to HDBSCAN's condensed tree (`HierarchicalStructure`, `extract_hierarchy`) so callers can walk the merge structure directly. |
-| `starfold.merge` | Cluster-merge recommender (`suggest_merges`) that requires density (tree cohesion) *and* embedding geometry (centroid gap) to agree before flagging a pair. |
-| `starfold.silhouette` | Memory-efficient silhouette (`chunked_silhouette`) returning overall, per-sample, and per-cluster aggregates without ever materialising the N x N distance matrix. |
-| `starfold.stability` | Subsample-stability diagnostic (`compute_subsample_stability`) reporting cluster-count variance and ARI across resampled embeddings. |
-| `starfold.diagnostics` | Input validation (`validate_input_matrix`), fit diagnostics surfaced in `PipelineResult.flags`, data-size-aware defaults (`auto_mcs_upper`, `recommend_budget`). |
-| `starfold.pipeline` | `UnsupervisedPipeline` and `PipelineResult` orchestrate the full sequence and own the audit trail. |
-| `starfold.plotting` | `plot_embedding`, `plot_trustworthiness_curve`, and a family of tuning / quality diagnostic panels composable into `PipelineResult.plot_tuning_dashboard` and `plot_quality_dashboard`. |
-| `starfold.io` | `PipelineResult.save` / `load_pipeline_result`. |
+| `labels`, `kept_rows` | one fit of the selected settings on all rows; rows with NaN or inf are dropped, never filled in |
+| `params`, `deployed_params` | the selected settings, and the same settings with `min_cluster_size` and `min_samples` scaled to the full row count |
+| `default_labels`, `default_params` | the UMAP and HDBSCAN defaults on the same rows, for comparison |
+| `support`, `worlds.unresolved` | per row: how often the refits that sampled it put it with each group, or with none; each row sums to one |
+| `worlds.group_recurrence`, `worlds.group_recurrence_band` | per group: how well it comes back across refits (0 to 1), and its 5 to 95 percent range |
+| `worlds.count_values`, `worlds.count_interval` | groups found in each refit, and their 5 to 95 percent range |
+| `worlds.property_median`, `worlds.property_band` | per group and column: the median in your units, and its spread over refits |
+| `consensus.contrast`, `consensus.agreement` | how much more often the refits cluster rows of one group together than rows of different groups; how well a partition cut from that matches `labels` |
+| `null` | the calibration test when `Config.null_families` names a family; skipped by default |
+| `search.trials`, `search.candidates` | every setting tried with its score; the best few rescored on fresh subsets |
+| `flags`, `provenance` | caveats; seeds, versions, engine, budgets, fits and seconds per stage |
 
-See [`docs/methodology.md`](docs/methodology.md) for the paper §3
-walkthrough and [`docs/design_decisions.md`](docs/design_decisions.md)
-for every place where the paper is silent and `starfold` picks a
-default.
+## Reading the flags
 
-## Caching
+`result.flags` names every caveat the evidence raised, from a fixed list of 16 (`starfold.result.FLAG_VOCABULARY`). Flags are derived from the arrays, and `starfold.load` derives them again instead of trusting the saved list. The ones you will meet most:
 
-`compute_noise_baseline` memoises the 99.7th-percentile threshold
-under `platformdirs.user_cache_dir("starfold")` (typically
-`~/.cache/starfold` on Linux). The cache key is a hash of
-`(n_samples, n_features, frozen umap_kwargs, random_state,
-n_realisations, per_realisation_trials)`. Clear it by deleting the
-directory or by passing `force_recompute=True` on the call that
-provoked it. The pipeline surfaces the same option through
-`UnsupervisedPipeline(noise_baseline_kwargs={"force_recompute":
-True})`. The cache is ignored by git.
+- `search_stopped_early` or `search_budget_exhausted`: one is always present and only says how the search ended.
+- `null_not_run`: the calibration test did not run inside `recover`, the default. A separate `null_test` returns its own evidence and leaves this flag in place.
+- `selected_is_default`, `default_within_noise`: the search found nothing better than the defaults, or nothing better beyond the noise of the score.
+- `count_unstable`, `high_unresolved_mass`: most refits find a different number of groups than `labels` has, or rows are on average left unassigned in more than half the refits.
+- `consensus_disagrees`: the partition cut from the refits agrees poorly with `labels`.
+- `no_structure_supported`: the test ran and its p-value is above `alpha`.
 
-## Scope
+The [handbook](docs/handbook.md) lists all 16, with what each one means and what to do about it.
 
-This package implements the methodology of Neitzel et al. (2025), not
-the paper's scientific application. It does not construct stellar
-samples, model observational uncertainties, apply survey selection
-functions, or know anything about galactic archaeology. A biologist
-clustering single-cell RNA-seq data should find the tool as usable as
-an astronomer clustering stars.
+## Scope and limits
+
+- **Input.** One row per object, at least 50 finite rows and 2 numeric columns. The columns you choose define what "similar" means; Starfold scales them (`Config(scaling="robust")` for heavy tails). Rows with a missing value are dropped, never filled in.
+- **Small groups merge.** Groups much smaller than about sqrt(12 n) rows tend to be merged into larger ones: about 155 rows at n = 2,000 and 350 at n = 10,000. This is an empirical scale, measured on the benchmark and by injecting groups into a real table, not a derived bound. Treat it as a rule of thumb.
+- **Stable is not true.** Support is a recurrence rate, not a membership probability, and the ranges over refits are stability intervals, not confidence intervals. A dense chance fluctuation recurs in every subset too. There is no per-group significance test.
+- **Counts.** The group count is not an estimate of how many populations exist. On the benchmark the count can differ from the true class count (Gas drift: 390 groups against 6 classes; Letter: 284 against 26). Report `worlds.count_interval` with it.
+- **The p-value** holds only for its copy family (by default a Gaussian copula: one population with the table's column values and correlations) and for the part of the search it replays: by default the library defaults and the 16 Sobol points that open the search, and the best score among them. `Config(null_procedure="full_search")` replays the whole search at a higher cost. With 19 copies it cannot go below 0.05. It is not the probability that the groups are real.
+- **Evidence.** On ten labelled public tables (six used to tune the method, four held out), Starfold matched or beat the UMAP and HDBSCAN defaults against the true classes (adjusted Rand index on the assigned rows, times the share assigned; within 0.02 counts as a match) on 8 of the ten: all six development tables and two of the four held out. On the four held-out tables the mean is lower than the defaults' (0.24 against 0.29). The largest has 20,000 rows; nothing larger has been measured. CPU and GPU runs do not give identical labels; compare them by partition with `starfold.compare_backends`.
+
+## Documentation
+
+- [Handbook](docs/handbook.md): how it works, preparing a table, reading a result, every flag, GPU and cluster use, exact definitions.
+- Notebooks, in Jupytext percent format: [handwritten digits](notebooks/01_digits.py), [9,242 APOGEE DR19 stars](notebooks/02_apogee.py), [the calibration test](notebooks/03_calibration.py). The APOGEE table ships with the repository, not the package ([provenance](bench/data/stellar_chemokinematics_apogee_dr19.md)).
+- [Changelog](CHANGELOG.md).
+
+## Tests
+
+```bash
+git clone https://github.com/AndreasWNeitzel/Starfold && cd starfold
+uv sync --extra dev --extra bench    # add --extra gpu-cu13 or --extra gpu-cu12 for cuML
+uv run pytest -m "not slow"          # quick checks
+uv run pytest -m slow                # real fits on small fixtures
+uv run pytest -m gpu                 # needs cuML
+```
 
 ## Citation
 
-If `starfold` contributes to work you publish, please cite both the
-software and the methodological paper.
+Cite the software ([CITATION.cff](CITATION.cff)) and the paper it grew from:
 
-The paper:
+Neitzel, A. W., Campante, T. L., Bossini, D., and Miglio, A. 2025, "Dissecting stellar populations with manifold learning. I. Validation of the method on a synthetic Milky Way-like galaxy", A&A, 695, A243, doi:10.1051/0004-6361/202451718
 
-```bibtex
-@article{neitzel2025_starfold,
-  author  = {Neitzel, Andreas W. and Campante, Tiago L.
-             and Bossini, Diego and Miglio, Andrea},
-  title   = {Unsupervised classification of simulated Milky Way-like
-             galaxies based on chrono-chemo-kinematic stellar properties},
-  journal = {Astronomy \& Astrophysics},
-  volume  = {695},
-  pages   = {A243},
-  year    = {2025},
-  doi     = {10.1051/0004-6361/202451718},
-  url     = {https://arxiv.org/abs/2501.16294},
-}
-```
-
-The software: `CITATION.cff` at the repo root is the canonical metadata
-file; GitHub renders it as a one-click **"Cite this repository"** entry
-on the sidebar, which exports BibTeX and APA.
+Please also cite UMAP (McInnes, Healy and Melville 2018, arXiv:1802.03426), HDBSCAN (Campello, Moulavi and Sander 2013, doi:10.1007/978-3-642-37456-2_14) and Optuna (Akiba et al. 2019, arXiv:1907.10902).
 
 ## License
 
-MIT. See `LICENSE`.
-
-A citation to the methodological paper above is requested but not
-legally required. Treating the paper as an intellectual dependency —
-the way `scikit-learn` users cite Pedregosa+11 even though BSD does not
-compel it — is the community norm that keeps methodological work
-fundable.
+MIT, see [LICENSE](LICENSE).
