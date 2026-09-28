@@ -1,93 +1,81 @@
-"""starfold.
+"""Starfold: UMAP, HDBSCAN and Optuna population recovery.
 
-UMAP manifold learning followed by Optuna-tuned HDBSCAN clustering,
-with a trustworthiness score and a statistical noise baseline, for
-any numerical feature matrix.
+One Optuna search selects a UMAP and HDBSCAN configuration by a label-free
+score, and a full-data fit of it is the emitted partition. Possible worlds
+measure its reproducibility, a bounded co-association check tests it without
+matching labels, and a matched Monte Carlo null calibrates the claim.
 
-The package uses ``X`` for feature matrices and ``X_high`` / ``X_low``
-for paired high- and low-dimensional embeddings, following the
-conventions of the scientific-Python literature this tool builds on.
-
-The top-level namespace exposes the symbols a new user needs to go
-from ``X`` to a validated clustering with a single import: the
-pipeline classes, the four analytic building blocks (embedding,
-trustworthiness, clustering, noise baseline), the science extensions
-(credibility, uncertainty, merge, silhouette, subsample stability), a
-compact set of publication-ready plots, on-disk I/O, and the
-data-size-aware diagnostic helpers.
-
-Advanced objects -- result dataclasses returned by the building
-blocks, dashboard-panel plot primitives, and the engine type alias --
-stay in their submodules (e.g. ``starfold.clustering.HDBSCANResult``,
-``starfold.plotting.plot_credibility``) so the top-level surface
-remains small and easy to learn.
+The public surface is loaded lazily so that ``import starfold`` does not
+import umap-learn.
 """
 
 from __future__ import annotations
 
-from starfold._engine import cuml_is_importable
-from starfold.clustering import run_hdbscan, search_hdbscan
-from starfold.credibility import compute_credibility
-from starfold.diagnostics import (
-    auto_mcs_upper,
-    recommend_budget,
-    validate_input_matrix,
-)
-from starfold.embedding import run_pca, run_tsne, run_umap
-from starfold.io import load_pipeline_result, save_pipeline_result
-from starfold.merge import suggest_merges
-from starfold.noise_baseline import compute_noise_baseline
-from starfold.pipeline import PipelineResult, UnsupervisedPipeline
-from starfold.plotting import (
-    plot_condensed_tree,
-    plot_embedding,
-    plot_embedding_comparison,
-    plot_optuna_history,
-    plot_optuna_param_importance,
-    plot_trustworthiness_curve,
-    plot_uncertainty_map,
-)
-from starfold.silhouette import chunked_silhouette
-from starfold.stability import compute_subsample_stability
-from starfold.trustworthiness import (
-    continuity,
-    continuity_curve,
-    trustworthiness,
-    trustworthiness_curve,
-)
-from starfold.uncertainty import propagate_uncertainty
+import importlib
+from typing import TYPE_CHECKING, Any
+
+__version__ = "0.2.0"
+
+_EXPORTS: dict[str, str] = {
+    "recover": "starfold.api",
+    "Config": "starfold.api",
+    "Space": "starfold.api",
+    "search": "starfold.search",
+    "SearchResult": "starfold.search",
+    "WorldEvidence": "starfold.worlds",
+    "null_test": "starfold.api",
+    "NullEvidence": "starfold.nulls",
+    "generate_null": "starfold.nulls",
+    "compare_backends": "starfold.backend",
+    "BackendAgreement": "starfold.backend",
+    "Params": "starfold.backend",
+    "default_params": "starfold.backend",
+    "Result": "starfold.result",
+    "save": "starfold.result",
+    "load": "starfold.result",
+}
 
 __all__ = [
-    "PipelineResult",
-    "UnsupervisedPipeline",
-    "auto_mcs_upper",
-    "chunked_silhouette",
-    "compute_credibility",
-    "compute_noise_baseline",
-    "compute_subsample_stability",
-    "continuity",
-    "continuity_curve",
-    "cuml_is_importable",
-    "load_pipeline_result",
-    "plot_condensed_tree",
-    "plot_embedding",
-    "plot_embedding_comparison",
-    "plot_optuna_history",
-    "plot_optuna_param_importance",
-    "plot_trustworthiness_curve",
-    "plot_uncertainty_map",
-    "propagate_uncertainty",
-    "recommend_budget",
-    "run_hdbscan",
-    "run_pca",
-    "run_tsne",
-    "run_umap",
-    "save_pipeline_result",
-    "search_hdbscan",
-    "suggest_merges",
-    "trustworthiness",
-    "trustworthiness_curve",
-    "validate_input_matrix",
+    "BackendAgreement",
+    "Config",
+    "NullEvidence",
+    "Params",
+    "Result",
+    "SearchResult",
+    "Space",
+    "WorldEvidence",
+    "__version__",
+    "compare_backends",
+    "default_params",
+    "generate_null",
+    "load",
+    "null_test",
+    "recover",
+    "save",
+    "search",
 ]
 
-__version__ = "0.0.1"
+if TYPE_CHECKING:
+    from starfold.api import Config, Space, null_test, recover
+    from starfold.backend import BackendAgreement, Params, compare_backends, default_params
+    from starfold.nulls import NullEvidence, generate_null
+    from starfold.result import Result, load, save
+    from starfold.search import SearchResult, search
+    from starfold.worlds import WorldEvidence
+
+
+def __getattr__(name: str) -> Any:  # noqa: ANN401 - lazy attribute dispatch
+    """Resolve a public name from its defining module on first access."""
+    module_name = _EXPORTS.get(name)
+    if module_name is None:
+        msg = f"module 'starfold' has no attribute {name!r}"
+        raise AttributeError(msg)
+    module = importlib.import_module(module_name)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    """List the public surface."""
+    return sorted(set(globals()) | set(_EXPORTS))

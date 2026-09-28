@@ -1,43 +1,47 @@
+minimum_pre_commit_version: "4.4.0"
+exclude: ^legacy/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: check-yaml
+      - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: check-added-large-files
         args: ["--maxkb=5000"]
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+  # Ruff and mypy run from the locked environment, so their versions are the
+  # ones in uv.lock and CI.
+  - repo: local
     hooks:
-      - id: ruff
-        args: ["--fix"]
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --no-sync ruff check --fix --force-exclude
+        language: unsupported
+        types_or: [python, pyi]
       - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
-    hooks:
+        name: ruff format
+        entry: uv run --no-sync ruff format --force-exclude
+        language: unsupported
+        types_or: [python, pyi]
       - id: mypy
-        additional_dependencies:
-          - numpy>=1.26
-        args: ["--strict", "--ignore-missing-imports"]
+        name: mypy
+        entry: uv run --no-sync mypy
+        language: unsupported
+        pass_filenames: false
         files: ^src/
 
   - repo: https://github.com/mwouts/jupytext
-    rev: v1.16.4
+    rev: v1.19.5
     hooks:
       - id: jupytext
         args: ["--sync"]
-        files: ^docs/tutorial_.*\.(ipynb|py)$
+        files: ^notebooks/.*\.(ipynb|py)$
 
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.7.1
+    rev: 0.9.1
     hooks:
       - id: nbstripout
-        # Strip outputs from the legacy reference notebook only. The
-        # four tutorial notebooks deliberately keep their rendered
-        # outputs so GitHub's notebook viewer shows the full story; the
-        # .py:percent pair (paired via jupytext above) is the
-        # source-of-truth for code review.
-        files: ^legacy/.*\.ipynb$
+        files: ^notebooks/.*\.ipynb$

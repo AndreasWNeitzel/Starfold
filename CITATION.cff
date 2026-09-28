@@ -1,38 +1,46 @@
 cff-version: 1.2.0
 message: >-
   If you use this software, please cite both the software and the
-  methodological paper below.
+  methodological paper listed under references.
 title: starfold
 abstract: >-
-  A general-purpose unsupervised clustering tool that applies UMAP
-  manifold learning followed by Optuna-tuned HDBSCAN clustering,
-  validated by a trustworthiness score and a statistical noise
-  baseline. Packaged from the methodology of Neitzel et al. (2025).
+  A population-recovery system built around jointly searched UMAP and
+  HDBSCAN configurations, selected by a label-free objective scored as a gap
+  against a matched null, with possible-world recurrence evidence and
+  sequential matched-null calibration. Developed from and extending the
+  methodology of Neitzel et al. (2025).
 type: software
 authors:
   - family-names: Neitzel
     given-names: Andreas W.
     email: andreaswneitzel@gmail.com
+    orcid: https://orcid.org/0000-0001-6283-907X
+    affiliation: Instituto de Astrofísica e Ciências do Espaço, Universidade do Porto
 license: MIT
-version: 0.0.1
+version: 0.2.0
 repository-code: https://github.com/AndreasWNeitzel/starfold
-preferred-citation:
-  type: article
-  title: >-
-    Unsupervised classification of simulated Milky Way-like galaxies
-    based on chrono-chemo-kinematic stellar properties
-  authors:
-    - family-names: Neitzel
-      given-names: Andreas W.
-    - family-names: Campante
-      given-names: Tiago L.
-    - family-names: Bossini
-      given-names: Diego
-    - family-names: Miglio
-      given-names: Andrea
-  journal: Astronomy & Astrophysics
-  volume: 695
-  start: A243
-  year: 2025
-  doi: 10.1051/0004-6361/202451718
-  url: https://arxiv.org/abs/2501.16294
+references:
+  - type: article
+    title: >-
+      Dissecting stellar populations with manifold learning. I. Validation
+      of the method on a synthetic Milky Way-like galaxy
+    authors:
+      - family-names: Neitzel
+        given-names: Andreas W.
+        orcid: https://orcid.org/0000-0001-6283-907X
+      - family-names: Campante
+        given-names: Tiago L.
+        orcid: https://orcid.org/0000-0002-4588-5389
+      - family-names: Bossini
+        given-names: Diego
+        orcid: https://orcid.org/0000-0002-9480-8400
+      - family-names: Miglio
+        given-names: Andrea
+        orcid: https://orcid.org/0000-0001-5998-8533
+    journal: Astronomy & Astrophysics
+    volume: 695
+    start: A243
+    year: 2025
+    month: 3
+    doi: 10.1051/0004-6361/202451718
+    url: https://arxiv.org/abs/2501.16294

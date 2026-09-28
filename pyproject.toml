@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "starfold"
-version = "0.0.1"
-description = "UMAP + Optuna-tuned HDBSCAN + trustworthiness + statistical noise baseline, for any numerical feature matrix."
+version = "0.2.0"
+description = "UMAP, HDBSCAN and Optuna population recovery with possible-world evidence and matched-null calibration."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
     { name = "Andreas W. Neitzel", email = "andreaswneitzel@gmail.com" },
 ]
@@ -19,18 +19,17 @@ keywords = [
     "umap",
     "hdbscan",
     "optuna",
-    "trustworthiness",
+    "consensus-clustering",
+    "cluster-stability",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Typing :: Typed",
 ]
 dependencies = [
@@ -40,35 +39,44 @@ dependencies = [
     "umap-learn>=0.5.5",
     "hdbscan>=0.8.33",
     "optuna>=3.6",
-    "matplotlib>=3.8",
-    "platformdirs>=4.0",
     "joblib>=1.3",
-    "tqdm>=4.66",
+    "pynndescent>=0.5",
 ]
 
 [project.optional-dependencies]
+gpu-cu12 = [
+    "cuml-cu12>=25.12,<27",
+]
+gpu-cu13 = [
+    "cuml-cu13>=25.12,<27",
+]
+bench = [
+    # fetch_openml(parser="auto") reads dense ARFF through pandas.
+    "pandas>=2.0",
+    "matplotlib>=3.8",
+    "jupytext>=1.16",
+    "ipykernel>=6.29",
+]
 dev = [
     "pytest>=8",
     "pytest-cov>=5",
-    "hypothesis>=6.100",
     "ruff>=0.6",
     "mypy>=1.11",
-    "pre-commit>=3.7",
-    "nbstripout>=0.7",
-    "jupyter>=1.0",
-    # Pair the .ipynb tutorials with .py:percent source-of-truth files
-    # so notebook diffs are reviewable as plain Python.
-    "jupytext>=1.16",
-    # hdbscan's ``relative_validity_`` (used as a per-trial diagnostic in
-    # search_hdbscan and rendered by plot_tuning_dashboard) internally
-    # requires pandas via ``minimum_spanning_tree_.to_pandas()``. Not a
-    # runtime dep: starfold's numerical API is pandas-free.
-    "pandas>=2.0",
+    "pre-commit>=4.4",
 ]
 
 [project.urls]
 Homepage = "https://github.com/AndreasWNeitzel/starfold"
+Repository = "https://github.com/AndreasWNeitzel/starfold"
+Documentation = "https://github.com/AndreasWNeitzel/starfold/blob/main/docs/handbook.md"
+Changelog = "https://github.com/AndreasWNeitzel/starfold/blob/main/CHANGELOG.md"
+Issues = "https://github.com/AndreasWNeitzel/starfold/issues"
 Paper = "https://doi.org/10.1051/0004-6361/202451718"
+
+[tool.uv]
+# cuml-cu12 and cuml-cu13 pin mutually exclusive cuda-toolkit major versions,
+# so a single environment can only ever install one of the two GPU extras.
+conflicts = [[{ extra = "gpu-cu12" }, { extra = "gpu-cu13" }]]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -79,41 +87,28 @@ starfold = ["py.typed"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
-extend-exclude = [
-    "legacy",
-    "docs/tutorial_*.ipynb",
-    "docs/tutorial_*.py",
-    "build",
-    "dist",
-]
+src = ["src", "tests", "bench"]
+extend-exclude = ["legacy"]
 
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "D203",
-    "D213",
     "COM812",
-    "ISC001",
-    # The package convention (documented in src/.../__init__.py) uses `X` for
-    # feature matrices and `X_high`/`X_low` for paired high/low embeddings;
-    # these are the names used throughout the scientific literature this
-    # tool follows, so PEP 8 N803/N806 do not apply.
+    # `X` for feature matrices is the scientific-Python convention.
     "N803",
     "N806",
-    # Small integer literals (``ndim != 2``, ``percentile=99.7``) read better
-    # inline than behind a named constant.
+    # Small integer literals read better inline than behind a named constant.
     "PLR2004",
-    # Many-argument keyword-only APIs are the scientific-Python convention
-    # (think StandardScaler, UMAP, TSNE); the "too many arguments" rule would
-    # force artificial config objects without readability gain.
+    # Keyword-only scientific APIs take several explicit controls.
     "PLR0913",
+    "PLR0917",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "D", "ANN", "PLR2004", "INP001"]
-"examples/**" = ["D", "ANN", "T201", "INP001"]
-"docs/**" = ["D", "ANN", "INP001"]
+"tests/**" = ["S101", "D", "ANN"]
+"bench/**" = ["D", "ANN", "T201"]
+"notebooks/**" = ["D", "ANN", "T201", "INP001", "E402", "B018", "ERA001"]
+"scripts/**" = ["INP001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
@@ -123,24 +118,18 @@ strict = true
 python_version = "3.11"
 files = ["src"]
 warn_unused_configs = true
-warn_redundant_casts = true
-warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 module = [
     "umap",
-    "umap.*",
     "hdbscan",
-    "hdbscan.*",
-    "cuml",
     "cuml.*",
+    "cupy.*",
+    "rmm.*",
     "sklearn.*",
     "scipy.*",
-    "optuna.*",
-    "matplotlib.*",
     "joblib.*",
-    "platformdirs",
-    "tqdm.*",
+    "pynndescent",
 ]
 ignore_missing_imports = true
 
@@ -148,16 +137,19 @@ ignore_missing_imports = true
 minversion = "8.0"
 addopts = "-ra --strict-markers"
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: requires an importable cuML backend",
 ]
 
 [tool.coverage.run]
 source = ["src/starfold"]
 branch = true
-omit = ["*/plotting.py"]
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
-fail_under = 0
+
+[tool.jupytext]
+formats = "ipynb,py:percent"

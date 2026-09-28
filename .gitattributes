@@ -1,0 +1,7 @@
+# LF line endings on every platform.
+* text=auto eol=lf
+
+# Never normalise binary files.
+*.npz binary
+*.pdf binary
+*.png binary
