@@ -45,8 +45,7 @@
 # times the fits of the rest of a run. This is why `recover` skips it by default
 # and `starfold.null_test` runs it as a separate step.
 #
-# The recorded tests below took 791 s (Digits) and 2,176 s (APOGEE) of wall time
-# on a laptop RTX 3060. This notebook does not rerun them.
+# Each recorded test below made 1,938 fits. This notebook does not rerun them.
 
 # %%
 import sys
@@ -187,7 +186,8 @@ for ax, column, edges, label in (
         label="shuffled copy (independent_marginals)",
     )
     ax.set(title=f"{label} alone: identical", xlabel=f"{label} (dex)", ylabel="stars")
-    ax.legend()
+handles, labels = axes["m0"].get_legend_handles_labels()
+fig.legend(handles, labels, loc="outside lower center", ncol=3)
 save_figure(fig, "apogee_surrogate.png")
 plt.show()
 
