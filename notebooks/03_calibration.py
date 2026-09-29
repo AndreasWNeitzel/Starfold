@@ -12,10 +12,10 @@
 # %% [markdown]
 # # Calibration
 #
-# UMAP draws a low-dimensional map of a table and HDBSCAN finds dense groups on
-# that map. With the right settings, the two can find groups in almost any table.
-# The calibration test asks whether your table scores higher than copies of it
-# that have no groups at all.
+# UMAP draws a low-dimensional map of a table, HDBSCAN finds dense groups on that
+# map, and with the right settings the two can find groups in almost any table.
+# For this reason, the calibration test asks whether the table scores higher than
+# copies of it that have no groups at all.
 #
 # This notebook shows what such a copy looks like and reads the tests recorded on
 # the handwritten digits and on APOGEE DR19. It runs no fits.
@@ -25,9 +25,9 @@
 #
 # The statistic is the best score among the first 17 trials of the search: the
 # library defaults and 16 settings spread evenly over the search range (a Sobol
-# design). Each structureless copy goes through the same 17 trials, with the same
+# design). Each structureless copy goes through the same 17 trials with the same
 # subsets and seeds. The p-value is the fraction of copies that score at least as
-# high as your table, counting your table as one more draw.
+# high as the table, counting the table as one more draw.
 #
 # It does not tell you:
 #
@@ -39,13 +39,13 @@
 # %% [markdown]
 # ## What it costs
 #
-# Every trial fits 3 subsets of the copy, and 3 of a structureless copy of the
-# copy, because the search scores each setting as its excess over such a copy.
-# That is 102 fits per copy. The test draws up to 19 copies, 1,938 fits, about six
-# times the fits of the rest of a run. This is why `recover` skips it by default
-# and `starfold.null_test` runs it as a separate step.
+# Every trial fits 3 subsets of the copy and 3 of a structureless copy of the copy,
+# because the search scores each setting as its excess over such a copy. That is
+# 102 fits per copy. The test draws up to 19 copies (1,938 fits), about six times
+# the fits of the rest of a run. Given this cost, `recover` skips it by default and
+# `starfold.null_test` runs it as a separate step.
 #
-# Each recorded test below made 1,938 fits. This notebook does not rerun them.
+# This notebook does not rerun the 1,938 fits that each recorded test below made.
 
 # %%
 import sys
@@ -98,19 +98,19 @@ def save_figure(fig, name):
 # %% [markdown]
 # ## What a structureless copy is
 #
-# A copy keeps every value of every column and changes only which row each value
-# sits in. Nothing is invented. There are two families:
+# A copy invents nothing: it keeps every value of every column and changes only
+# which row each value sits in. There are two families:
 #
-# - `gaussian_copula`, the default, reorders the values in each column so the
-#   columns keep one smooth, elliptical trend between them;
-# - `independent_marginals` shuffles each column on its own, which removes the
-#   trend as well.
+# - `gaussian_copula` (the default) reorders the values in each column such that
+#   the columns keep one smooth, elliptical trend between them;
+# - `independent_marginals` shuffles each column on its own, removing the trend as
+#   well.
 #
-# A copy keeps anything you can see in one column alone, such as two peaks. What
-# it removes is structure that only shows when columns are combined.
+# A copy keeps anything visible in one column alone, such as two peaks, while
+# removing structure that shows only when columns are combined.
 
 # %% [markdown]
-# The APOGEE table holds 9,242 real stars. In [Fe/H] against [Mg/Fe] they form two
+# In [Fe/H] against [Mg/Fe], the 9,242 real stars of the APOGEE table form two
 # sequences, the high- and low-alpha discs. The cell below draws one copy of each
 # family and checks that every column of each copy holds exactly the observed
 # values.
@@ -195,8 +195,8 @@ plt.show()
 # ## Running the test
 #
 # `starfold.null_test` takes the rows the search used, the search itself, and the
-# same `Config`, seed, engine and, above 20,000 rows per resample, `n_jobs`, so
-# every copy goes through exactly the steps the data went through. If you searched
+# same `Config`, seed, engine and (above 20,000 rows per resample) `n_jobs`, to make
+# every copy go through exactly the steps the data went through. If you searched
 # a custom `Space`, pass that `Config` again. A run saved on cuML must be tested on
 # a machine where cuML works. Run it once, on the result you report.
 
@@ -209,9 +209,10 @@ plt.show()
 # ## Recorded results
 #
 # The two records below come from `python -m bench.null_stage digits <saved run>`
-# and `python -m bench.null_stage apogee <saved run>`, at the default budgets.
-# `null_values` holds each copy's best score, `observed` the data's. `exceedances`
-# counts the copies at or above the data; a tie counts against the data.
+# and `python -m bench.null_stage apogee <saved run>` at the default budgets. In
+# each record, `null_values` holds each copy's best score and `observed` the data's.
+# `exceedances` counts the copies at or above the data; a tie counts against the
+# data.
 
 # %%
 records = {
@@ -249,10 +250,10 @@ for name, record in records.items():
     plt.show()
 
 # %% [markdown]
-# Digits: no copy scored as high as the data, so p is at its floor of 0.05 and the
-# table's structure is supported against this family. APOGEE: one copy scored
-# as high as the data, p = 0.10 is above alpha, so at 19 copies the test does not
-# support structure for the whole table. That is not a finding of no groups. It
+# For the digits, no copy scored as high as the data, so p is at its floor of 0.05
+# and the table's structure is supported against this family. For APOGEE, one copy
+# scored as high as the data; with p = 0.10 above alpha, the test at 19 copies does
+# not support structure for the whole table. That is not a finding of no groups. It
 # means at least one copy that keeps the table's overall trend scored as high as
 # the table.
 
@@ -261,15 +262,15 @@ for name, record in records.items():
 #
 # With h of L copies at or above the data, p = (h + 1) / (L + 1): the data count
 # as one more draw (Phipson and Smyth 2010, doi:10.2202/1544-6115.1585). With all
-# 19 copies below the data, p = 1 / 20 = 0.05, exactly the default alpha. So
-# p = 0.05 means no copy scored as high as the data. It does not say by how much
-# the data beat them.
+# 19 copies below the data, p = 1 / 20 = 0.05, exactly the default alpha. Thus
+# p = 0.05 means that no copy scored as high as the data, without saying by how
+# much the data beat them.
 #
 # The test stops once 3 copies reach the data (Besag and Clifford 1991,
-# doi:10.1093/biomet/78.2.301): p is then at least 4 / 20 and cannot reach 0.05.
-# The interval is the 95 percent Clopper-Pearson range of the fraction h / L
-# (Clopper and Pearson 1934, doi:10.1093/biomet/26.4.404), not an interval on p.
-# It measures Monte Carlo precision only.
+# doi:10.1093/biomet/78.2.301), after which p is at least 4 / 20 and cannot reach
+# 0.05. The interval is the 95 percent Clopper-Pearson range of the fraction h / L
+# (Clopper and Pearson 1934, doi:10.1093/biomet/26.4.404), not an interval on p,
+# and measures Monte Carlo precision only.
 
 # %%
 print("copies   p for h = 0, 1, 2, 3 copies at or above the data")
@@ -278,8 +279,8 @@ for n_copies in (4, 9, 19, 99):
     print(f"{n_copies:6d}   {row}")
 
 # %% [markdown]
-# A lower floor needs more copies. `dataclasses.replace(config, n_null_max=99)`
-# brings it to 0.01, at up to 10,098 fits. `n_null_max` and `alpha` do not change
+# A lower floor needs more copies: `dataclasses.replace(config, n_null_max=99)`
+# brings it to 0.01 at up to 10,098 fits. Neither `n_null_max` nor `alpha` changes
 # the search, so the replay stays matched.
 
 # %% [markdown]
@@ -289,7 +290,7 @@ for n_copies in (4, 9, 19, 99):
 # `null_not_run`. Replace the null with `dataclasses.replace`, and re-derive the
 # flags with `starfold.result.derive_flags` in the same step: `starfold.load`
 # re-derives the flags from the evidence and refuses a result whose stored flags
-# differ. The provenance still describes the `recover` run; the null evidence
+# differ. The provenance still describes the `recover` run, while the null evidence
 # records its own families, fits and seconds.
 
 # %%

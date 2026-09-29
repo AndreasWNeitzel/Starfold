@@ -1,12 +1,12 @@
 """Starfold: UMAP, HDBSCAN and Optuna population recovery.
 
-One Optuna search selects a UMAP and HDBSCAN configuration by a label-free
-score, and a full-data fit of it is the emitted partition. Possible worlds
-measure its reproducibility, a bounded co-association check tests it without
-matching labels, and a matched Monte Carlo null calibrates the claim.
+The emitted partition is a full-data fit of the UMAP and HDBSCAN
+configuration that one Optuna search selects by a label-free score. Possible
+worlds measure its reproducibility, a bounded co-association check tests it
+without matching labels, and a matched Monte Carlo null calibrates the claim.
 
-The public surface is loaded lazily so that ``import starfold`` does not
-import umap-learn.
+The public surface is loaded lazily, keeping ``import starfold`` from
+importing umap-learn.
 """
 
 from __future__ import annotations

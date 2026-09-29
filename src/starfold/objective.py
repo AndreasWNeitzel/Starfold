@@ -1,11 +1,11 @@
 """Label-free trial objective: paired stability, joint coverage, input-space modularity.
 
-Every trial receives one finite score by formula; degenerate outcomes score
-zero without any gate, and the cluster count is never read. Stability alone
-prefers the coarsest partition (von Luxburg 2010, arXiv:1007.1075); the
-modularity of the partition on the input-space neighbour graph counters
-that, and the geometric mean makes a zero in any lane fatal without a
-threshold.
+Every trial receives one finite score by a formula that never reads the
+cluster count, and degenerate outcomes score zero without any gate. Stability
+alone prefers the coarsest partition (von Luxburg 2010, arXiv:1007.1075), a
+preference countered by the modularity of the partition on the input-space
+neighbour graph. The geometric mean then makes a zero in any lane fatal
+without a threshold.
 """
 
 from __future__ import annotations
@@ -61,8 +61,8 @@ def pair_stability(
     With ``J`` the overlap rows assigned on both sides, the agreement is
     ``max(0, ARI)`` of the Hubert and Arabie adjusted Rand index
     (doi:10.1007/BF01908075) on ``J`` when ``|J| >= 2`` and both restricted
-    vectors hold at least two distinct labels, else 0; coverage is
-    ``|J| / |O|`` and 0 when the overlap is empty.
+    vectors hold at least two distinct labels, and 0 otherwise. Coverage is
+    ``|J| / |O|``, or 0 when the overlap is empty.
 
     Parameters
     ----------
@@ -109,8 +109,8 @@ def modularity(
 
     ``Q = sum_c [e_c / E - (vol_c / 2E)^2]`` over clusters ``c >= 0`` (Newman
     2006, doi:10.1073/pnas.0601602103). Noise rows keep their degrees and
-    edges in ``E`` but form no rewarded community; ``Q`` is raw and may be
-    negative, and is 0 when the graph has no edges.
+    edges in ``E`` but form no rewarded community. ``Q`` is raw, may be
+    negative, and is 0 for a graph without edges.
 
     Parameters
     ----------
@@ -196,8 +196,9 @@ class TrialScore:
     modularity : float
         Mean over available fits of ``max(0, Q_r)``.
     pair_agreement, pair_coverage : tuple of float
-        Per ordered pair ``(r, s)``, ``r != s``, both fits present: held-out
-        prediction agreement of fit ``r`` on the rows of ``s`` it never saw.
+        Per ordered pair ``(r, s)`` with ``r != s`` and both fits present, the
+        held-out prediction agreement of fit ``r`` on the rows of ``s`` it never
+        saw.
     fit_counts : tuple of int
         Group count per present fit.
     fit_noise : tuple of float
@@ -251,7 +252,7 @@ def _vote(labels_fit: NDArray[np.int32], neighbours: NDArray[np.intp]) -> NDArra
     if neighbours.shape[0] == 0:
         return np.empty(0, dtype=np.int32)
     votes = np.asarray(labels_fit, dtype=np.int32)[neighbours]
-    # Mode of the k votes by pairwise comparison, ties to the smallest label; a
+    # Mode of the k votes by pairwise comparison, ties to the smallest label. A
     # rows-by-labels count table would reach gigabytes with thousands of groups.
     counts = (votes[:, :, None] == votes[:, None, :]).sum(axis=2)
     best = counts.max(axis=1, keepdims=True)
@@ -270,12 +271,12 @@ def transfer_labels(
 ) -> NDArray[np.int32]:
     """Predict labels of unseen rows by majority vote of their input-space neighbours.
 
-    The scaler is fitted on the fitted rows only, so the query rows are seen
-    through the fit's own preprocessing; noise votes count, so a row whose
-    neighbours are mostly noise is predicted as noise. This is the classifier
-    step of cluster validation by prediction (Lange, Roth, Braun and Buhmann
-    2004, doi:10.1162/089976604773717621; Tibshirani and Walther 2005,
-    doi:10.1198/106186005X59243).
+    With the scaler fitted on the fitted rows only, the query rows are seen
+    through the fit's own preprocessing. Given that noise votes count, a row
+    whose neighbours are mostly noise is predicted as noise. The transfer is the
+    classifier step of cluster validation by prediction (Lange, Roth, Braun
+    and Buhmann 2004, doi:10.1162/089976604773717621; Tibshirani and Walther
+    2005, doi:10.1198/106186005X59243).
 
     Parameters
     ----------
@@ -342,10 +343,10 @@ def heldout_neighbours(
 ) -> HeldoutNeighbours:
     """Neighbour table of the held-out rows of every ordered resample pair.
 
-    The table depends on the matrix, the plan, the scaling and the backend
-    but on no configuration, so a search computes it once per matrix and plan
-    and each trial only gathers labels and votes. Every entry is found exactly
-    as :func:`transfer_labels` finds it.
+    The table depends on the matrix, the plan, the scaling and the backend but
+    on no configuration. For this reason, a search computes it once per matrix
+    and plan, and each trial only gathers labels and votes. Every entry is
+    found exactly as :func:`transfer_labels` finds it.
 
     Parameters
     ----------
@@ -376,10 +377,10 @@ def heldout_neighbours(
 
 
 class _Scorer:
-    """Scores fit lists of one plan; each pair transfer and each ``Q_r`` is computed once.
+    """Scores fit lists of one plan, computing each pair transfer and each ``Q_r`` once.
 
-    The memo is keyed on resample index, so it is valid while the fit of each
-    resample stays the same, as it does while ``evaluate`` extends its list.
+    Keyed on resample index, the memo is valid while the fit of each resample
+    stays the same, as it does while ``evaluate`` extends its list.
     """
 
     def __init__(
@@ -450,14 +451,14 @@ def score_fits(
     """Score the fits present; a pair needs both fits, a lane needs one.
 
     Stability is the mean held-out prediction agreement over every ordered
-    pair ``(r, s)`` of present fits: the rows of resample ``s`` absent from
+    pair ``(r, s)`` of present fits. The rows of resample ``s`` absent from
     resample ``r`` receive labels transferred from fit ``r`` by
-    :func:`transfer_labels`, and :func:`pair_stability` compares them with
-    fit ``s``'s own labels on those rows. Coverage is the mean joint coverage
-    of those predictions and modularity the mean clipped modularity of the
-    fits on their resample graphs. Agreement on the overlap of two resamples
-    cannot see structure fixed by the rows themselves, such as an embedding
-    torn into stable micro-clusters; prediction on unseen rows can.
+    :func:`transfer_labels`, and :func:`pair_stability` compares these labels
+    with fit ``s``'s own labels on those rows. Coverage is the mean joint
+    coverage of those predictions, and modularity the mean clipped modularity
+    of the fits on their resample graphs. Agreement on the overlap of two
+    resamples cannot see structure fixed by the rows themselves, such as an
+    embedding torn into stable micro-clusters. Prediction on unseen rows can.
 
     Parameters
     ----------
@@ -475,7 +476,8 @@ def score_fits(
         Backend of the label transfer and the modularity.
     neighbours : mapping, optional
         :func:`heldout_neighbours` of the same ``x``, ``plan``, ``scaling``
-        and ``engine``; searched per pair when omitted, with the same result.
+        and ``engine``. When omitted, the neighbours are searched per pair with
+        the same result.
 
     Returns
     -------
@@ -516,8 +518,8 @@ class TrialPruned(Exception):  # noqa: N818 - the name is part of the public int
 def _run_fit(job: FitJob) -> Fit | str:
     """Fit one resample, returning exception text instead of raising.
 
-    Only labels and the group count leave the worker; the embedding and
-    strengths are replaced by empty arrays, since the objective reads neither.
+    Only labels and the group count leave the worker. Given that the objective
+    reads neither, the embedding and strengths are replaced by empty arrays.
     """
     x_rows, params, seed, engine, scaling, knn = job
     try:
@@ -541,8 +543,8 @@ def _fit_until(
 ) -> str | None:
     """Fit resamples ``len(fits)..stop-1`` in order into ``fits``; return the first error text.
 
-    One worker fits lazily in this process and stops at the first failure;
-    several fit the whole range as one batch.
+    One worker fits lazily in this process and stops at the first failure,
+    while several workers fit the whole range as one batch.
     """
     jobs: list[FitJob] = [
         (x[plan.indices[r]], params, plan.seeds[r], engine, scaling, graphs[r])
@@ -594,13 +596,13 @@ def evaluate(
     """Evaluate one configuration on the resample plan with optional pruning.
 
     Once resamples 0 and 1 are fitted, their pair score is the intermediate
-    value offered to ``should_prune``. A prunable trial fits them first;
-    otherwise every resample is fitted in one batch and the leading pair is
-    scored afterwards, so ``should_prune`` still sees it whenever both fits
+    value offered to ``should_prune``. A prunable trial fits them first.
+    Otherwise every resample is fitted in one batch and the leading pair is
+    scored afterwards, with ``should_prune`` still seeing it whenever both fits
     succeeded. The final score reuses the leading pair's transfers and
     modularities. Fits run in worker processes when ``n_jobs > 1`` on the CPU
-    backend and stop at the first failure in this process otherwise; cuML
-    always runs in this process.
+    backend and otherwise run in this process, where they stop at the first
+    failure; cuML always runs in this process.
 
     Parameters
     ----------

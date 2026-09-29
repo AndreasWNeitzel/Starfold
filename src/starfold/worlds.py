@@ -2,15 +2,16 @@
 
 A world is one refit of the selected configuration on a random subset of the
 rows, with one measurement draw when per-value uncertainties or a sampler are
-supplied. The reference partition is never relabelled by the worlds; the
-worlds measure how often its groups and memberships recur, the clusterboot
-design of Hennig 2007 (doi:10.1016/j.csda.2006.11.025). Every statistic here
-is an algorithmic recurrence under the declared perturbation design and not a
-posterior; percentile bands over worlds are stability intervals and not
-confidence intervals. :func:`summarize_worlds` gives the definitions.
+supplied. Following the clusterboot design of Hennig 2007
+(doi:10.1016/j.csda.2006.11.025), the worlds never relabel the reference
+partition and measure how often its groups and memberships recur. Every
+statistic here is an algorithmic recurrence under the declared perturbation
+design, not a posterior, and percentile bands over worlds are stability
+intervals, not confidence intervals. :func:`summarize_worlds` gives the
+definitions.
 
 The evidence holds ``2 W n`` bytes of world labels and ``4 n G`` bytes of
-support; summarizing adds a float64 accumulator of ``8 n G`` bytes. No
+support, and summarizing adds a float64 accumulator of ``8 n G`` bytes. No
 statistic in this module allocates an ``n`` by ``n`` object.
 """
 
@@ -54,14 +55,14 @@ class WorldEvidence:
         Per world, -2 for a row the world did not sample, -1 for world noise,
         else the world cluster id.
     n_sampled : ndarray of shape (n,), dtype uint16
-        Number of worlds that sampled each row; the evidence coverage.
+        Number of worlds that sampled each row (the evidence coverage).
     support : ndarray of shape (n, G), dtype float32
         Purity-weighted recurrence of each row landing with the members of
-        each reference group, averaged over the worlds that sampled the row;
+        each reference group, averaged over the worlds that sampled the row.
         NaN for rows no world sampled.
     unresolved : ndarray of shape (n,), dtype float32
-        Mean mass a row placed on world noise or on reference-noise company;
-        ``support.sum(1) + unresolved == 1`` on every sampled row.
+        Mean mass a row placed on world noise or on reference-noise company,
+        with ``support.sum(1) + unresolved == 1`` on every sampled row.
     own_support : ndarray of shape (n,), dtype float32
         ``support[i, labels[i]]`` for reference-assigned rows, NaN for
         reference noise.
@@ -69,21 +70,21 @@ class WorldEvidence:
         Mean of ``unresolved`` over sampled rows.
     group_recurrence : ndarray of shape (G,), dtype float32
         Mean over worlds of the best Jaccard match of each reference group
-        (Hennig 2007, doi:10.1016/j.csda.2006.11.025); NaN when no world
+        (Hennig 2007, doi:10.1016/j.csda.2006.11.025). NaN when no world
         sampled a member.
     group_recurrence_band : ndarray of shape (G, 2), dtype float32
-        5th and 95th percentiles of the per-world Jaccard match; a stability
+        5th and 95th percentiles of the per-world Jaccard match, a stability
         interval.
     count_values : ndarray of shape (W,), dtype int16
         Number of clusters found in each world.
     count_interval : tuple of int
-        Integer hull of the 5th and 95th percentiles of ``count_values``; a
-        stability interval, never a confidence interval.
+        Integer hull of the 5th and 95th percentiles of ``count_values``, a
+        stability interval and never a confidence interval.
     count_reference : int
         Number of groups in the reference partition.
     property_median : ndarray of shape (G, d), dtype float64
         Median over worlds of the per-feature median of the world cluster
-        matched to each group, in original units; NaN when never matched.
+        matched to each group, in original units. NaN when never matched.
     property_band : ndarray of shape (G, d, 2), dtype float64
         5th and 95th percentiles over worlds of the same per-world medians.
     property_propagated : bool
@@ -124,7 +125,7 @@ class WorldEvidence:
 
 @dataclass(frozen=True)
 class _WorldTask:
-    """Everything one world needs; shipped to a worker process as a unit."""
+    """Everything one world needs, shipped to a worker process as a unit."""
 
     world: int
     x: NDArray[np.float64]
@@ -166,7 +167,7 @@ def _cluster_medians(x_w: NDArray[np.float64], labels: NDArray[np.int32]) -> NDA
 
 
 def _fit_world(task: _WorldTask) -> _WorldOutcome:
-    """Draw, perturb and fit one world; a raising fit becomes all noise plus its text."""
+    """Draw, perturb and fit one world, turning a raising fit into all noise plus its text."""
     rng = np.random.default_rng(derive_seed(task.random_state, 2, task.world))
     n = task.x.shape[0]
     rows = np.sort(rng.choice(n, size=task.n_rows, replace=False)).astype(np.intp)
@@ -304,14 +305,14 @@ def summarize_worlds(
     cluster_medians : sequence of ndarray, optional
         Per world, the (K_w, d) per-feature medians of the world's own
         feature matrix over its clusters in sorted order of cluster id.
-        :func:`run_worlds` supplies these so that measurement draws, which
-        are never persisted, still enter the property bands.
+        :func:`run_worlds` supplies these, letting measurement draws enter
+        the property bands although they are never persisted.
 
     Returns
     -------
     WorldEvidence
-        Every statistic; ``world_seeds`` and ``world_errors`` are empty and
-        ``n_fits`` and ``seconds`` are zero until :func:`run_worlds` fills them.
+        Every statistic, with ``world_seeds`` and ``world_errors`` empty and
+        ``n_fits`` and ``seconds`` zero until :func:`run_worlds` fills them.
 
     Raises
     ------
@@ -321,13 +322,13 @@ def summarize_worlds(
 
     Notes
     -----
-    Support is purity-weighted: a row in world cluster ``c`` receives on
+    Support is purity-weighted. A row in world cluster ``c`` receives on
     group ``g`` the fraction of ``c`` that the reference assigns to ``g``, and
     on the unresolved column the fraction of ``c`` that the reference calls
-    noise; world noise places mass 1 on unresolved. Group recurrence is the
-    maximum Jaccard similarity between the group's sampled members and any
+    noise, while world noise places mass 1 on unresolved. Group recurrence is
+    the maximum Jaccard similarity between the group's sampled members and any
     world cluster (Hennig 2007, doi:10.1016/j.csda.2006.11.025), averaged over
-    the worlds that sampled at least one member; Hennig's descriptive
+    the worlds that sampled at least one member. Hennig's descriptive
     reference points (0.85 stable, below 0.5 dissolved) are never applied as
     gates. Ties in the best match resolve to the lowest cluster id. Bands are
     5th and 95th percentiles over worlds with linear interpolation, and
@@ -484,20 +485,20 @@ def run_worlds(
     world_fraction : float
         Fraction of rows each world draws without replacement, in ``(0, 1]``.
     random_state : int
-        Base seed; world ``w`` draws its rows and measurement with
+        Base seed. World ``w`` draws its rows and measurement with
         ``derive_seed(random_state, 2, w)`` and fits UMAP with
         ``derive_seed(random_state, 3, w)``.
     engine : {"cpu", "cuml"}
-        Resolved backend; any other value raises ``ValueError``.
+        Resolved backend. Any other value raises ``ValueError``.
     scaling : {"standard", "robust"}
         Scaler fitted inside each world on the world's rows only.
     n_jobs : int, default 1
-        Worker processes over worlds; ``sampler`` must be picklable above 1.
+        Worker processes over worlds. Above 1, ``sampler`` must be picklable.
     x_err : ndarray of shape (n, d), optional
-        Measured per-value uncertainties; each world adds one standard normal
+        Measured per-value uncertainties. Each world adds one standard normal
         draw scaled by them.
     sampler : callable, optional
-        Measurement sampler ``(x_rows, row_indices, rng) -> x_rows``; exclusive
+        Measurement sampler ``(x_rows, row_indices, rng) -> x_rows``, exclusive
         with ``x_err``.
 
     Returns
@@ -513,11 +514,11 @@ def run_worlds(
 
     Notes
     -----
-    A world whose fit raises is recorded as all noise on its rows, its
-    exception text is kept in ``world_errors`` and no exception propagates;
-    the world still counts in ``n_sampled`` and adds unresolved mass. Seeds
-    are derived per world, so the result does not depend on ``n_jobs``.
-    Measurement draws are used inside the world and never persisted.
+    A world whose fit raises is recorded as all noise on its rows, with its
+    exception text kept in ``world_errors`` and no exception propagated; such
+    a world still counts in ``n_sampled`` and adds unresolved mass. With seeds
+    derived per world, the result does not depend on ``n_jobs``. Measurement
+    draws are used inside the world and never persisted.
     """
     start = time.perf_counter()
     engine = require_resolved(engine)

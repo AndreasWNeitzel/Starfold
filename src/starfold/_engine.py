@@ -1,9 +1,9 @@
 """Engine resolution, seed derivation, library versions, and bounded process parallelism.
 
 ``"auto"`` prefers RAPIDS cuML when it imports with a visible CUDA device and
-falls back to the CPU reference path otherwise; ``"cuml"`` is strict and
-``"cpu"`` always works. The probe runs once per process because a failing
-cuML import is slow and its outcome cannot change within one run.
+falls back to the CPU reference path otherwise. ``"cuml"`` is strict and
+``"cpu"`` always works. The probe runs once per process: a failing cuML import
+is slow and its outcome cannot change within one run.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ def release_backend_caches() -> None:
     """Collect fitted-estimator cycles and release the CuPy and RMM pools.
 
     The release is best effort because RAPIDS installations differ in their
-    allocator; without RAPIDS only the collection runs.
+    allocator. Without RAPIDS, only the collection runs.
     """
     gc.collect()
     with suppress(Exception):
@@ -108,7 +108,7 @@ def cuml_status() -> tuple[bool, str | None]:
     available : bool
         ``True`` only when the import succeeds and a device is visible.
     reason : str or None
-        Failure text of the cached probe; ``None`` when available.
+        Failure text of the cached probe, or ``None`` when available.
     """
     return _cuml_probe()
 
@@ -181,7 +181,7 @@ def library_versions() -> dict[str, str]:
     -------
     dict[str, str]
         Keys ``numpy``, ``scipy``, ``scikit-learn``, ``umap-learn``,
-        ``hdbscan``, ``optuna``, ``joblib`` and ``cuml``; the value is the
+        ``hdbscan``, ``optuna``, ``joblib`` and ``cuml``, each mapped to the
         distribution version or ``"absent"``. RAPIDS wheels carry a CUDA
         suffix (``cuml-cu12``, ``cuml-cu13``), so ``cuml`` is matched by prefix.
     """
@@ -203,9 +203,9 @@ def library_versions() -> dict[str, str]:
 def derive_seed(base: int, *ids: int) -> int:
     """Derive a 32-bit seed for one (stage, index, ...) position from a base seed.
 
-    Seeds are spawned through ``numpy.random.SeedSequence`` so that every fit,
-    world and null realisation has a seed fixed by its identifiers and not by
-    the worker that executes it.
+    Seeds are spawned through ``numpy.random.SeedSequence``, giving every fit,
+    world and null realisation a seed fixed by its identifiers and not by the
+    worker that executes it.
 
     Parameters
     ----------
@@ -235,7 +235,7 @@ def parallel_map(fn: Callable[[T], R], items: Sequence[T], *, n_jobs: int) -> li
         ``1`` runs a plain loop in the calling process. Any other value is
         passed to ``joblib.Parallel`` with the loky backend and
         ``inner_max_num_threads=1``, which caps the BLAS, OpenMP and Numba
-        threads of every worker, so that throughput comes from processes, not
+        threads of every worker. Throughput thus comes from processes, not
         threads. The calling process is left unchanged.
 
     Returns

@@ -61,9 +61,9 @@ class Result:
     Attributes
     ----------
     labels : ndarray of int32, shape (n_kept,)
-        Emitted partition: one full-data fit of ``params``; -1 is noise.
+        Emitted partition, one full-data fit of ``params``, with -1 for noise.
     strengths : ndarray of float32, shape (n_kept,)
-        HDBSCAN within-fit strengths of that fit; not posteriors.
+        HDBSCAN within-fit strengths of that fit, not posteriors.
     default_labels : ndarray of int32, shape (n_kept,)
         One full-data fit of the library defaults, the external comparator.
     kept_rows : ndarray of intp, shape (n_kept,)
@@ -71,9 +71,9 @@ class Result:
     params : Params
         Configuration selected by the search, validated on resample rows.
     deployed_params : Params
-        ``params`` with the minimum cluster mass rescaled from the resample
-        row count to the full row count, the configuration that produced
-        ``labels``; equal to ``params`` when the two counts agree.
+        Configuration that produced ``labels``: ``params`` with the minimum
+        cluster mass rescaled from the resample row count to the full row
+        count, equal to ``params`` when the two counts agree.
     default_params : Params
         The library defaults, fitted at full size as the external comparator.
     search : SearchResult
@@ -137,7 +137,7 @@ def matrix_fingerprint(x: NDArray[np.floating[Any]]) -> str:
 def peak_rss_mb() -> float:
     """Peak resident set size of this process in megabytes, NaN where unknown.
 
-    ``ru_maxrss`` is in kilobytes on Linux and in bytes on macOS; the
+    ``ru_maxrss`` is in kilobytes on Linux and in bytes on macOS. The
     ``resource`` module does not exist on Windows.
     """
     try:
@@ -261,7 +261,7 @@ def _jsonable(value: Any) -> Any:  # noqa: ANN401, PLR0911 - recursive normalisa
 
 
 def _search_payload(search: SearchResult) -> dict[str, Any]:
-    """Scalar and table part of a search result; the resample rows go to the arrays."""
+    """Scalar and table part of a search result (the resample rows go to the arrays)."""
     payload = {
         name: _jsonable(getattr(search, name))
         for name in search.__dataclass_fields__
@@ -345,7 +345,7 @@ def save(result: Result, path: str | Path) -> Path:
     result : Result
         Result to persist.
     path : str or Path
-        Target directory; created if absent, existing files overwritten.
+        Target directory, created if absent. Existing files are overwritten.
 
     Returns
     -------
@@ -377,7 +377,7 @@ def save(result: Result, path: str | Path) -> Path:
 
 
 def _float_or_nan(value: object) -> float:
-    """JSON has no NaN; a missing component comes back as NaN."""
+    """Read a missing component back as NaN, which JSON cannot hold."""
     return float("nan") if value is None else float(value)  # type: ignore[arg-type]
 
 

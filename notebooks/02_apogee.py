@@ -11,13 +11,13 @@
 # %% [markdown]
 # # Worked example: 9,242 APOGEE DR19 stars
 #
-# This notebook runs Starfold on a real table that nobody has labelled, reads the evidence in
-# physical units, and ends with what the run supports and what it does not. It also redraws
-# the APOGEE figures of the handbook.
+# This notebook runs Starfold on a real, unlabelled table, reads the evidence in physical
+# units and ends with what the run supports and what it does not. It also redraws the APOGEE
+# figures of the handbook.
 #
-# The table holds 9,242 Milky Way stars and eight columns: three abundances from the APOGEE
+# The table holds 9,242 Milky Way stars in eight columns: three abundances from the APOGEE
 # DR19 ASPCAP pipeline and five orbital quantities integrated with galpy from Gaia DR3
-# astrometry. Its sources, cuts and checksum are in the
+# astrometry. Its sources, cuts and checksum are listed in the
 # [provenance note](../bench/data/stellar_chemokinematics_apogee_dr19.md).
 
 # %% [markdown]
@@ -28,13 +28,13 @@
 
 # %% [markdown]
 # At the default budgets the run takes under 4 minutes, 334 fits and 1.7 GB of host memory
-# on a laptop GPU with RAPIDS cuML. The CPU path has not been timed at this size; set
-# `N_ROWS = 3000` for a quick CPU pass on a seeded subsample. The calibration test is off: it
-# costs 102 fits per copy of the table and up to 19 copies (1,938 fits), about six times the
-# rest of the run.
+# on a laptop GPU with RAPIDS cuML. The CPU path has not been timed at this size; for a quick
+# CPU pass on a seeded subsample, set `N_ROWS = 3000`. The calibration test is off: it costs
+# 102 fits per copy of the table for up to 19 copies (1,938 fits), about six times the rest of
+# the run.
 #
-# The table ships with the repository, not with the installed package, so the notebook needs
-# a clone. The first cell finds it.
+# The notebook needs a clone of the repository, because the table ships with the repository
+# and not with the installed package. The first cell finds the clone.
 
 # %%
 import sys
@@ -97,14 +97,14 @@ def save_figure(fig, name):
 #
 # - `fe_h` is [Fe/H], the iron abundance relative to the Sun in dex: 0 is solar, -1 is a
 #   tenth of solar.
-# - `alpha_m` ([alpha/M]) and `mg_fe` ([Mg/Fe]) say how rich a star is in alpha elements
+# - `alpha_m` ([alpha/M]) and `mg_fe` ([Mg/Fe]) indicate how rich a star is in alpha elements
 #   such as magnesium. Stars that formed early and quickly are richer in them.
 # - `J_R` and `J_z` are orbital actions in kpc km/s: how far the orbit swings in and out,
 #   and up and down through the disc.
 # - `L_z` is the angular momentum about the Galaxy's axis, large and positive for stars that
 #   rotate with the disc.
 # - `ecc` is the orbital eccentricity, 0 for a circle. `E` is the orbital energy in
-#   km^2/s^2; more negative means more tightly bound.
+#   km^2/s^2, more negative for a more tightly bound star.
 
 # %%
 x, names = example_table()
@@ -158,15 +158,15 @@ for j, name in enumerate(names):
 # %% [markdown]
 # ## The run
 #
-# UMAP draws a map of the stars in a few dimensions that keeps neighbours in the table close.
-# HDBSCAN marks the dense regions of that map as groups and leaves the stars between them
+# UMAP draws a map of the stars in a few dimensions that keeps neighbours in the table close,
+# and HDBSCAN marks the dense regions of that map as groups and leaves the stars between them
 # unassigned. Their settings can turn the same table into a handful of groups or hundreds, so
 # Starfold chooses them first.
 
 # %% [markdown]
 # `recover` tries up to 48 settings: the library defaults, 16 spread evenly over the space,
-# and the rest where earlier scores were highest. Each is scored without labels on the same
-# three 80 percent subsets. The winner is fitted once on all stars, and that fit is the
+# and the rest where earlier scores were highest. Each setting is scored without labels on the
+# same three 80 percent subsets. The winner is fitted once on all stars, and that fit is the
 # partition.
 # Starfold then refits it 32 times on fresh 80 percent subsets with new seeds to see which
 # groups come back; these refits are the worlds in `result.worlds`.
@@ -224,12 +224,12 @@ if not result.flags:
 # ## Groups and how often they come back
 #
 # Group recurrence matches each group with its closest group in every refit, takes the stars
-# the two share as a fraction of the stars in either (Jaccard), and averages over refits: 1
-# means the group comes back with the same members every time. The interval on the group
-# count is the 5 to 95 percent range over refits, a stability interval and not a confidence
-# interval. Unresolved mass scores each star in each refit that drew it: 1 if the refit left
-# it unassigned, otherwise the share of its refit group that the partition leaves unassigned.
-# It averages those scores over the star's refits, then over stars.
+# the two share as a fraction of the stars in either (Jaccard) and averages over refits: 1
+# means the group comes back with the same members every time. For the group count, the
+# interval is the 5 to 95 percent range over refits: a stability interval, not a confidence
+# interval. Unresolved mass scores each star in every refit that drew it: 1 if the refit left
+# the star unassigned, otherwise the share of its refit group that the partition leaves
+# unassigned. Those scores are averaged over the star's refits, then over stars.
 
 # %%
 worlds = result.worlds
@@ -260,9 +260,9 @@ print(f"unresolved mass {result.unresolved_mass:.3f}")
 #
 # Each setting is scored on how well a fit on one subset predicts the groups of stars it never
 # saw, how many stars both fits assign, and how closely the groups follow the neighbours in
-# the table itself. The same setting is also scored on a structureless copy of the table, and
-# only the excess over the copy counts. For the fit on all stars, `min_cluster_size` and
-# `min_samples` are scaled up from the 80 percent subsets to the full table.
+# the table itself. The search also scores the same setting on a structureless copy of the
+# table and counts only the excess over the copy. For the fit on all stars, `min_cluster_size`
+# and `min_samples` are scaled up from the 80 percent subsets to the full table.
 
 
 # %%
@@ -286,10 +286,11 @@ print(f"beats the defaults under the objective: {search.beats_default_under_obje
 # ## The map
 #
 # When the selected setting draws its map in two dimensions, the next cell refits it on all
-# stars with the same seed and checks that it gives back exactly the same groups, so the
-# picture is the map HDBSCAN cut. With more dimensions it draws a separate two-dimensional
-# refit for display only, and the axis label says so. The display refit adds one UMAP fit on
-# the CPU. UMAP axes have no units; only which stars sit near which matters.
+# stars with the same seed and checks that the refit gives back exactly the same groups, so
+# the picture is the map HDBSCAN cut. With more dimensions, the cell instead draws a separate
+# two-dimensional refit for display only and says so in the axis label. This display refit
+# adds one UMAP fit on the CPU. UMAP axes have no units; only which stars sit near which
+# matters.
 
 # %%
 deployed = result.deployed_params
@@ -317,8 +318,9 @@ else:
 print(f"layout: {axis_note}")
 
 # %% [markdown]
-# Opacity is each star's recurrence support: how consistently it lands with the other members
-# of its group across the 32 refits. Faint stars are the ones the refits place inconsistently.
+# Opacity is each star's recurrence support: how consistently the star lands with the other
+# members of its group across the 32 refits. Faint stars are the ones the refits place
+# inconsistently.
 
 # %%
 own = np.clip(np.nan_to_num(worlds.own_support, nan=0.0), 0.05, 1.0)
@@ -344,9 +346,9 @@ plt.show()
 # %% [markdown]
 # ## What the regions of the map are
 #
-# The same map, coloured once by each column, says what the regions are in measured
-# quantities. Each colour scale is clipped to the column's 2nd to 98th percentile so that a
-# long tail does not flatten the rest.
+# The same map, coloured once by each column, shows what the regions are in measured
+# quantities. Each colour scale is clipped to the column's 2nd to 98th percentile to keep a
+# long tail from flattening the rest.
 
 # %%
 fig, axes = plt.subplots(2, 4, figsize=(13, 6), layout="constrained")
@@ -367,9 +369,9 @@ plt.show()
 # %% [markdown]
 # ## The groups in physical units
 #
-# In every refit, the group is matched to its closest refit group and that group's median is
-# taken in each column. The table gives the median of those medians over the 32 refits, their
-# 5 to 95 percent range, and the median of all stars for comparison.
+# In every refit, each group is matched to its closest refit group, whose median is taken in
+# each column. The table gives the median of those medians over the 32 refits, their 5 to 95
+# percent range, and the median of all stars for comparison.
 
 # %%
 median, band = worlds.property_median, worlds.property_band
@@ -383,9 +385,10 @@ for i, g in enumerate(groups):
         )
 
 # %% [markdown]
-# The left panel shows every star in the [Fe/H]-[Mg/Fe] plane, with each group's median and
-# its 5 to 95 percent range over refits. The right panel puts all eight columns on one axis:
-# each group's median minus the table mean, in units of the table's standard deviation.
+# In the left panel, every star appears in the [Fe/H]-[Mg/Fe] plane with each group's median
+# and its 5 to 95 percent range over refits. The right panel puts all eight columns on one
+# axis as each group's median minus the table mean, in units of the table's standard
+# deviation.
 
 
 # %%
@@ -447,7 +450,7 @@ plt.show()
 
 # %% [markdown]
 # The bars show how far a group's median moves over the 32 refits. They are stability
-# intervals, not confidence intervals, and they hold no measurement error: the table has no
+# intervals, not confidence intervals, and contain no measurement error: the table has no
 # per-star uncertainties.
 
 # %% [markdown]
@@ -455,14 +458,15 @@ plt.show()
 #
 # The Milky Way disc has two chemical sequences in the [Fe/H]-[Mg/Fe] plane (Bensby et al.
 # 2014, doi:10.1051/0004-6361/201322631; Hayden et al. 2015, doi:10.1088/0004-637X/808/2/132).
-# The high-alpha sequence holds older, metal-poorer stars on hotter orbits: lower `L_z`,
-# larger `J_R`, `J_z` and eccentricity. The low-alpha sequence reaches solar [Fe/H] and above,
-# on cooler, more circular orbits. Starfold was told none of this.
+# The high-alpha sequence holds older, metal-poorer stars on hotter orbits, with lower `L_z`
+# and larger `J_R`, `J_z` and eccentricity, while the low-alpha sequence reaches solar [Fe/H]
+# and above on cooler, more circular orbits. Starfold was told none of this.
 
 # %% [markdown]
 # A group that is high in both alpha columns, low in [Fe/H] and `L_z`, and high in `J_R`,
-# `J_z` and eccentricity sits on the high-alpha sequence; the reverse is the low-alpha
-# sequence. The right panel above makes that comparison for all eight columns at once.
+# `J_z` and eccentricity sits on the high-alpha sequence, and a group with the reverse pattern
+# sits on the low-alpha sequence. The right panel above makes that comparison for all eight
+# columns at once.
 
 # %% [markdown]
 # ## Co-association: a check that ignores label numbers
@@ -470,15 +474,15 @@ plt.show()
 # Take the refits that sampled and assigned both stars of a pair. Their co-association is the
 # share of those refits that put the two in the same group. Pairs in the same group of the
 # partition should sit near 1 and pairs in different groups near 0. A pair no refit assigned
-# together counts as 0, and the largest value is 1 - 1/64 with 32 refits. The contrast is the
-# difference of the two means, and it does not depend on how each refit numbers its groups.
+# together counts as 0, and with 32 refits the largest value is 1 - 1/64. The contrast, the
+# difference of the two means, does not depend on how each refit numbers its groups.
 
 # %% [markdown]
 # The check also cuts the co-association matrix into groups of its own and compares that cut
-# with the partition (the agreement, flagged as `consensus_disagrees` below 0.5). The cut is a
-# second clustering and can fail where the pair frequencies still separate the groups
-# clearly, so read the contrast first. With all 9,242 stars the pair matrices would exceed
-# the 512 MiB budget, so the check uses a seeded subset of 4,096 stars.
+# with the partition (the agreement, flagged as `consensus_disagrees` below 0.5). However,
+# the cut is a second clustering and can fail where the pair frequencies still separate the
+# groups clearly, so read the contrast first. The check uses a seeded subset of 4,096 stars,
+# as the pair matrices for all 9,242 stars would exceed the 512 MiB budget.
 
 # %%
 consensus = result.consensus
@@ -523,15 +527,16 @@ plt.show()
 # %% [markdown]
 # ## Score on the data against score on a copy
 #
-# Every trial was scored twice on the same subsets: on the data, and on a copy of the table
-# that keeps each column's values and a single smooth correlation between columns, with the
-# groups removed. What a setting scores on the copy, it scores without any structure. The
-# search ranks settings by the difference; points on the diagonal gain nothing from the data.
+# Every trial was scored twice on the same subsets, once on the data and once on a copy of the
+# table that keeps each column's values and a single smooth correlation between columns but
+# has the groups removed. What a setting scores on the copy, it scores without any structure.
+# The search ranks settings by the difference, and points on the diagonal gain nothing from
+# the data.
 
 # %% [markdown]
-# The points are the search's own scores. The final choice re-scores the top three and the
-# defaults on fresh subsets against three fresh copies and keeps the largest fresh gap; the
-# cell prints those gaps under the figure.
+# The points are the search's own scores. For the final choice, the top three and the
+# defaults are re-scored on fresh subsets against three fresh copies and the largest fresh gap
+# is kept; the cell prints those gaps under the figure.
 
 # %%
 selected = next(t for t in search.trials if t.number == search.candidates[0].trial_number)
@@ -589,8 +594,8 @@ print(
 # ## The calibration test, as its own step
 #
 # The test replays the 17-trial exploration (the defaults and the 16 Sobol points) on copies
-# of the table, and asks how often a copy scores at least as high as the real table. Each
-# copy costs 102 fits; the test stops at 19 copies (1,938 fits) or once 3 copies score at
+# of the table to ask how often a copy scores at least as high as the real table. Each copy
+# costs 102 fits, and the test stops at 19 copies (1,938 fits) or as soon as 3 copies score at
 # least as high as the data. With 19 copies the smallest possible p-value is 0.05. Run it
 # once, on the result you report, with the same config, seed and engine:
 #
@@ -604,14 +609,14 @@ print(
 # Here `result.null.skipped_reason` is `"null_not_run"`, and its p-value of 1.0 is a
 # placeholder, not a measurement. From the repository root,
 # `python -m bench.null_stage apogee notebooks/runs/apogee` runs the test on this table and
-# writes `bench/results/apogee_null.json`. It reloads the full table, so it works on the
-# all-stars run only. Notebook `03_calibration.py` shows how to attach the test to a saved
-# result.
+# writes `bench/results/apogee_null.json`. The command reloads the full table and for this
+# reason works on the all-stars run only. Notebook `03_calibration.py` shows how to attach the
+# test to a saved result.
 
 # %% [markdown]
 # ## How to report it
 #
-# The reference run (all stars, `RANDOM_STATE = 0`, default budgets, laptop GPU) gives:
+# The reference run (all stars, `RANDOM_STATE = 0`, default budgets, laptop GPU) gave:
 #
 # | quantity | value |
 # |---|---|
@@ -626,7 +631,7 @@ print(
 
 # %% [markdown]
 # Name the evidence behind each number. The groups come from one fit of the selected setting
-# on all stars. Recurrence, the count interval and the bands come from 32 refits on 80
+# on all stars, while recurrence, the count interval and the bands come from 32 refits on 80
 # percent subsets with new seeds. The p-value comes from the separate calibration run in
 # `bench/results/apogee_null.json`; it compares the best score of the 17-trial exploration on
 # the data with the same exploration on structureless copies.
@@ -636,8 +641,8 @@ print(
 #
 # - How reproducible the split is. Recurrence and the count interval say how often the same
 #   groups come back when a fifth of the stars and the seeds change.
-# - How the groups differ, in physical units, in the property table and figure, and how much
-#   those differences move across refits.
+# - How the groups differ in physical units (property table and figure) and how much those
+#   differences move across refits.
 # - A sanity check of the method, when the group medians fall on the two alpha sequences: a
 #   known feature of the disc, recovered with no labels and no astronomy in the method.
 
@@ -645,8 +650,8 @@ print(
 # What it does not support:
 #
 # - That the groups are distinct populations. Reproducible is not true, and the calibration
-#   test does not show it either: p at or below 0.05 says only that no copy that keeps each
-#   column's values and the correlations between columns scored as high as the table, and p
+#   test does not show it either: p at or below 0.05 says only that no copy keeping each
+#   column's values and the correlations between columns scored as high as the table, while p
 #   above 0.05 says at least one did.
 # - That the Milky Way holds this many populations. The count depends on the settings and on
 #   what you call a population, and its interval is over refits, not a confidence interval.
@@ -654,7 +659,7 @@ print(
 #   group, and HDBSCAN's strengths describe one fit. Neither is a posterior.
 # - Anything about the Galaxy as a whole. These are APOGEE stars with SNR above 70 and Gaia
 #   orbits inside a volume cut, and no selection function was modelled.
-# - Anything about measurement error. The table has no per-star uncertainties, so the bands
+# - Anything about measurement error. With no per-star uncertainties in the table, the bands
 #   reflect subsampling and seeds only; `X_err` adds measurement draws to every refit.
-# - A citable result. The bundled table is for tutorials; rebuild it from APOGEE and Gaia for
-#   published work.
+# - A citable result. The bundled table is for tutorials; for published work, rebuild it from
+#   APOGEE and Gaia.

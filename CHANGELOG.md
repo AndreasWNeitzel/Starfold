@@ -9,7 +9,7 @@ New code base and API. Code written for 0.0.1 needs porting.
 - Trial 0 is always the library defaults. 16 Sobol points explore, then TPE converges.
 - The calibration test is opt-in: `starfold.null_test(...)`, or `Config(null_families=("gaussian_copula",))`. It costs up to 1,938 fits at the default settings, about six times the rest of a run.
 - On cuML every fit, neighbour search, label transfer, modularity and co-association runs on the GPU. `engine="auto"` warns when it falls back to the CPU; `engine="cuml"` raises instead.
-- `X_err` or `measurement_sampler` carry per-value uncertainties into every refit.
+- `X_err` or `measurement_sampler` carries per-value uncertainties into every refit.
 - `save` and `load` write checksummed JSON and NumPy arrays and re-derive the flags on load. Results saved by 0.0.1 do not load.
 - Removed: `UnsupervisedPipeline`, `PipelineResult`, and every 0.0.1 helper, plotting function and dashboard.
 - The APOGEE DR19 example table is now `bench/data/stellar_chemokinematics_apogee_dr19.npz`, read with `bench.datasets.example_table()` from a clone.

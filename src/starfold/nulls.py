@@ -9,9 +9,9 @@ is invented:
   latent ranks. Every marginal is preserved exactly and only one elliptical
   dependence survives. Null hypothesis: one elliptical population without
   multimodality.
-- ``independent_marginals``: each column permuted independently, which
-  destroys all dependence and preserves every marginal (the permutation null
-  of Lovdal et al. 2022, arXiv:2201.02404).
+- ``independent_marginals``: each column permuted independently, destroying
+  all dependence while preserving every marginal (the permutation null of
+  Lovdal et al. 2022, arXiv:2201.02404).
 
 The statistic is supplied by the caller as a callable on a null matrix, so
 this module never depends on the search. The p-value is the add-one Monte
@@ -65,7 +65,7 @@ class NullEvidence:
         Add-one Monte Carlo p-value per family.
     p_intervals : tuple of tuple of float
         Nominal 95 percent Clopper-Pearson interval on the exceedance
-        proportion per family; Monte Carlo precision only.
+        proportion per family, describing Monte Carlo precision only.
     p_value : float
         Composite p-value, the maximum over families (least favourable).
     alpha : float
@@ -194,8 +194,8 @@ def monte_carlo_pvalue(exceedances: int, n_realisations: int) -> float:
     Returns
     -------
     float
-        The estimate of Phipson and Smyth 2010 (doi:10.2202/1544-6115.1585);
-        1.0 when no realisation was generated.
+        The estimate of Phipson and Smyth 2010 (doi:10.2202/1544-6115.1585),
+        or 1.0 when no realisation was generated.
     """
     if n_realisations <= 0:
         return 1.0
@@ -220,7 +220,7 @@ def clopper_pearson(
     -------
     tuple of float
         Lower and upper bounds (Clopper and Pearson 1934,
-        doi:10.1093/biomet/26.4.404); ``(0.0, 1.0)`` when no trial was run.
+        doi:10.1093/biomet/26.4.404), or ``(0.0, 1.0)`` when no trial was run.
     """
     if n_realisations <= 0:
         return (0.0, 1.0)
@@ -366,11 +366,11 @@ def null_test(
     observed : float
         Observed statistic on ``x``.
     statistic : callable
-        ``statistic(x_null) -> (value, n_fits)``; must apply the identical
-        procedure and seeds that produced ``observed``, so that observed and
-        null values are exchangeable.
+        ``statistic(x_null) -> (value, n_fits)``. To make observed and null
+        values exchangeable, it must apply the identical procedure and seeds
+        that produced ``observed``.
     families : sequence of str
-        Generator families to run; empty skips the stage.
+        Generator families to run. An empty sequence skips the stage.
     statistic_name : str
         Recorded name of the statistic.
     n_null_max : int
@@ -384,11 +384,11 @@ def null_test(
         Base seed; realisation ``b`` of family ``f`` uses
         ``derive_seed(random_state, 5, f, b)``.
     n_jobs : int, default 1
-        Realisations drawn at a time. Above 1 every realisation, a short
-        final batch included, runs in one of ``n_jobs`` worker processes, so
-        ``statistic`` must then pickle. The rule reads them in order and
-        discards those drawn past the stop, so the evidence, wall time
-        aside, does not depend on ``n_jobs``.
+        Realisations drawn at a time. Above 1, every realisation (a short
+        final batch included) runs in one of ``n_jobs`` worker processes, so
+        ``statistic`` must then pickle. The evidence, wall time aside, does
+        not depend on ``n_jobs`` because the rule reads the realisations in
+        order and discards those drawn past the stop.
 
     Returns
     -------

@@ -1,7 +1,7 @@
 """The only module that calls UMAP and HDBSCAN.
 
-Neighbour graphs are built once per row set and sliced to each trial's
-``n_neighbors`` for UMAP's ``precomputed_knn``; UMAP (McInnes, Healy and
+Neighbour graphs are built once per row set and sliced to the ``n_neighbors``
+of each trial for UMAP's ``precomputed_knn``. UMAP (McInnes, Healy and
 Melville 2018, arXiv:1802.03426) and HDBSCAN (Campello, Moulavi and Sander
 2013, doi:10.1007/978-3-642-37456-2_14; McInnes and Healy 2017,
 arXiv:1705.07321) run on the CPU reference libraries or on RAPIDS cuML.
@@ -84,7 +84,7 @@ class Params:
     selection_method: SelectionMethod
 
     def __post_init__(self) -> None:
-        """Validate every field; ranges follow the umap-learn and hdbscan contracts."""
+        """Validate every field against the ranges of the umap-learn and hdbscan contracts."""
         checks = (
             (self.n_neighbors >= 2, "n_neighbors must be at least 2"),
             (0.0 <= self.min_dist <= 1.0, "min_dist must lie in [0, 1]"),
@@ -118,7 +118,7 @@ class Params:
         Parameters
         ----------
         d : mapping
-            Field names to values; integral floats are accepted for int fields.
+            Field names to values, with integral floats accepted for int fields.
 
         Returns
         -------
@@ -145,7 +145,7 @@ class Params:
 
 
 def _as_float(value: object) -> float:
-    """Convert a real scalar to float; bools and non-numeric objects raise TypeError."""
+    """Convert a real scalar to float, raising TypeError for bools and non-numeric objects."""
     if isinstance(value, bool) or not isinstance(value, (int, float, np.integer, np.floating)):
         msg = f"expected a real number (got {value!r})."
         raise TypeError(msg)
@@ -167,8 +167,8 @@ def default_params() -> Params:
     Returns
     -------
     Params
-        ``Params(15, 0.1, 2, 5, 5, "eom")``; trial 0 of every search after
-        clipping into the declared space.
+        ``Params(15, 0.1, 2, 5, 5, "eom")``, used as trial 0 of every search
+        after clipping into the declared space.
     """
     return Params(15, 0.1, 2, 5, 5, "eom")
 
@@ -180,7 +180,7 @@ def rescale_params(params: Params, from_rows: int, to_rows: int) -> Params:
     with ``min_cluster_size`` clipped to ``[2, to_rows]`` and ``min_samples``
     to ``[1, min_cluster_size]`` and at most the cuML limit of 1023, so the
     smallest admissible population keeps the mass fraction the search
-    validated. The lower bound of 2 wins when ``to_rows`` is 1.
+    validated. When ``to_rows`` is 1, the lower bound of 2 wins.
     ``n_neighbors``, ``min_dist`` and ``n_components`` describe local geometry
     and are unchanged.
 
@@ -194,7 +194,7 @@ def rescale_params(params: Params, from_rows: int, to_rows: int) -> Params:
     Returns
     -------
     Params
-        The rescaled configuration; unchanged when the row counts are equal.
+        The rescaled configuration, unchanged when the row counts are equal.
 
     Raises
     ------
@@ -227,7 +227,7 @@ class Fit:
     n_groups : int
         Number of distinct non-noise labels.
     seconds : float
-        Wall time of scaling, graph, UMAP and HDBSCAN together.
+        Total wall time of scaling, graph, UMAP and HDBSCAN.
     """
 
     labels: NDArray[np.int32]
@@ -302,12 +302,12 @@ def knn_graph(
     x_scaled : ndarray of shape (m, d)
         Scaled rows.
     k : int
-        Columns requested; capped at ``m``. Column 0 is the row itself at
-        distance 0 and distances ascend along each row.
+        Columns requested, capped at ``m``. Column 0 holds the row itself at
+        distance 0, with distances ascending along each row.
     engine : {"cpu", "cuml"}
         CPU uses exact brute force in row chunks for ``m <= 20000`` and seeded
-        pynndescent above; cuML uses brute force on the device. Any other value
-        raises ``ValueError``.
+        pynndescent above, while cuML uses brute force on the device. Any other
+        value raises ``ValueError``.
     seed : int
         Seed of the approximate search.
     n_jobs : int, default 1
@@ -348,16 +348,16 @@ def neighbor_adjacency(knn: KnnGraph, k: int = 15) -> scipy.sparse.csr_matrix:
     Parameters
     ----------
     knn : KnnGraph
-        Graph whose column 0 is the row itself; columns ``1..k`` are used, so
-        each row contributes ``k`` neighbours before symmetrisation (fewer when
-        the graph is narrower).
+        Graph whose column 0 is the row itself. Columns ``1..k`` are used,
+        giving each row ``k`` neighbours before symmetrisation (fewer when the
+        graph is narrower).
     k : int, default 15
         Neighbours per row.
 
     Returns
     -------
     scipy.sparse.csr_matrix of shape (m, m), float32
-        Entries are 1 where either row lists the other; no self loops.
+        Entries are 1 where either row lists the other, with no self loops.
     """
     indices, _distances = knn
     m, width = indices.shape
@@ -428,11 +428,11 @@ def fit_umap(
     seed : int
         ``random_state`` of the layout; umap-learn then runs serially.
     engine : {"cpu", "cuml"}
-        Backend; any other value raises ``ValueError``.
+        Backend. Any other value raises ``ValueError``.
     knn : KnnGraph, optional
         Graph sliced to ``params.n_neighbors`` and passed as ``precomputed_knn``
-        on both backends; a silent library fallback to its own search is
-        turned into an error.
+        on both backends. A silent fallback of the library to its own search
+        is turned into an error.
 
     Returns
     -------
@@ -481,9 +481,9 @@ def fit_hdbscan(
         Configuration; only the HDBSCAN fields are read.
     engine : {"cpu", "cuml"}
         ``hdbscan.HDBSCAN`` (single-threaded core distances) or
-        ``cuml.cluster.HDBSCAN``; Euclidean, no spanning tree, no prediction
-        data, ``allow_single_cluster=False``. Any other value raises
-        ``ValueError``.
+        ``cuml.cluster.HDBSCAN``, both Euclidean with no spanning tree, no
+        prediction data and ``allow_single_cluster=False``. Any other value
+        raises ``ValueError``.
 
     Returns
     -------
@@ -535,17 +535,17 @@ def fit_pipeline(
     Parameters
     ----------
     x_rows : ndarray of shape (m, d), float64
-        Rows in original units; the scaler is fitted on them alone.
+        Rows in original units. The scaler is fitted on these rows alone.
     params : Params
         Configuration.
     seed : int
         UMAP seed and, when a graph is built, the approximate-search seed.
     engine : {"cpu", "cuml"}
-        Backend; any other value raises ``ValueError`` before any work.
+        Backend. Any other value raises ``ValueError`` before any work.
     scaling : {"standard", "robust"}
         Scaler family.
     knn : KnnGraph, optional
-        Cached graph of the scaled rows; built at ``k = n_neighbors`` if absent.
+        Cached graph of the scaled rows, built at ``k = n_neighbors`` if absent.
 
     Returns
     -------
@@ -587,17 +587,17 @@ class BackendAgreement:
     mean_agreement : float
         Mean of ``agreement``.
     ari, coverage : tuple of float
-        The two factors of ``agreement`` per seed; a low product can mean the
-        backends disagree or only that few rows are assigned by both.
+        The two factors of ``agreement`` per seed. A low product can mean that
+        the backends disagree or only that few rows are assigned by both.
     assigned_cpu, assigned_cuml : tuple of float
         Fraction of rows each backend assigned, per seed.
     normalised : tuple of float
         ``ari * coverage / min(assigned_cpu, assigned_cuml)`` per seed: agreement
         relative to the most the assigned fractions allow, so a configuration
         that leaves most rows as noise is not read as backend disagreement.
-        1 when neither backend assigns a row and 0 when only one does.
+        Equal to 1 when neither backend assigns a row and 0 when only one does.
     mean_normalised : float
-        Mean of ``normalised``; the ``backend_disagreement`` flag reads it.
+        Mean of ``normalised``, read by the ``backend_disagreement`` flag.
     n_groups_cpu, n_groups_cuml : tuple of int
         Per-seed group counts on each backend.
     """
@@ -624,8 +624,8 @@ def compare_backends(
 ) -> BackendAgreement:
     """Fit the same configuration on both backends and report partition agreement.
 
-    Backends are compared by agreement of their partitions, never by exact
-    labels, because layouts differ in floating-point order.
+    Backends are compared by the agreement of their partitions, never by exact
+    labels, because their layouts differ in floating-point order.
 
     Parameters
     ----------

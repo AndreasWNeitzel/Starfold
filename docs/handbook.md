@@ -2,10 +2,10 @@
 
 ## 1. What Starfold does
 
-You give Starfold a numeric table: one row per object (a star, a cell, an image), one column per
+Starfold takes a numeric table with one row per object (a star, a cell, an image) and one column per
 measured number. It returns one set of groups, how often each group and each row comes back when it
-refits on random subsets of the rows, and a flag wherever the evidence is weak. It never sees any
-known classes your rows may have. Three tools do the work:
+refits on random subsets of the rows, and a flag wherever the evidence is weak, without ever seeing
+any known classes your rows may have. Three tools do the work:
 
 - **UMAP** (McInnes, Healy and Melville 2018) draws a low-dimensional map of the table, the
   *embedding*, that keeps similar rows close together.
@@ -43,9 +43,9 @@ pip install "starfold[gpu-cu12] @ git+https://github.com/AndreasWNeitzel/starfol
 ```
 
 The GPU extras install RAPIDS cuML (NVIDIA's GPU versions of UMAP and HDBSCAN) on Linux or WSL2.
-`nvidia-smi` shows the highest CUDA version your driver supports; the CUDA 12 extra needs driver
+`nvidia-smi` shows the highest CUDA version your driver supports. The CUDA 12 extra needs driver
 525.60.13 or newer, the CUDA 13 extra 580.65.06 or newer (docs.rapids.ai/install). Install one,
-never both: they pin different CUDA toolkits and `uv` refuses the pair. The notebooks and the
+never both: they pin different CUDA toolkits; `uv` refuses the pair. The notebooks and the
 bundled APOGEE table need a clone:
 
 ```bash
@@ -71,7 +71,7 @@ result = starfold.load("runs/digits")  # checks the files and re-derives the fla
 ```
 
 - **The calibration test is off by default**, so the result carries `null_not_run`. It costs about
-  six times the rest of a run; run it once, on the result you report (section 6).
+  six times the rest of a run. Run it once, on the result you report (section 6).
 - **`engine="auto"`** uses cuML when it imports and sees a GPU, and otherwise warns and runs on the CPU;
   `"cuml"` raises instead, and `"cpu"` never touches the GPU.
 
@@ -89,35 +89,35 @@ Starfold compares rows by distance after scaling each column, so the columns you
 - **At least 50 rows and 2 columns**, or `recover` raises a `ValueError`. With `n` rows kept, groups
   much smaller than about sqrt(12 n) rows tend to merge (section 8).
 - **Missing values drop the row.** A row with a NaN or infinity anywhere is removed, never filled in
-  (flag `rows_rejected_nonfinite`), so `X[result.kept_rows]` lines up with `result.labels`. Filling gaps
-  with a column mean makes a false dense clump that Starfold will call a group; if a column is missing
-  for most rows, drop the column.
+  (flag `rows_rejected_nonfinite`), so `X[result.kept_rows]` lines up with `result.labels`. Filling
+  gaps with a column mean makes a false dense clump that Starfold will call a group. Instead, if a
+  column is missing for most rows, drop the column.
 - **Choose columns for the question.** Every column gets equal weight after scaling. An irrelevant
   column blurs real groups; two columns measuring the same thing count it twice.
 - **Scaling** is fitted inside each subset (scikit-learn; Pedregosa et al. 2011).
-  `Config(scaling="standard")` divides by the standard deviation; `Config(scaling="robust")` uses the
+  `Config(scaling="standard")` divides by the standard deviation. `Config(scaling="robust")` uses the
   median and interquartile range, better when a few extreme values squash the rest of a column.
 - **Uncertainties.** Measured per-value uncertainties go in as `X_err` (standard deviations, the shape
   of `X`, finite and non-negative on every kept row); every refit draws `X + X_err * N(0, 1)`. For
-  correlated errors pass `measurement_sampler(rows, indices, rng)`, which returns a perturbed copy of
-  `rows`; give one or the other. They change the 32 refits, not the choice of settings, and an invented
-  error bar produces an invented spread.
+  correlated errors, pass `measurement_sampler(rows, indices, rng)`, which returns a perturbed copy of
+  `rows`. Give one or the other. Either input changes the 32 refits but not the choice of settings,
+  and an invented error bar produces an invented spread.
 
 ---
 
 ## 4. Reading a result
 
 Read `result.flags` first (table at the end of this section), then check whether the count, the groups
-and the rows are stable. A *refit* (or *world*) is one fit of the selected settings on a random 80
-percent of the rows; Starfold runs 32. The *full fit* uses all rows and gives `result.labels`; its set
-of groups is the *partition*. Every number below is a recurrence rate or a stability range over the
+and the rows are stable. Starfold runs 32 *refits* (or *worlds*), each a fit of the selected settings
+on a random 80 percent of the rows. The *full fit* uses all rows and gives `result.labels`; its set of
+groups is the *partition*. Every number below is a recurrence rate or a stability range over the
 refits, not a probability or a confidence interval. *Post hoc* marks a check against known classes
 that Starfold never saw.
 
 **The count.** Compare `result.n_groups` with `result.worlds.count_interval`, the 5th to 95th
 percentile of the groups found per refit (`count_values` holds all 32). A narrow interval containing
-`n_groups` means the count reproduces; a wide one means the table supports several readings. Neither
-estimates how many populations exist.
+`n_groups` means the count reproduces; a wide one means the table supports several readings.
+However, neither estimates how many populations exist.
 
 ![Groups found in each refit](figures/digits_counts.png)
 
@@ -125,38 +125,39 @@ estimates how many populations exist.
 
 **Unresolved mass.** `result.unresolved_mass` is the average share of refits that left a row unassigned
 or put it with rows the full fit calls noise. Above 0.5 (`high_unresolved_mass`) the groups describe a
-minority of rows, which is honest for a table with a diffuse background.
+minority of rows, an honest outcome for a table with a diffuse background.
 
 **The groups.** `result.worlds.group_recurrence` gives each group a number from 0 to 1: per refit, the
 best Jaccard overlap (shared rows over rows in either) between the group and any refit group, averaged
-over refits; `group_recurrence_band` is its 5th to 95th percentile. Hennig (2007) reads above 0.85 as
-stable and below 0.5 as dissolved; Starfold quotes those marks and never uses them to drop a group.
-`property_median` and `property_band` give each group's median per column in your units, with its range
-over refits.
+over refits. Its 5th to 95th percentile is `group_recurrence_band`. Hennig (2007) reads above 0.85 as
+stable and below 0.5 as dissolved, marks that Starfold quotes but never uses to drop a group. For
+each group, `property_median` and `property_band` give the median per column in your units and its
+range over refits.
 
 ![Per-group recurrence](figures/digits_groups.png)
 
 *Left, recurrence of each Digits group. Middle, group sizes. Right, recurrence against the share of
 the group's majority digit (post hoc).*
 
-**The rows.** `result.support[i, g]` is how often, across the refits that sampled row `i`, it landed
-in a refit group made of members of group `g`. `result.worlds.unresolved` holds the rest, so each
-row sums to one, and `own_support` picks each row's own group. Keeping rows with own support above
-0.9 gives a purer sample and loses rows near the edges (section 8 shows how steep the trade can be).
+**The rows.** `result.support[i, g]` is how often, across the refits that sampled row `i`, the row
+landed in a refit group made of members of group `g`. `result.worlds.unresolved` holds the rest, so
+each row sums to one, and `own_support` picks each row's own group. Keeping rows with own support
+above 0.9 gives a purer sample and loses rows near the edges (section 8 shows how steep the trade can
+be).
 
 ![Recurrence support](figures/digits_support.png)
 
 *Left, own support of every grouped Digits row. Middle, the unresolved share. Right, own support by
 whether the row matches its group's majority digit (post hoc).*
 
-**The co-association check.** For each pair of rows, `result.consensus` takes the share of refits that
-grouped both together among those that assigned both. `contrast` is that share averaged over pairs in
-one group minus its average over pairs in different groups: near 1 the refits agree with your
-partition, near 0 they do not. The check also regroups the rows from these shares alone and compares
-the result with `labels`; with 32 refits many pairs tie, so that regrouping can fail and raise
-`consensus_disagrees` although the refits agree, so read the contrast first. Above 5,792 rows it runs
-on a recorded 4,096-row subset (`consensus_subsampled`). The p-value (`result.null.p_value`, 1.0 until
-the test runs) is in section 6.
+**The co-association check.** For each pair of rows, `result.consensus` takes the share of refits
+placing both in the same group among those that assigned both. `contrast` is that share averaged over
+pairs in one group minus its average over pairs in different groups; near 1 the refits agree with
+your partition, near 0 they do not. The check also regroups the rows from these shares alone and
+compares the outcome with `labels`. However, with 32 refits many pairs tie, so the regrouping can
+fail and raise `consensus_disagrees` although the refits agree; read the contrast first. Above 5,792
+rows the check runs on a recorded 4,096-row subset (`consensus_subsampled`). Section 6 covers the
+p-value (`result.null.p_value`, 1.0 until the test runs).
 
 ### All 16 flags
 
@@ -187,13 +188,14 @@ stored flags differ.
 ## 5. How the settings are chosen
 
 Settings alone can change how many groups the same table gives, from a handful to hundreds. Starfold
-scores each setting on rows its fit never saw and subtracts what the same setting scores on a copy of
-your table with the groups removed. Only the excess counts.
+scores each setting on rows its fit never saw, subtracts what the same setting scores on a copy of
+your table with the groups removed, and counts only the excess.
 
 ![Settings against groups found](figures/digits_settings_vs_groups.png)
 
-*Every complete Digits trial: gap over the copy against the median groups its three fits found. Trial 0
-is the black star, the selected trial is circled, the dotted line marks the 10 true digits (post hoc).*
+*Gap over the copy against the median number of groups found by the three fits, for every complete
+Digits trial. Trial 0 is the black star and the selected trial is circled; the dotted line marks the
+10 true digits (post hoc).*
 
 | setting | what it controls | searched range | default |
 |---|---|---|---|
@@ -204,102 +206,103 @@ is the black star, the selected trial is circled, the dotted line marks the 10 t
 | `min_samples` | how smooth HDBSCAN's density estimate is; larger values call more rows noise | 0.05 to 1.0 of `min_cluster_size`, log scale | 5 |
 | `selection_method` | `eom` picks the most persistent clumps, `leaf` the finest ones | `eom`, `leaf` | `eom` |
 
-`starfold.Space` sets these ranges. The cap of 1023 comes from cuML's limit on `min_samples`, so CPU
-and GPU search the same space.
+`starfold.Space` sets these ranges, with the cap of 1023 taken from cuML's limit on `min_samples` to
+let CPU and GPU search the same space.
 
 ### The score
 
-Starfold draws three random 80 percent subsets, and every setting is scored on the same three, so a
+Starfold draws three random 80 percent subsets and scores every setting on the same three, so a
 difference between settings comes from the settings and not from the draw (common random numbers;
-Glasserman and Yao 1992). For one setting, UMAP and HDBSCAN are fitted on each subset and three
-things are measured:
+Glasserman and Yao 1992). For one setting, UMAP and HDBSCAN are fitted on each subset and
+three things are measured:
 
-1. **Prediction agreement.** For each row of subset B that the fit on subset A never saw, predict a
-   group from the 15 most similar rows A did see and compare with the fit on B (adjusted Rand index: 1
-   for identical groupings, 0 for chance). A setting that tears a smooth region into small clumps cannot
-   predict unseen rows (Lange et al. 2004; Tibshirani and Walther 2005).
+1. **Prediction agreement.** For each row of subset B unseen by the fit on subset A, predict a group
+   from the 15 most similar rows that A did see and compare it with the fit on B (adjusted Rand index:
+   1 for identical groupings, 0 for chance). A setting that tears a smooth region into small clumps
+   cannot predict unseen rows (Lange et al. 2004; Tibshirani and Walther 2005).
 2. **Coverage.** The share of those rows that both fits assigned to a group, so calling most rows
    noise does not pay.
-3. **Modularity.** Link each row to its 15 nearest rows in your scaled columns, before any map is
-   drawn, and measure how many links stay inside groups compared with chance (Newman 2006). A
-   separation UMAP invents earns nothing (Chari and Pachter 2023), and modularity offsets the pull of
-   agreement alone towards the coarsest grouping (von Luxburg 2010).
+3. **Modularity.** Link each row to its 15 nearest rows in your scaled columns before any map is
+   drawn, and measure how many links stay inside groups compared with chance (Newman 2006).
+   Modularity gives no credit to a separation that UMAP invents (Chari and Pachter 2023) and offsets
+   the pull of agreement alone towards the coarsest grouping (von Luxburg 2010).
 
-The score is the cube root of the product, so a zero in any one gives zero (all noise, one giant
-group, a crashed fit) without a special rule. It never looks at the number of groups.
+The score is the cube root of the product and is zero whenever any one of the three is zero (all
+noise, one giant group, a crashed fit), without a special rule. It never looks at the number of
+groups.
 
 ### The copy and the gap
 
-Some settings score well on any table, including one with no groups: chopping a smooth cloud into
-compact pieces gives pieces that recur and look tidy. Starfold therefore builds a structureless copy
-of your table that keeps every column's values and the correlations between columns but reorders
-which values sit together, so the copy is one smooth cloud (a *Gaussian copula*; Appendix A). Every
-number in it is one you measured.
+Some settings score well on any table, including one with no groups: chopped into compact pieces, a
+smooth cloud gives pieces that recur and look tidy. For this reason, Starfold builds a structureless
+copy of your table that keeps every column's values and the correlations between columns but
+reorders which values sit together, so the copy is one smooth cloud (a *Gaussian copula*;
+Appendix A). Every number in it is one you measured.
 
 ![The APOGEE table and its structureless copies](figures/apogee_surrogate.png)
 
 *[Fe/H] against [Mg/Fe] for the 9,242 APOGEE stars of section 7 (top left), a Gaussian-copula copy
-(top middle) and a shuffled copy (top right). Below, each column alone: identical histograms, because
-a copy only reorders measured values. Do the two dense ridges survive in the copies?*
+(top middle) and a shuffled copy (top right). Below, each column alone: the histograms are identical,
+as a copy only reorders measured values. Check whether the two dense ridges survive in the copies.*
 
-Each setting is scored on the data and on the copy with the same subsets, and the search maximises the
-difference, the *gap* (Tibshirani, Walther and Hastie 2001). A setting that only chops scores about
-the same on both and gains nothing.
+The search scores each setting on the data and on the copy with the same subsets and maximises the
+difference between the two, the *gap* (Tibshirani, Walther and Hastie 2001). A setting that only
+chops scores about the same on both and gains nothing.
 
 ![Score on the data against score on the copy](figures/apogee_gap.png)
 
 *Every complete APOGEE trial, scored on the data (x) and on the copy (y). Points on the diagonal have
-no advantage over structureless data; the further below, the larger the advantage. The defaults are
-the black star
-(0.326 on the data, 0.319 on the copy)
-and the selected trial is circled.*
+no advantage over structureless data, and the advantage grows with the distance below the diagonal.
+The black star marks the defaults (0.326 on the data, 0.319 on the copy); the selected trial is
+circled.*
 
 ### The search and the final fit
 
-- **Trial 0 is the library defaults** (a default outside your `Space` moves to the nearest bound), so
-  Starfold always considers the answer you would get without it.
-- **Trials 1 to 16 are a scrambled Sobol design**: points that cover the space far more evenly than
-  random draws (Owen 1998; Bergstra and Bengio 2012). They are never cut short.
-- **Later trials use TPE** (tree-structured Parzen estimator), which learns which regions scored well
+- **Trial 0 is the library defaults** (a default outside your `Space` moves to the nearest bound),
+  so Starfold always considers the answer you would get without it.
+- **Trials 1 to 16 are a scrambled Sobol design**, never cut short, whose points cover the space far
+  more evenly than random draws (Owen 1998; Bergstra and Bengio 2012).
+- **Later trials use TPE** (tree-structured Parzen estimator); it learns which regions scored well
   and proposes points there (Bergstra et al. 2011).
-- **Pruning and stopping.** From trial 17, a trial whose data score after two of its three fits is
-  below the median of earlier complete trials stops (Golovin et al. 2017); up to 3 pruned trials whose
-  partial score beats the best complete trial are finished at the end. From trial 33, the search stops
-  when the best score has improved by less than 0.01 over 16 trials.
+- **Pruning and stopping.** From trial 17, a trial stops if its data score after two of its three
+  fits falls below the median of earlier complete trials (Golovin et al. 2017), although up to 3
+  pruned trials whose partial score beats the best complete trial are finished at the end. From
+  trial 33, the search stops once the best score has improved by less than 0.01 over 16 trials.
 
-The best score of 48 noisy trials is optimistic, since the top trial is partly lucky. Starfold
+The best score of 48 noisy trials is optimistic, given that the top trial is partly lucky. Starfold
 re-scores the top 3 complete trials and the defaults on three fresh subsets and three fresh copies and
-selects the largest fresh gap, ties to the defaults (`result.search.candidates`; `result.search.trials`
-holds every trial). The winner is fitted once on all rows: `result.labels` is one transparent fit,
-not a vote. `min_cluster_size` and `min_samples` are row counts validated on subsets of `m = 0.8 n`
-rows, so the full fit multiplies both by `n / m`. `result.params` holds the searched values and
-`result.deployed_params` the rescaled ones.
+selects the largest fresh gap, with ties going to the defaults (`result.search.candidates`;
+`result.search.trials` holds every trial). The winner is fitted once on all rows: `result.labels` is
+one transparent fit, not a vote. `min_cluster_size` and `min_samples` are row counts validated on
+subsets of `m = 0.8 n` rows, so the full fit multiplies both by `n / m`. `result.params` holds the
+searched values and `result.deployed_params` the rescaled ones.
 
 ---
 
 ## 6. The calibration test
 
 The p-value is the chance that structureless copies of your table, run through the first 17 trials of
-the same search, score at least as high as your table. It is not the probability that the groups are
-real and says nothing about how many there are. Run it once, on the result you report.
+the same search, score at least as high as your table. However, it is not the probability that the
+groups are real, nor does it say anything about how many there are. Run it once, on the result you
+report.
 
 The *statistic* is the best gap among the 17 opening trials (trial 0 and the 16 Sobol points), stored
-as `result.search.exploration_max`. The test runs the same 17 trials on a copy of your table with the
-same seeds and records the copy's best gap, for up to 19 copies. With `h` copies at or above your
-table out of `L` drawn, `p = (h + 1) / (L + 1)`, so with 19 copies p cannot go below 0.05. It stops
-once 3 copies reach your table's value. `null.p_intervals` gives the share of copies at or above your
-table with a range showing how precisely 19 copies pin it down. Each trial's score is itself a gap, so
-each copy needs a second copy of its own: 17 trials x 3 subsets x 2 tables = 102 fits per copy, up to
-1,938 fits, about six times the rest of a run.
+as `result.search.exploration_max`. For up to 19 copies, the test runs the same 17 trials on a copy
+of your table with the same seeds and records the copy's best gap. With `h` copies at or above your
+table out of `L` drawn, `p = (h + 1) / (L + 1)`, so with 19 copies p cannot go below 0.05. The test
+stops once 3 copies reach your table's value. `null.p_intervals` gives the share of copies at or
+above your table, with a range showing how precisely 19 copies pin it down. Each trial's score is
+itself a gap, so each copy needs a second copy of its own: 17 trials x 3 subsets x 2 tables = 102
+fits per copy, up to 1,938 fits, or about six times the rest of a run.
 
-`gaussian_copula` (the default) is one smooth population with your columns' values and correlations.
-Groups that show up only as a correlation between columns survive in it, so it can score almost as high
-as your table. `independent_marginals` shuffles each column alone, destroying every correlation
-(Lövdal et al. 2022), and is easier to beat. With several families, `p_value` is the largest of their
-p-values. `Config(null_procedure="full_search")` replays the whole search instead of the 17 opening
-trials, at a much higher cost. Run the test on the rows `recover` kept, with the same `config`
-(including any custom `Space`), `random_state` and `engine` and, above 20,000 rows per subset, the
-same `n_jobs`:
+The default family, `gaussian_copula`, is one smooth population with your columns' values and
+correlations, in which groups that show up only as a correlation between columns survive; it can
+therefore score almost as high as your table. In contrast, `independent_marginals` shuffles each
+column alone, destroying every correlation (Lövdal et al. 2022), and is easier to beat. With several
+families, `p_value` is the largest of their p-values. `Config(null_procedure="full_search")`
+replays the whole search instead of the 17 opening trials, at a much higher cost. Run the test on
+the rows `recover` kept, with the same `config` (including any custom `Space`), `random_state` and
+`engine`, and with the same `n_jobs` above 20,000 rows per subset:
 
 ```python
 null = starfold.null_test(X[result.kept_rows], result.search, random_state=0)
@@ -307,8 +310,9 @@ print(null.p_value, null.p_intervals, null.structure_supported)
 ```
 
 A separate `null_test` returns its own evidence and leaves `null_not_run` on the result; the
-[calibration notebook](../notebooks/03_calibration.py) shows how to attach it and re-derive the flags.
-To run it inside `recover`, pass `Config(null_families=("gaussian_copula",))`.
+[calibration notebook](../notebooks/03_calibration.py) shows how to attach that evidence and
+re-derive the flags. To run the test inside `recover` instead, pass
+`Config(null_families=("gaussian_copula",))`.
 
 Results on two tables, 19 copies each:
 
@@ -317,22 +321,22 @@ Results on two tables, 19 copies each:
 | Digits | 1,797 rows, 10 digit classes | 0.050 | 0 of 19 | table 0.710, largest copy 0.243; interval 0 to 0.176 |
 | APOGEE | 9,242 stars, no classes | 0.100 | 1 of 19 | table 0.362, exceeding copy 0.366, copy median 0.165; interval 0.001 to 0.260 |
 
-The records are `bench/results/digits_null.json` and `bench/results/apogee_null.json`.
+The records are in `bench/results/digits_null.json` and `bench/results/apogee_null.json`.
 
 ---
 
 ## 7. Worked example: 9,242 APOGEE DR19 stars
 
-A full run without known classes on the table bundled with the repository, and how to report it. The
-[APOGEE notebook](../notebooks/02_apogee.py) reproduces it and draws the figures. Each star has three
-chemical abundances ([Fe/H], [alpha/M], [Mg/Fe] from the APOGEE DR19 ASPCAP pipeline) and five orbital
-quantities integrated with galpy from Gaia DR3 (radial action `J_R`, vertical action `J_z`, angular
-momentum `L_z`, eccentricity, orbital energy); see the
-[provenance note](../bench/data/stellar_chemokinematics_apogee_dr19.md). `bench.datasets.example_table()`
-loads the table and checks its checksum.
+This section follows one full run without known classes on the table bundled with the repository and
+shows how to report it; the [APOGEE notebook](../notebooks/02_apogee.py) reproduces the run and draws the
+figures. Each star has three chemical abundances from the APOGEE DR19 ASPCAP pipeline ([Fe/H],
+[alpha/M], [Mg/Fe]) and five orbital quantities integrated with galpy from Gaia DR3: radial action
+`J_R`, vertical action `J_z`, angular momentum `L_z`, eccentricity and orbital energy (see the
+[provenance note](../bench/data/stellar_chemokinematics_apogee_dr19.md)).
+`bench.datasets.example_table()` loads the table and checks its checksum.
 
 This is a check of the method, not a finding about the Galaxy. Disc stars fall on two chemical
-sequences: at the same iron content, one is richer in alpha elements such as magnesium (high-alpha),
+sequences: at the same iron content, one is richer in alpha elements such as magnesium (high-alpha) and
 the other poorer (low-alpha). A method that finds no structure here, or fifty groups, has a problem.
 
 | quantity | value |
@@ -348,38 +352,36 @@ the other poorer (low-alpha). A method that finds no structure here, or fifty gr
 | calibration test | p = 0.100, 1 of 19 copies at or above the table, interval 0.001 to 0.260 |
 | flags | `search_budget_exhausted`, `consensus_subsampled`, `consensus_disagrees`, and `no_structure_supported` once the test is attached (`null_not_run` before) |
 
-The fresh gap comes from the re-scoring step of section 5, on new subsets and copies. The calibration
-row is `bench/results/apogee_null.json` (statistic `exploration_design_max` 0.362).
+The fresh gap comes from the re-scoring step of section 5 on new subsets and copies, and the calibration
+row from `bench/results/apogee_null.json` (statistic `exploration_design_max` 0.362).
 
 ![The groups in the map](figures/apogee/01_layout.png)
 
-*Stars in the map, coloured by group; faint stars rarely stay in their group across refits. If the
-chosen map has more than two coordinates this is a separate 2-D map for display.*
+*Stars in the map, coloured by group, with faint stars rarely staying in their group across refits.
+When the chosen map has more than two coordinates, the figure is a separate 2-D map for display.*
 
 ![Group medians](figures/apogee/04_properties.png)
 
 *Left, group medians in the [Fe/H] against [Mg/Fe] plane with 5 to 95 percent bands over refits. Right,
 every column's group median in standard deviations from the table mean.*
 
-The group medians sit at
-[Fe/H] = -0.416 (-0.424 to -0.405) and [Mg/Fe] = +0.273 (0.271 to 0.275) dex for the 1,588-star group, and -0.076 (-0.080 to -0.071) and +0.040 (0.039 to 0.042) dex for the 6,586-star group. Compare them with
-the known positions of the two sequences; Starfold was given no classes, no astronomy and no expected
-count.
+For the 1,588-star group the medians sit at [Fe/H] = -0.416 (-0.424 to -0.405) and [Mg/Fe] = +0.273
+(0.271 to 0.275) dex, and for the 6,586-star group at -0.076 (-0.080 to -0.071) and +0.040 (0.039 to
+0.042) dex. Compare them with the known positions of the two sequences; Starfold was given no classes,
+no astronomy and no expected count.
 
 ### How to report it
 
 The calibration test gives p = 0.10, so the split is not shown to beat a Gaussian-copula copy that
 keeps the correlations (`no_structure_supported`). This run cannot separate three reasons: the statistic
 uses only the 17 opening trials and has less power than the full search; with 19 copies p moves in steps
-of 0.05 and one copy (0.366 against 0.362) decided the outcome; and the copy keeps the correlations
+of 0.05, and one copy (0.366 against 0.362) decided the outcome; and the copy keeps the correlations
 between iron, magnesium and the orbits, which carry much of the two-sequence signal.
 
-Suggested wording for a paper: "Starfold recovers
-2 groups with recurrence
-0.91 and 0.92 across 32 refits, whose medians lie on
-the high-alpha and low-alpha sequences; a matched
-Gaussian-copula test gives p = 0.10 (19 copies), so the split is not shown to exceed a single
-correlated population." State the claim about the sequences only if the medians support it.
+Suggested wording for a paper: "Starfold recovers 2 groups with recurrence 0.91 and 0.92 across 32
+refits, whose medians lie on the high-alpha and low-alpha sequences; a matched Gaussian-copula test
+gives p = 0.10 (19 copies), so the split is not shown to exceed a single correlated population." State
+the claim about the sequences only if the medians support it.
 
 ---
 
@@ -387,22 +389,22 @@ correlated population." State the claim about the sequences only if the medians 
 
 ### Small groups merge
 
-In terms of the subset size `m = 0.8 n`, the scale is about sqrt(15 m) rows: 155 at `n = 2,000` and 346
-at `n = 10,000`. It is empirical, measured on the ten-table benchmark below and by injecting groups into
-the APOGEE table; nothing above 20,000 rows was measured. Modularity's known preference for larger
+In terms of the subset size `m = 0.8 n`, the scale is about sqrt(15 m) rows (155 at `n = 2,000` and 346
+at `n = 10,000`), an empirical value measured on the ten-table benchmark below and by injecting groups
+into the APOGEE table. Nothing above 20,000 rows was measured. Modularity's known preference for larger
 communities (Fortunato and Barthelemy 2007) is the likely reason, but their bound does not give this
 number. If you expect smaller groups, use more rows and fewer irrelevant columns, or expect them to
 merge into a neighbour.
 
 **Injection into real data.** Artificial groups were added to a 2,000-row sample of the APOGEE table.
-Each group is made-up rows spread evenly inside a ball around a random real star, whose radius is that
-star's distance to its 30th nearest neighbour, so the ball holds about 30 real rows: a group of 30
-injected rows has the local background density and 480 rows 16 times it, so size and density contrast
-rise together. Three groups go in at a time and Starfold runs without knowing which rows were added (32
-trials, 16 refits, seed 0, one run per size). A group is retrieved when a reported group shares at
-least half its rows with it (Jaccard similarity 0.5 or more; design after Krone-Martins and Moitinho
-2013 and Hunt 2025). Purity is the share of the best-matching group that is injected, completeness the
-share of the injected rows it holds.
+Each group consisted of made-up rows spread evenly inside a ball around a random real star, with the
+radius set to that star's distance to its 30th nearest neighbour, so the ball holds about 30 real rows.
+A group of 30 injected rows has the local background density and a group of 480 rows 16 times it, so
+size and density contrast rise together. Three groups went in at a time, and Starfold ran without
+knowing which rows were added (32 trials, 16 refits, seed 0, one run per size). A group counts as
+retrieved when a reported group shares at least half its rows with it (Jaccard similarity 0.5 or more,
+following the design of Krone-Martins and Moitinho 2013 and Hunt 2025). Purity is the share of the
+best-matching group that is injected, completeness the share of the injected rows it holds.
 
 | rows per group | size over sqrt(15 m) | retrieved | groups reported | purity | completeness |
 |---:|---:|---:|---:|---:|---:|
@@ -413,7 +415,7 @@ share of the injected rows it holds.
 | 480 | 1.89 | 3 of 3 | 20 | 0.92 | 0.91 |
 
 The two smallest sizes were absorbed into large groups; the rest were retrieved. Each row is one draw of
-three sites, so read the table as a rough threshold, not a measured curve.
+three sites, so read the table as a rough threshold rather than a measured curve.
 
 ![Injection-recovery](figures/bench_injection.png)
 
@@ -422,13 +424,13 @@ completeness (dashed) against the support threshold.*
 
 ### The benchmark
 
-Ten public tables with known classes, never shown to Starfold and used only to score its output. Six
-form the development set; four are held out ("sealed" in the figures), so no rule or default of the
-method was set by looking at them. The score is coverage-adjusted recovery: the adjusted Rand index,
-floored at 0, against the true classes on the rows Starfold assigned, times the share assigned, so
-labelling a few easy rows and calling the rest noise does not pay. The defaults column is the median
-over 8 seeds of the library defaults' recovery, and Starfold matches them when within 0.02. The
-class-size column is `0.8 n / classes` over sqrt(15 m).
+Our benchmark uses ten public tables with known classes, never shown to Starfold and used only to score
+its output. Six form the development set; the other four are held out ("sealed" in the figures), so no
+rule or default of the method was set by looking at them. Each output is scored by coverage-adjusted
+recovery: the adjusted Rand index, floored at 0, against the true classes on the rows Starfold assigned,
+times the share assigned, so labelling a few easy rows and calling the rest noise does not pay. The
+defaults column gives the median recovery of the library defaults over 8 seeds, with Starfold counted as
+matching them when within 0.02. The class-size column is `0.8 n / classes` over sqrt(15 m).
 
 | table | rows x columns | classes | set | class size / sqrt(15 m) | Starfold | defaults | groups | count interval |
 |---|---:|---:|---|---:|---:|---:|---:|---|
@@ -446,8 +448,8 @@ class-size column is `0.8 n / classes` over sqrt(15 m).
 ![Recovery against class size over the scale](figures/bench_resolution.png)
 
 *Left, each table's recovery minus the defaults'. Right, how well trial scores track recovery (Spearman
-correlation). Both against mean class size over sqrt(15 m); tables left of the dashed line have classes
-below the scale ("sealed" means held out).*
+correlation). Both are plotted against mean class size over sqrt(15 m), and tables left of the dashed
+line have classes below the scale ("sealed" means held out).*
 
 - **Development set:** matched or beat the defaults on 6 of 6 tables; mean recovery 0.469 against
   0.315. **Held out:** 2 of 4; 0.239 against 0.291. **All ten:** 8 of 10; 0.377 against 0.306.
@@ -472,15 +474,16 @@ below the scale ("sealed" means held out).*
 ## 9. GPU and clusters
 
 With cuML, the fits, neighbour searches, held-out label transfer, modularity and co-association counts
-run on the GPU; scaling, Optuna's sampling, the copies and the co-association regrouping run on the CPU.
-`engine="auto"` falls back to the CPU with a `RuntimeWarning` naming the reason, and `result.provenance`
-records the requested and resolved engine, library versions, seeds, budgets and fits per stage.
+run on the GPU; scaling, Optuna's sampling, the copies and the co-association regrouping run on the
+CPU. `engine="auto"` falls back to the CPU with a `RuntimeWarning` naming the reason, and
+`result.provenance` records the requested and resolved engine, library versions, seeds, budgets and fits
+per stage.
 
 On the CPU, neighbour graphs are exact up to 20,000 rows per subset and use pynndescent (approximate
-nearest neighbours) above that, which depends on the thread count, so a run reproduces there only with
-the same `n_jobs`. `n_jobs` sets CPU worker processes (for the fits in a trial, at most 3 useful; for the
-32 refits; and, up to 20,000 rows per subset, for calibration copies). On cuML it is forced to 1
-(`n_jobs_forced_to_one_on_cuml`).
+nearest neighbours) above that. Because pynndescent depends on the thread count, a run reproduces there
+only with the same `n_jobs`. `n_jobs` sets the CPU worker processes for the fits in a trial (at most 3
+useful), for the 32 refits and, up to 20,000 rows per subset, for calibration copies. On cuML it is
+forced to 1 (`n_jobs_forced_to_one_on_cuml`).
 
 ### What it costs
 
@@ -493,17 +496,17 @@ Fits per run, from each run's provenance:
 | Letter, 20,000 rows, test off | 258 |
 | calibration test, 19 copies (Digits or APOGEE) | 1,938 |
 
-GPU memory was not recorded and no table above 20,000 rows has been run. Apart from the co-association
-matrix, capped by `consensus_budget_bytes`, every array grows linearly in rows.
+GPU memory was not recorded, and no table above 20,000 rows has been run. Every array except the
+co-association matrix (capped by `consensus_budget_bytes`) grows linearly in rows.
 
 ### Sweeps and the two-stage pattern
 
-Because the test multiplies the cost by up to 19 copies, keep it off for sweeps over seeds, column sets
-or tables and save every result. Then run `null_test` once, as a separate job, on the result you
-report, with an equal `Config` (including any custom `Space`), the same `random_state` and `engine`
-and, above 20,000 rows per subset, the same `n_jobs`. Keep the `Config` in one module that both jobs
-import. A template for Slurm, the job scheduler on most university clusters, with one GPU and one
-output directory per array task:
+Because the test multiplies the cost by up to 19 copies, keep it off for sweeps over seeds, column
+sets or tables, and save every result. Then run `null_test` once, as a separate job, on the result you
+report, with an equal `Config` (including any custom `Space`), the same `random_state` and `engine` and,
+above 20,000 rows per subset, the same `n_jobs`. Keep the `Config` in one module that both jobs import.
+A template for Slurm, the job scheduler on most university clusters, with one GPU and one output
+directory per array task:
 
 ```bash
 #!/bin/bash
@@ -523,13 +526,14 @@ section 6.
 ### Comparing backends
 
 `starfold.compare_backends(X[result.kept_rows], result.deployed_params, scaling=config.scaling)` fits
-the same settings on CPU and GPU with 3 seeds and reports partition agreement;
-`Config(check_backends=True)` runs it inside `recover` and sets `backend_disagreement` when the
-normalised agreement (Appendix A) is below 0.8. Both need cuML. In `bench/results/backend_agreement.json`
-the normalised agreement is 0.85 to 0.935 on Digits, Rice, Landsat and APOGEE and 0.58 on Waveform, the
-one table that would raise the flag; group counts differ between backends and seeds (Digits: 14, 12, 13
-on the CPU, 10, 10, 10 on the GPU). Tables above 4,000 rows were fitted on a seeded 4,000-row subset.
-Compare backends by partition and evidence, never by label or count.
+the same settings on CPU and GPU with 3 seeds and reports partition agreement.
+`Config(check_backends=True)` runs the comparison inside `recover`, setting `backend_disagreement` when
+the normalised agreement (Appendix A) is below 0.8; both need cuML. In
+`bench/results/backend_agreement.json` the normalised agreement is 0.85 to 0.935 on Digits, Rice,
+Landsat and APOGEE and 0.58 on Waveform, the one table that would raise the flag; group counts
+differ between backends and seeds (Digits: 14, 12, 13 on the CPU, 10, 10, 10 on the GPU). Tables above
+4,000 rows were fitted on a seeded 4,000-row subset. Compare backends by partition and evidence, never
+by label or count.
 
 ---
 
@@ -556,18 +560,18 @@ Compare backends by partition and evidence, never by label or count.
 Every number Starfold reports has one formula here.
 
 **Resample plan.** Every seed derives from `random_state` and a fixed stage number
-(`numpy.random.SeedSequence`), so it depends on its place in the procedure and not on the worker. `R = 3`
-subsets `I_1, I_2, I_3`, each of `m = round(0.8 n)` rows drawn without replacement and sorted, are shared
-by every trial. For an ordered pair `(r, s)` the held-out rows are `H_rs = I_s \ I_r`. The same
+(`numpy.random.SeedSequence`), so it depends on its place in the procedure and not on the worker. All
+trials share `R = 3` subsets `I_1, I_2, I_3`, each of `m = round(0.8 n)` rows drawn without replacement
+and sorted. For an ordered pair `(r, s)` the held-out rows are `H_rs = I_s \ I_r`. The same
 construction with seed stage 6 gives the fresh plan.
 
-**Held-out agreement and coverage.** Fit `r` gives labels `L_r` on `I_r`. For each row in `H_rs`, the
-predicted label is the most frequent label among its 15 nearest rows of `I_r` (Euclidean, in the scaling
-fitted on `I_r`), noise votes included, ties to the smallest label. With `P` the predictions and `J` the
-rows of `H_rs` that both `P` and `L_s` assign, `a_rs = max(0, ARI(P[J], L_s[J]))` (0 when `|J| < 2` or
-either side has fewer than two distinct labels on `J`) and `c_rs = |J| / |H_rs|` (0 when `H_rs` is
-empty). `ARI` is the adjusted Rand index (Hubert and Arabie 1985). The agreement `a` and coverage `c` are
-means over the 6 ordered pairs.
+**Held-out agreement and coverage.** Fit `r` gives labels `L_r` on `I_r`. The predicted label of each
+row in `H_rs` is the most frequent label among its 15 nearest rows of `I_r` (Euclidean, in the scaling
+fitted on `I_r`), with noise votes included and ties going to the smallest label. With `P` the
+predictions and `J` the rows of `H_rs` that both `P` and `L_s` assign, `a_rs = max(0, ARI(P[J], L_s[J]))`
+(0 when `|J| < 2` or either side has fewer than two distinct labels on `J`) and `c_rs = |J| / |H_rs|` (0
+when `H_rs` is empty). `ARI` is the adjusted Rand index (Hubert and Arabie 1985). The agreement `a` and
+coverage `c` are means over the 6 ordered pairs.
 
 **Modularity and the score.** On subset `r`, the graph links each row to its 15 nearest rows in the
 scaled columns, symmetrised and unweighted, without self loops. With `E` edges, `e_c` edges inside group
@@ -580,28 +584,29 @@ S = (max(0, a) * max(0, c) * max(0, q))^(1/3),   q = mean_r max(0, Q_r)
 
 Noise rows keep their edges in `E` but form no group. `S` is 0 when any fit raises an error.
 
-**The gap.** `gaussian_copula` copy of `X`: replace each column by normal scores
-`Phi^-1((rank - 0.5) / n)`, estimate their correlation with Ledoit-Wolf shrinkage (Ledoit and Wolf 2004)
-projected to the nearest positive-definite correlation matrix, draw `n` rows from that multivariate
-normal, and put each column's sorted observed values in the order of the draw's ranks.
+**The gap.** The `gaussian_copula` copy of `X` is built by replacing each column by normal scores
+`Phi^-1((rank - 0.5) / n)`, estimating their correlation with Ledoit-Wolf shrinkage (Ledoit and Wolf
+2004) projected to the nearest positive-definite correlation matrix, drawing `n` rows from that
+multivariate normal, and putting each column's sorted observed values in the order of the draw's ranks.
 `independent_marginals` permutes each column independently. Both keep every column's values exactly.
 During the search, a trial's score is `S(theta; X) - S(theta; X_copy)` on one fixed copy (seed stage 9)
-with the same plan; a pruned trial keeps its two-fit data score. At re-scoring, the gap is `S` on the fresh
-plan minus the mean of `S` on 3 fresh copies (stage 8).
+with the same plan, and a pruned trial keeps its two-fit data score. At re-scoring, the gap is `S` on the
+fresh plan minus the mean of `S` on 3 fresh copies (stage 8).
 
 **Search constants.** Trial 0 is the defaults `(15, 0.1, 2, 5, 5, eom)` clipped into the space, with
 `min_samples` keeping the default's fraction of `min_cluster_size` within the fraction bounds. Trials 1
 to 16 are an Owen-scrambled Sobol design over the five numeric axes, on log or linear scales, with
 `selection_method` alternating; later trials use multivariate TPE. Every trial reports its data score
-after 2 fits for pruning (section 5). The top 3 complete trials and trial 0 are re-scored; the largest
-fresh gap wins, ties to the lower trial number. `default_within_noise` is raised when the winner is not
-the default and its fresh score differs from the default's by at most `2 sd(d) / sqrt(6)`, with `d` the 6
-per-pair score differences. `exploration_design_max` is the largest search score among trials 0 to 16.
+after 2 fits for pruning (section 5). Once the top 3 complete trials and trial 0 are re-scored, the
+largest fresh gap wins, with ties going to the lower trial number. `default_within_noise` is raised when
+the winner is not the default and its fresh score differs from the default's by at most
+`2 sd(d) / sqrt(6)`, with `d` the 6 per-pair score differences. `exploration_design_max` is the largest
+search score among trials 0 to 16.
 
 **Rescaling.** For a fit on `N` rows of settings validated on `m` rows,
 `min_cluster_size' = clip(round(min_cluster_size * N / m), 2, N)` and
 `min_samples' = clip(round(min_samples * N / m), 1, min(min_cluster_size', 1023))`. The full fit uses
-`N = n`; refits use `N = round(0.8 n)`, which equals `m` at the default fractions. `n_neighbors`,
+`N = n`, while refits use `N = round(0.8 n)`, equal to `m` at the default fractions. `n_neighbors`,
 `min_dist` and `n_components` are unchanged.
 
 **Refit statistics.** Each of `W = 32` refits draws `round(0.8 n)` rows without replacement, optionally
@@ -610,12 +615,12 @@ full-fit group `g`, `share_kg` is the fraction of `k`'s rows the full fit puts i
 fraction it calls noise.
 
 - **Support.** A row in refit cluster `k` adds `share_kg` to `support[i, g]` and `share_k0` to
-  `unresolved[i]`; a refit-noise row adds 1 to `unresolved[i]`. Both are divided by `n_sampled[i]`, the
-  number of refits that drew row `i`, so `sum_g support[i, g] + unresolved[i] = 1`, and
-  `own_support[i] = support[i, labels[i]]`.
+  `unresolved[i]`, while a refit-noise row adds 1 to `unresolved[i]`. Both are divided by
+  `n_sampled[i]`, the number of refits that drew row `i`, giving `sum_g support[i, g] + unresolved[i] = 1`,
+  and `own_support[i] = support[i, labels[i]]`.
 - **Unresolved mass.** The mean of `unresolved` over sampled rows.
 - **Group recurrence.** Per refit, the largest Jaccard similarity between the sampled members of `g` and
-  any refit cluster (Hennig 2007); the mean over refits that sampled a member, with 5th and 95th
+  any refit cluster (Hennig 2007), averaged over the refits that sampled a member, with 5th and 95th
   percentiles as the band.
 - **Count interval.** The floor of the 5th and the ceiling of the 95th percentile of the refit cluster
   counts.
@@ -627,25 +632,26 @@ fraction it calls noise.
 **Co-association and contrast.** For rows `i` and `j`, `N_ij` counts refits that drew and assigned both,
 and `C_ij` those that also grouped them together. The distance is `D_ij = max(1 - C_ij / N_ij, 1 / (2W))`,
 with `D_ij = 1` where `N_ij = 0` and 0 on the diagonal (Fred and Jain 2005; Monti et al. 2003). The
-matrix is dense when `16 n^2` bytes fit `consensus_budget_bytes`; above that it uses a seeded, recorded
+matrix is dense when `16 n^2` bytes fit `consensus_budget_bytes` and otherwise uses a seeded, recorded
 subset of 4,096 rows. The contrast is computed before the regrouping: within is the mean of `1 - D_ij`
 over distinct pairs in the same full-fit group, between the mean over pairs in different groups, and
 contrast is within minus between. The regrouping is scikit-learn HDBSCAN on `D` with `min_cluster_size`
 and `min_samples` both set to the rescaled `min_cluster_size`, and the full fit's `selection_method`.
 Agreement is `max(0, ARI)` times joint coverage against the full fit.
 
-**The calibration test.** Statistic: `exploration_design_max`, or with `null_procedure="full_search"` the
-selected fresh score of a full replay. Copy `b` of family `f` uses seed stage 5 and runs the identical
-procedure. A family stops after 3 copies at or above the observed value (Besag and Clifford 1991), or
-after `n_null_max = 19` copies. With `h` such copies in `L`, `p = (h + 1) / (L + 1)` (Phipson and Smyth
-2010), and the interval is the 95 percent Clopper-Pearson interval on `h / L` (Clopper and Pearson 1934).
-Across families `p_value` is the maximum, and `structure_supported` is `p_value <= alpha`. An observed
-statistic of 0 or below skips the test with `observed_statistic_zero`.
+**The calibration test.** The statistic is `exploration_design_max`, or with
+`null_procedure="full_search"` the selected fresh score of a full replay. Copy `b` of family `f` uses
+seed stage 5 and runs the identical procedure. A family stops after 3 copies at or above the observed
+value (Besag and Clifford 1991), or after `n_null_max = 19` copies. With `h` such copies in `L`,
+`p = (h + 1) / (L + 1)` (Phipson and Smyth 2010), and the interval is the 95 percent Clopper-Pearson
+interval on `h / L` (Clopper and Pearson 1934). Across families `p_value` is the maximum, and
+`structure_supported` is `p_value <= alpha`. An observed statistic of 0 or below skips the test with
+`observed_statistic_zero`.
 
 **Backend agreement.** For each seed, both backends fit the same settings on the same rows. Agreement is
-`max(0, ARI)` on the rows both grouped, times the share grouped by both. Normalised agreement divides that
-by the smaller of the two grouped shares, so a setting that leaves most rows as noise does not look like
-disagreement. The flag uses the mean over seeds.
+`max(0, ARI)` on the rows both grouped, times the share grouped by both. Normalised agreement divides
+that by the smaller of the two grouped shares, so a setting that leaves most rows as noise does not look
+like disagreement. The flag uses the mean over seeds.
 
 **Saved format.** `starfold.save` writes `result.json`, `arrays.npz` (`allow_pickle=False`) and
 `manifest.json` (the SHA-256 of both). `starfold.load` checks the checksums, the format tag and the

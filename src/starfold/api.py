@@ -41,19 +41,19 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Space:
-    """Search space bounds; trial 0 is the library default clipped into them.
+    """Search space bounds, with trial 0 the library default clipped into them.
 
     Attributes
     ----------
     n_neighbors : tuple of int
-        Log-uniform bounds; the upper bound may not exceed 100, the width
-        of the cached neighbour graph, and is capped at ``m - 1`` per fit.
+        Log-uniform bounds. The upper bound may not exceed 100 (the width of
+        the cached neighbour graph) and is capped at ``m - 1`` per fit.
     min_dist : tuple of float
         Uniform bounds.
     n_components : tuple of int
         Uniform integer bounds.
     min_cluster_size : tuple of int or None
-        Log-uniform bounds; None means ``[5, min(max(50, n // 20), 1023)]``.
+        Log-uniform bounds, ``[5, min(max(50, n // 20), 1023)]`` when None.
     min_samples_fraction : tuple of float
         Log-uniform bounds of ``min_samples / min_cluster_size``.
     selection_method : tuple of str
@@ -73,8 +73,8 @@ class Config:
     """Declared budgets and rules of one ``recover`` run.
 
     ``null_families`` is empty by default, so ``recover`` skips the matched
-    null: it costs 102 fits per realisation, up to 19 realisations, about six
-    times the rest of a run. Run :func:`null_test` once on the result you
+    null: it costs 102 fits per realisation over up to 19 realisations, about
+    six times the rest of a run. Run :func:`null_test` once on the result you
     report, or name the families here to run it inside ``recover``.
 
     Construction raises ``ValueError`` when a range is empty or reaches zero
@@ -230,11 +230,11 @@ def _null_stage(
     """Run the matched null with the statistic the configuration declares.
 
     On the CPU with at most ``_BRUTE_FORCE_MAX_ROWS`` rows per resample, where
-    every neighbour graph is exact, realisations run ``n_jobs`` at a time and
-    each replay runs whole in one process, single-threaded when ``n_jobs``
-    exceeds 1; the evidence equals the serial run's. Larger resamples use
-    pynndescent, whose graph depends on its thread count, so those replays
-    keep the search's ``n_jobs`` and run one at a time, as on cuML.
+    every neighbour graph is exact, realisations run ``n_jobs`` at a time,
+    each replay running whole in one process (single-threaded when ``n_jobs``
+    exceeds 1); the evidence equals that of the serial run. Larger resamples
+    use pynndescent, whose graph depends on its thread count, so those
+    replays keep the search's ``n_jobs`` and run one at a time, as on cuML.
     """
     concurrent = engine == "cpu" and search_result.plan.m <= _BRUTE_FORCE_MAX_ROWS
     replay_jobs, null_jobs = (1, n_jobs) if concurrent else (n_jobs, 1)
@@ -292,9 +292,10 @@ def recover(
     Parameters
     ----------
     X : array-like of shape (n_samples, n_features)
-        Feature matrix; rows with non-finite values are rejected and counted.
+        Feature matrix. Rows with non-finite values are rejected and counted.
     X_err : array-like of shape (n_samples, n_features), optional
-        Per-value standard deviations; each world draws ``X + X_err * N(0, 1)``.
+        Per-value standard deviations, from which each world draws
+        ``X + X_err * N(0, 1)``.
     measurement_sampler : callable, optional
         Alternative measurement model ``sampler(rows, indices, rng)``.
     config : Config, optional
@@ -319,8 +320,8 @@ def recover(
     ValueError
         For an invalid matrix, uncertainties, or job count.
     ImportError
-        If ``engine="cuml"`` or ``config.check_backends`` is set and cuML
-        cannot be used; raised before any stage runs.
+        Raised before any stage runs if ``engine="cuml"`` or
+        ``config.check_backends`` is set and cuML cannot be used.
     """
     started = time.perf_counter()
     cfg = Config() if config is None else config
@@ -464,11 +465,11 @@ def null_test(
     search_result : SearchResult
         The search whose observed statistic is calibrated.
     config, random_state, engine
-        Must match the search so the replay is matched.
+        Must match the search for the replay to be matched.
     families : tuple of str, default ("gaussian_copula",)
         Generator families, replacing ``config.null_families``.
     n_jobs : int, default 1
-        As in ``recover``; above 20000 rows per resample it must also match
+        As in ``recover``. Above 20000 rows per resample it must also match
         the search, because the approximate neighbour graph depends on it.
 
     Returns

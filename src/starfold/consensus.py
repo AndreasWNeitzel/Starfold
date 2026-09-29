@@ -3,8 +3,8 @@
 Evidence accumulation (Fred and Jain 2005, doi:10.1109/TPAMI.2005.113) and
 consensus clustering (Monti et al. 2003, doi:10.1023/A:1023949509487) are
 used only as a check on the emitted partition, never as the partition itself.
-The pairwise matrices are the only ``n`` by ``n`` objects in the library and
-stay inside the declared byte budget; above it the same cut runs on a seeded
+The pairwise matrices, the only ``n`` by ``n`` objects in the library, stay
+inside the declared byte budget, above which the same cut runs on a seeded
 subset of rows.
 """
 
@@ -43,7 +43,7 @@ class ConsensusCheck:
     labels : ndarray of shape (n_rows,), dtype int32
         Consensus partition over ``rows`` with -1 for noise.
     rows : ndarray of shape (n_rows,), dtype intp
-        Row indices the check used, sorted; every row when dense.
+        Sorted row indices the check used, covering every row when dense.
     agreement : float
         Adjusted Rand index times joint coverage between ``labels`` and the
         reference partition on ``rows``.
@@ -61,10 +61,10 @@ class ConsensusCheck:
     between_association : float
         The same quantity for pairs the reference places in different groups.
     contrast : float
-        ``within_association - between_association``; label-invariant and
+        ``within_association - between_association``. It is label-invariant and
         computed whenever the matrix is built, even when the cut returns only
-        noise; NaN when the cut is skipped because ``min_cluster_size`` exceeds
-        ``n_rows``.
+        noise. NaN when the cut is skipped because ``min_cluster_size``
+        exceeds ``n_rows``.
     """
 
     labels: NDArray[np.int32]
@@ -99,29 +99,29 @@ def coassociation(
     rows : ndarray of shape (n_rows,), dtype intp
         Row indices to compare.
     engine : {"cpu", "cuml"}, default "cpu"
-        ``"cuml"`` accumulates the counts on the device in float32, which is
-        exact for any count below 2**24, and returns the matrix to the host.
-        Any other value raises ``ValueError``.
+        ``"cuml"`` accumulates the counts on the device in float32, exact for
+        any count below 2**24, and returns the matrix to the host. Any other
+        value raises ``ValueError``.
 
     Returns
     -------
     ndarray of shape (n_rows, n_rows), dtype float64
-        ``D = max(1 - C / N, 1 / (2 W))`` where ``C`` counts the worlds in
-        which both rows were sampled, both assigned and shared a label and
-        ``N`` the worlds in which both were sampled and both assigned; 1.0
-        where ``N`` is zero; zero diagonal.
+        ``D = max(1 - C / N, 1 / (2 W))``, where ``C`` counts the worlds in
+        which both rows were sampled, both assigned and shared a label, and
+        ``N`` the worlds where both were sampled and both assigned. The
+        distance is 1.0 where ``N`` is zero, with a zero diagonal.
 
     Notes
     -----
     ``C`` and ``N`` are accumulated per world from pairwise label equality
-    over the rows sampled and assigned in that world, in uint8 when
-    ``W <= 255`` and uint16 above, and are released before the distance is
+    over the rows sampled and assigned in that world, held in uint8 when
+    ``W <= 255`` and in uint16 above, and released before the distance is
     returned. The floor ``1 / (2 W)`` keeps perfectly recurrent pairs at a
     finite distance below the smallest resolvable non-zero co-association
     distance. A pair never jointly assigned carries no evidence of
-    association and sits at the maximum distance; a midpoint value would make
-    always-noise rows hubs through which single linkage merges separated
-    groups.
+    association and sits at the maximum distance. With a midpoint value
+    instead, always-noise rows would become hubs through which single linkage
+    merges separated groups.
     """
     engine = require_resolved(engine)
     world_labels = np.asarray(world_labels, dtype=np.int16)
@@ -179,8 +179,8 @@ def _coassociation_device(labels_by_world: NDArray[np.int16], n_worlds: int) -> 
         indicator = assigned.astype(cupy.float32)
         joint += cupy.outer(indicator, indicator)
     positive = joint > 0
-    # Counts are exact in float32; the division is done in float64 so the
-    # distances equal the CPU path's to the last bit.
+    # Counts are exact in float32. Dividing in float64 makes the distances
+    # equal the CPU path's to the last bit.
     ratio = shared.astype(cupy.float64) / cupy.where(positive, joint, 1.0).astype(cupy.float64)
     del shared
     distance = cupy.where(positive, cupy.maximum(1.0 - ratio, 1.0 / (2.0 * n_worlds)), 1.0)
@@ -195,10 +195,10 @@ def association_contrast(
     """Mean co-association within and between the reference groups.
 
     Co-association is ``1 - distance``, the fraction of worlds that clustered a
-    pair together among the worlds in which both were assigned. Only pairs the
-    reference assigns are counted, and the diagonal is excluded. The sums run
-    through a ``G`` by ``G`` table of group totals, so no further ``r`` by
-    ``r`` array is allocated.
+    pair together among the worlds in which both were assigned. Only pairs that
+    the reference assigns are counted, excluding the diagonal. Running the sums
+    through a ``G`` by ``G`` table of group totals avoids allocating any
+    further ``r`` by ``r`` array.
 
     Parameters
     ----------
@@ -248,7 +248,7 @@ def consensus_check(
     world_labels : ndarray of shape (W, n), dtype int16
         World label matrix from :func:`starfold.worlds.run_worlds`.
     params : Params
-        Selected configuration at the full ``n`` rows; its
+        Selected configuration at the full ``n`` rows, whose
         ``min_cluster_size`` and ``selection_method`` drive the cut.
     reference_labels : ndarray of shape (n,), dtype int32
         Reference partition with -1 for noise.
@@ -259,9 +259,9 @@ def consensus_check(
     seed : int
         Seed of the subset draw.
     engine : {"cpu", "cuml"}, default "cpu"
-        Backend of the co-association matrix. The cut itself is scikit-learn
-        HDBSCAN on either backend, because cuML HDBSCAN accepts only Euclidean
-        input and this cut runs on a precomputed distance.
+        Backend of the co-association matrix. On either backend the cut itself
+        is scikit-learn HDBSCAN, because cuML HDBSCAN accepts only Euclidean
+        input, not the precomputed distance this cut runs on.
 
     Returns
     -------
@@ -278,18 +278,18 @@ def consensus_check(
 
     Notes
     -----
-    Dense over all rows only when ``16 n ** 2 <= budget_bytes``; otherwise a
-    sorted seeded subset of ``min(check_rows, n)`` rows is used and
-    ``params`` is rescaled to it with
-    :func:`~starfold.backend.rescale_params`, so the cut asks for the same
-    mass fraction as the reference. The cut is scikit-learn's HDBSCAN
-    (Campello, Moulavi and Sander 2013, doi:10.1007/978-3-642-37456-2_14) with
-    ``metric="precomputed"`` and ``copy=False``, which overwrites the matrix
-    with mutual-reachability distances; the association contrast is therefore
-    read before the cut. When ``min_cluster_size`` exceeds the rows used, no
-    cluster can exist and every row is returned as noise with agreement 0 and
-    NaN association, without building the matrix; the rescaling rules this out
-    on a subset of two or more rows.
+    The check is dense over all rows only when ``16 n ** 2 <= budget_bytes``
+    and otherwise uses a sorted seeded subset of ``min(check_rows, n)`` rows,
+    with ``params`` rescaled to it by :func:`~starfold.backend.rescale_params`
+    to let the cut ask for the same mass fraction as the reference. The cut is
+    scikit-learn's HDBSCAN (Campello, Moulavi and Sander 2013,
+    doi:10.1007/978-3-642-37456-2_14) with ``metric="precomputed"`` and
+    ``copy=False``, a setting that overwrites the matrix with
+    mutual-reachability distances. For this reason, the association contrast
+    is read before the cut. When ``min_cluster_size``
+    exceeds the rows used, no cluster can exist and every row is returned as
+    noise with agreement 0 and NaN association, without building the matrix.
+    On a subset of two or more rows, the rescaling rules this case out.
     """
     engine = require_resolved(engine)
     world_labels = np.asarray(world_labels, dtype=np.int16)

@@ -1,10 +1,10 @@
 # Starfold
 
-Starfold finds groups in a numeric table without labels, then measures how far those groups can be trusted. It searches UMAP and HDBSCAN settings with Optuna, and the library defaults (clipped into any bounds you set) are always the first setting tried. Each setting is scored without labels on three things: its groups must predict rows the fit never saw, it must assign most rows, and its groups must be neighbourhoods in the input columns. Each score is taken relative to the same setting on a copy of the table that keeps every column's values and their correlations but has no groups. The best setting is fitted once on all rows, then refitted on 32 random 80 percent subsets to measure how often each row and each group comes back. An optional test asks whether such copies score as high as the real table. Anything the evidence does not support comes back as a flag.
+Starfold finds groups in a numeric table without labels, then measures how far those groups can be trusted. It searches UMAP and HDBSCAN settings with Optuna, and the library defaults (clipped into any bounds you set) are always the first setting tried. Each setting is scored without labels on three things: its groups must predict rows the fit never saw, it must assign most rows, and its groups must be neighbourhoods in the input columns. Every score is taken relative to the same setting on a copy of the table that keeps each column's values and their correlations but has no groups. After one fit of the best setting on all rows, 32 refits on random 80 percent subsets measure how often each row and each group comes back. An optional calibration test asks whether such copies score as high as the real table. Anything the evidence does not support comes back as a flag.
 
 ![Digits: true classes, Starfold, library defaults](docs/figures/digits_partitions.png)
 
-*Handwritten digits (1,797 rows, 64 pixels) on a 2-D UMAP display: the true digits, which Starfold never sees; Starfold's groups, faded where support is low; the UMAP and HDBSCAN defaults.*
+*Handwritten digits (1,797 rows, 64 pixels) on a 2-D UMAP display, showing the true digits (never seen by Starfold), Starfold's groups (faded where support is low) and the UMAP and HDBSCAN defaults.*
 
 ## Install
 
@@ -16,7 +16,7 @@ pip install "starfold[gpu-cu13] @ git+https://github.com/AndreasWNeitzel/Starfol
 pip install "starfold[gpu-cu12] @ git+https://github.com/AndreasWNeitzel/Starfold"   # NVIDIA GPU, CUDA 12
 ```
 
-The GPU extras install RAPIDS cuML (Linux or WSL2). Install the one that matches the CUDA version `nvidia-smi` reports. With cuML, UMAP, HDBSCAN and the scoring run on the GPU; only the final consensus cut runs on the CPU.
+The GPU extras install RAPIDS cuML (Linux or WSL2); choose the one that matches the CUDA version reported by `nvidia-smi`. Running on cuML, Starfold performs UMAP, HDBSCAN and the scoring on the GPU and only the final consensus cut on the CPU.
 
 ## Use
 
@@ -34,16 +34,16 @@ result.support                                         # per row and group: how 
 starfold.save(result, "runs/digits")                   # starfold.load("runs/digits") reads it back
 ```
 
-`recover` skips the calibration test by default. The test costs 102 fits per copy at the default settings and up to 19 copies (1,938 fits), about six times the fits of the rest of a run, so run it once, on the result you report, with the same `config`, `random_state` and `engine` that `recover` used:
+`recover` skips the calibration test by default. The test costs 102 fits per copy at the default settings, with up to 19 copies (1,938 fits), about six times the fits of the rest of a run. Given that cost, run it once, on the result you report, with the same `config`, `random_state` and `engine` that `recover` used:
 
 ```python
 null = starfold.null_test(X[result.kept_rows], result.search, random_state=0)
 print(null.p_value, null.structure_supported)
 ```
 
-To run it inside `recover` instead, pass `config=starfold.Config(null_families=("gaussian_copula",))` and read `result.null.p_value`. On Digits, `recover` makes 314 fits (a few minutes on a laptop GPU) and `null_test` up to 1,938.
+To run the test inside `recover` instead, pass `config=starfold.Config(null_families=("gaussian_copula",))` and read `result.null.p_value`. On Digits, `recover` makes 314 fits (a few minutes on a laptop GPU), against up to 1,938 for `null_test`.
 
-`engine="auto"` uses cuML when it imports and sees a device; otherwise it warns and runs on the CPU. `engine="cuml"` raises instead of falling back. On the CPU, `n_jobs` sets the number of worker processes. If you have real per-value uncertainties, pass them as `X_err` (same shape as `X`); every refit redraws the table from them.
+`engine="auto"` uses cuML when it imports and sees a device and otherwise falls back to the CPU with a warning; `engine="cuml"` raises instead of falling back. On the CPU, `n_jobs` sets the number of worker processes. If you have real per-value uncertainties, pass them as `X_err` (same shape as `X`) to have every refit redraw the table from them.
 
 ## What a result holds
 
@@ -63,25 +63,25 @@ To run it inside `recover` instead, pass `config=starfold.Config(null_families=(
 
 ## Reading the flags
 
-`result.flags` names every caveat the evidence raised, from a fixed list of 16 (`starfold.result.FLAG_VOCABULARY`). Flags are derived from the arrays, and `starfold.load` derives them again instead of trusting the saved list. The ones you will meet most:
+`result.flags` names every caveat the evidence raised, drawn from a fixed list of 16 (`starfold.result.FLAG_VOCABULARY`). Flags are derived from the arrays, and `starfold.load` derives them again instead of trusting the saved list. Those you will meet most often:
 
-- `search_stopped_early` or `search_budget_exhausted`: one is always present and only says how the search ended.
-- `null_not_run`: the calibration test did not run inside `recover`, the default. A separate `null_test` returns its own evidence and leaves this flag in place.
+- `search_stopped_early` or `search_budget_exhausted`: one of the two is always present and says only how the search ended.
+- `null_not_run`: the calibration test did not run inside `recover` (the default). A separate `null_test` returns its own evidence and leaves this flag in place.
 - `selected_is_default`, `default_within_noise`: the search found nothing better than the defaults, or nothing better beyond the noise of the score.
 - `count_unstable`, `high_unresolved_mass`: most refits find a different number of groups than `labels` has, or rows are on average left unassigned in more than half the refits.
 - `consensus_disagrees`: the partition cut from the refits agrees poorly with `labels`.
-- `no_structure_supported`: the test ran and its p-value is above `alpha`.
+- `no_structure_supported`: the calibration test ran and its p-value is above `alpha`.
 
-The [handbook](docs/handbook.md) lists all 16, with what each one means and what to do about it.
+The [handbook](docs/handbook.md) lists all 16, each with its meaning and what to do about it.
 
 ## Scope and limits
 
-- **Input.** One row per object, at least 50 finite rows and 2 numeric columns. The columns you choose define what "similar" means; Starfold scales them (`Config(scaling="robust")` for heavy tails). Rows with a missing value are dropped, never filled in.
-- **Small groups merge.** Groups much smaller than about sqrt(12 n) rows tend to be merged into larger ones: about 155 rows at n = 2,000 and 350 at n = 10,000. This is an empirical scale, measured on the benchmark and by injecting groups into a real table, not a derived bound. Treat it as a rule of thumb.
+- **Input.** One row per object, with at least 50 finite rows and 2 numeric columns. The columns you choose define what "similar" means, and Starfold scales them (`Config(scaling="robust")` for heavy tails). Rows with a missing value are dropped, never filled in.
+- **Small groups merge.** Groups much smaller than about sqrt(12 n) rows (about 155 rows at n = 2,000 and 350 at n = 10,000) tend to be merged into larger ones. This is an empirical scale, not a derived bound: we measured it on our benchmark and by injecting groups into a real table. Treat it as a rule of thumb.
 - **Stable is not true.** Support is a recurrence rate, not a membership probability, and the ranges over refits are stability intervals, not confidence intervals. A dense chance fluctuation recurs in every subset too. There is no per-group significance test.
-- **Counts.** The group count is not an estimate of how many populations exist. On the benchmark the count can differ from the true class count (Gas drift: 390 groups against 6 classes; Letter: 284 against 26). Report `worlds.count_interval` with it.
-- **The p-value** holds only for its copy family (by default a Gaussian copula: one population with the table's column values and correlations) and for the part of the search it replays: by default the library defaults and the 16 Sobol points that open the search, and the best score among them. `Config(null_procedure="full_search")` replays the whole search at a higher cost. With 19 copies it cannot go below 0.05. It is not the probability that the groups are real.
-- **Evidence.** On ten labelled public tables (six used to tune the method, four held out), Starfold matched or beat the UMAP and HDBSCAN defaults against the true classes (adjusted Rand index on the assigned rows, times the share assigned; within 0.02 counts as a match) on 8 of the ten: all six development tables and two of the four held out. On the four held-out tables the mean is lower than the defaults' (0.24 against 0.29). The largest has 20,000 rows; nothing larger has been measured. CPU and GPU runs do not give identical labels; compare them by partition with `starfold.compare_backends`.
+- **Counts.** The group count is not an estimate of how many populations exist; on our benchmark the count can differ from the true class count (Gas drift: 390 groups against 6 classes; Letter: 284 against 26). Report `worlds.count_interval` with it.
+- **The p-value** holds only for its copy family (by default a Gaussian copula: one population with the table's column values and correlations) and for the part of the search it replays: by default the library defaults and the 16 Sobol points that open the search, and the best score among them. `Config(null_procedure="full_search")` replays the whole search at a higher cost. With 19 copies the p-value cannot go below 0.05. It is not the probability that the groups are real.
+- **Evidence.** We compared Starfold with the UMAP and HDBSCAN defaults against the true classes of ten labelled public tables, using the adjusted Rand index on the assigned rows times the share assigned. We used six of the tables to tune the method and held four out. Starfold matched or beat the defaults (within 0.02 counts as a match) on 8 of the ten: all six development tables and two of the four held out. However, on the four held-out tables its mean was lower than the defaults' (0.24 against 0.29). The largest table has 20,000 rows; nothing larger has been measured. CPU and GPU runs do not give identical labels; compare them by partition with `starfold.compare_backends`.
 
 ## Documentation
 
@@ -92,7 +92,7 @@ The [handbook](docs/handbook.md) lists all 16, with what each one means and what
 ## Tests
 
 ```bash
-git clone https://github.com/AndreasWNeitzel/Starfold && cd starfold
+git clone https://github.com/AndreasWNeitzel/starfold && cd starfold
 uv sync --extra dev --extra bench    # add --extra gpu-cu13 or --extra gpu-cu12 for cuML
 uv run pytest -m "not slow"          # quick checks
 uv run pytest -m slow                # real fits on small fixtures

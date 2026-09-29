@@ -1,13 +1,13 @@
 """Joint UMAP and HDBSCAN configuration search.
 
-One Optuna study scores every candidate on a common resample plan: the library
-defaults clipped into the space are trial 0, an Owen-scrambled Sobol design
-covers the space, a multivariate TPE sampler converges, median pruning saves
-fits, and pruned near-winners are completed from their cached fits. With a
-declared null family, a trial's score is its gap over a fixed null matrix. The
-top candidates and the default are re-scored on a fresh plan and fresh null
-matrices, and the largest fresh gap is selected, so the default comparison is
-not read off the maximised surface.
+One Optuna study scores every candidate on a common resample plan. Trial 0
+holds the library defaults clipped into the space, an Owen-scrambled Sobol
+design covers the space and a multivariate TPE sampler converges, with median
+pruning to save fits and with pruned near-winners completed from their cached
+fits. With a declared null family, a trial's score is its gap over a fixed null
+matrix. The top candidates and the default are re-scored on a fresh plan and
+fresh null matrices before the largest fresh gap is selected. For this reason
+the default comparison is not read off the maximised surface.
 """
 
 from __future__ import annotations
@@ -66,13 +66,13 @@ class ResolvedSpace:
 
 @dataclass(frozen=True)
 class TrialRecord:
-    """One trial; ``score`` is the gap ``raw_score - null_score`` the sampler maximises.
+    """One trial, whose ``score`` is the gap ``raw_score - null_score`` the sampler maximises.
 
-    ``raw_score`` is the objective on the data, ``null_score`` the objective of
-    the same configuration on the search's fixed null matrix; without one,
-    ``null_score`` is NaN and ``score`` equals ``raw_score``. A pruned trial has
-    a NaN ``null_score`` and keeps its leading-pair data score (resamples 0 and
-    1) as ``score``, ``raw_score`` and ``partial_score``.
+    ``raw_score`` is the objective on the data and ``null_score`` the objective
+    of the same configuration on the search's fixed null matrix. Without a null
+    matrix, ``null_score`` is NaN and ``score`` equals ``raw_score``. A pruned
+    trial has a NaN ``null_score`` and keeps its leading-pair data score
+    (resamples 0 and 1) as ``score``, ``raw_score`` and ``partial_score``.
     """
 
     number: int
@@ -94,7 +94,7 @@ class TrialRecord:
 
 @dataclass(frozen=True)
 class Candidate:
-    """A re-scored configuration; ``fit_counts`` are the cluster counts on the fresh plan."""
+    """A re-scored configuration, with ``fit_counts`` the cluster counts on the fresh plan."""
 
     params: Params
     trial_number: int
@@ -108,13 +108,13 @@ class Candidate:
 
 @dataclass(frozen=True)
 class SearchResult:
-    """Outcome of :func:`search`; every score is the objective, never agreement with truth.
+    """Outcome of :func:`search`. Every score is the objective, never agreement with truth.
 
     ``gap_selected`` and ``gap_default`` are the fresh scores minus the mean
-    score of the same configuration on the null matrices, the gap
-    statistic that selects the configuration (Tibshirani, Walther and Hastie
-    2001, doi:10.1111/1467-9868.00293); they equal the fresh scores when no
-    null matrix was scored.
+    score of the same configuration on the null matrices, the gap statistic
+    that selects the configuration (Tibshirani, Walther and Hastie 2001,
+    doi:10.1111/1467-9868.00293). Both equal the fresh scores when no null
+    matrix was scored.
     """
 
     selected: Params
@@ -147,12 +147,12 @@ def _as_selection(value: str) -> Selection:
 def resolve_space(space: Space, n: int, m: int) -> ResolvedSpace:
     """Apply the data-dependent bounds and check every range.
 
-    ``n_neighbors`` is capped at ``m - 1``; every trial slices one cached
-    graph of ``K_MAX`` neighbours, so a declared bound above ``K_MAX`` is
-    rejected. A ``None`` ``min_cluster_size`` becomes
-    ``[5, min(max(50, n // 20), 1023)]``: 5 is the HDBSCAN default and 1023
-    the cuML ``min_samples`` limit (github.com/rapidsai/cuml), so CPU and GPU
-    searches are the same procedure. Only these two rules read ``n`` and
+    ``n_neighbors`` is capped at ``m - 1``, and a declared bound above
+    ``K_MAX`` is rejected given that every trial slices one cached graph of
+    ``K_MAX`` neighbours. A ``None`` ``min_cluster_size`` becomes
+    ``[5, min(max(50, n // 20), 1023)]``, with 5 the HDBSCAN default and 1023
+    the cuML ``min_samples`` limit (github.com/rapidsai/cuml). CPU and GPU
+    searches are thus the same procedure. Only these two rules read ``n`` and
     ``m``.
 
     Parameters
@@ -205,10 +205,10 @@ def resolve_space(space: Space, n: int, m: int) -> ResolvedSpace:
 
 
 def default_in_space(space: ResolvedSpace) -> Params:
-    """Return ``default_params()`` clipped into ``space``: trial 0 of every search.
+    """Return ``default_params()`` clipped into ``space``, trial 0 of every search.
 
-    When the declared bounds contain the library default this is the default
-    itself; when a user bound excludes it (a floor on ``min_cluster_size``, a
+    The result is the library default itself when the declared bounds contain
+    it. When a declared bound excludes it (a floor on ``min_cluster_size``, a
     narrower ``n_neighbors`` range), each field is moved to the nearest bound
     and ``min_samples`` keeps the default's fraction of ``min_cluster_size``
     within the declared fraction bounds.
@@ -273,11 +273,12 @@ def _values_of(params: Params) -> dict[str, Any]:
 def suggest_params(trial: optuna.Trial, space: ResolvedSpace) -> Params:
     """Draw one configuration from the sampler, or replay an enqueued one exactly.
 
-    ``n_neighbors``, ``min_cluster_size`` and ``min_samples_fraction`` are
-    log-uniform because their effect is multiplicative; ``min_dist`` and
+    Given their multiplicative effect, ``n_neighbors``, ``min_cluster_size``
+    and ``min_samples_fraction`` are log-uniform, while ``min_dist`` and
     ``n_components`` are uniform. The fraction is the stored parameter and
-    ``min_samples = clip(round(f * mcs), 1, mcs)``, so ``f = 1`` reproduces
-    HDBSCAN's ``min_samples=None`` (github.com/scikit-learn-contrib/hdbscan).
+    sets ``min_samples = clip(round(f * mcs), 1, mcs)``. A fraction ``f = 1``
+    thus reproduces HDBSCAN's ``min_samples=None``
+    (github.com/scikit-learn-contrib/hdbscan).
 
     Parameters
     ----------
@@ -323,11 +324,11 @@ def _map_int(u: float, bounds: tuple[int, int], *, log: bool) -> int:
 def _sobol_rows(space: ResolvedSpace, n_points: int, seed: int) -> tuple[dict[str, Any], ...]:
     """Owen-scrambled Sobol exploration design over the five numeric axes.
 
-    Points come from ``scipy.stats.qmc.Sobol(d=5, scramble=True, seed)``
-    (Owen 1998, doi:10.1145/272991.273010) mapped in the log or linear
-    coordinate of each axis, with ``selection_method`` cycling through the
-    offered methods. Low-discrepancy coverage beats random points at equal
-    budget (Bergstra and Bengio 2012, JMLR 13:281). ``n_points`` must be zero
+    Points drawn from ``scipy.stats.qmc.Sobol(d=5, scramble=True, seed)``
+    (Owen 1998, doi:10.1145/272991.273010) are mapped in the log or linear
+    coordinate of each axis, and ``selection_method`` cycles through the
+    offered methods. At equal budget, low-discrepancy coverage beats random
+    points (Bergstra and Bengio 2012, JMLR 13:281). ``n_points`` must be zero
     or a power of two.
     """
     if n_points == 0:
@@ -390,9 +391,9 @@ def _fresh_bundles(
 ) -> Iterator[_Bundle]:
     """Yield the fresh plan's bundle of the data, then one per null matrix, built on demand.
 
-    Each null matrix is a structureless surrogate with the observed marginals;
-    subtracting a configuration's score on it cancels the scale preference of
-    the modularity lane.
+    Subtracting a configuration's score on a null matrix, a structureless
+    surrogate with the observed marginals, cancels the scale preference of the
+    modularity lane.
     """
     yield _build(x, fresh, config.scaling, engine, n_jobs)
     family = config.gap_family
@@ -542,10 +543,10 @@ class _Run:
     def complete_pruned(self, main: _Bundle, null: _Bundle | None) -> int:
         """Complete pruned trials whose leading-pair score exceeds the best complete gap.
 
-        The leading-pair score estimates the trial's data score, which bounds
-        its gap from above because the null score is non-negative. At most
-        ``n_complete_pruned`` are completed, highest leading-pair score first;
-        the cached fits of the rest are released.
+        The leading-pair score estimates the trial's data score, an upper bound
+        on its gap given that the null score is non-negative. At most
+        ``n_complete_pruned`` trials are completed, highest leading-pair score
+        first, and the cached fits of the rest are released.
         """
         best = self.best(max(self.records))
         pruned = [r for r in self.records.values() if r.state == "pruned"]
@@ -564,10 +565,10 @@ class _Run:
         return len(chosen)
 
     def rescore(self, bundles: Iterator[_Bundle]) -> tuple[Candidate, ...]:
-        """Re-score the top complete trials and the default; rank by gap over the null.
+        """Re-score the top complete trials and the default, then rank by gap over the null.
 
-        ``bundles`` yields the fresh data bundle, then one per null matrix; each
-        is scored for every candidate and released before the next is built.
+        ``bundles`` yields the fresh data bundle, then one per null matrix,
+        each scored for every candidate and released before the next is built.
         """
         complete = sorted(
             (r for r in self.records.values() if r.state == "complete"),
@@ -632,20 +633,20 @@ def search(
 
     Every trial is scored on one resample plan with common random numbers
     (Glasserman and Yao 1992, doi:10.1287/mnsc.38.6.884). Trial 0 is
-    :func:`default_in_space`, trials 1 to ``n_explore`` the Sobol design, then
-    multivariate TPE (Bergstra et al. 2011, NeurIPS 24; Akiba et al. 2019,
-    arXiv:1907.10902), all enqueued into one study so the surrogate is built
-    from complete evaluations. Convergence trials report the leading-pair score
-    after two fits and may be median-pruned (median stopping rule, Golovin et
-    al. 2017, doi:10.1145/3097983.3098043); design trials report it too but are
-    never pruned, so the pruner's median exists from the first convergence
-    trial. The search stops when the best score improves by less than
-    ``min_improvement`` over ``patience`` trials, or at ``n_trials``. Pruned
-    trials whose leading-pair score exceeds the best complete gap (the data
-    score bounds the gap from above, since the null score is non-negative) are
-    then completed, and the top ``n_rescore`` trials plus the default are
-    re-scored on a fresh plan and fresh null matrices; the largest fresh gap is
-    selected, which removes the winner's curse from the default comparison.
+    :func:`default_in_space` and trials 1 to ``n_explore`` are the Sobol design,
+    followed by multivariate TPE (Bergstra et al. 2011, NeurIPS 24; Akiba et al.
+    2019, arXiv:1907.10902), all enqueued into one study for the surrogate to be
+    built from complete evaluations. Convergence trials report the leading-pair
+    score after two fits and may be median-pruned (median stopping rule, Golovin
+    et al. 2017, doi:10.1145/3097983.3098043), while design trials report it
+    too but are never pruned, giving the pruner a median from the first
+    convergence trial onwards. The search stops when the best score improves by
+    less than ``min_improvement`` over ``patience`` trials, or at ``n_trials``.
+    Pruned trials whose leading-pair score exceeds the best complete gap are
+    then completed, given that the data score bounds the gap from above (the
+    null score is non-negative). The top ``n_rescore`` trials plus the default
+    are re-scored on a fresh plan and fresh null matrices, and the largest fresh
+    gap is selected, removing the winner's curse from the default comparison.
 
     Parameters
     ----------
@@ -661,10 +662,10 @@ def search(
     n_jobs : int, default 1
         Worker processes inside a trial.
     exploration_only : bool, default False
-        Run trials 0 to ``n_explore`` only, with no pruning, completion or
-        fresh re-scoring; ``selected`` is their best, the reported scores are
-        search scores and ``candidates`` is empty. The ``exploration`` null
-        procedure uses this.
+        Run trials 0 to ``n_explore`` only, without pruning, completion or
+        fresh re-scoring. ``selected`` is then their best, the reported scores
+        are search scores and ``candidates`` is empty. The ``exploration`` null
+        procedure uses this mode.
 
     Returns
     -------

@@ -4,11 +4,11 @@ message: >-
   methodological paper listed under references.
 title: starfold
 abstract: >-
-  A population-recovery system built around jointly searched UMAP and
-  HDBSCAN configurations, selected by a label-free objective scored as a gap
-  against a matched null, with possible-world recurrence evidence and
-  sequential matched-null calibration. Developed from and extending the
-  methodology of Neitzel et al. (2025).
+  A population-recovery system that jointly searches UMAP and HDBSCAN
+  configurations, selects one by a label-free objective scored as a gap
+  against a matched null, and supplies possible-world recurrence evidence
+  and sequential matched-null calibration. It was developed from, and
+  extends, the methodology of Neitzel et al. (2025).
 type: software
 authors:
   - family-names: Neitzel

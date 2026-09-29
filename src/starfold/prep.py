@@ -1,6 +1,6 @@
 """Input validation, resample-local scaling, resample plans, and measurement draws.
 
-Rows with a non-finite value are rejected and counted, never imputed; a scaler
+Rows with a non-finite value are rejected and counted, never imputed. A scaler
 is fitted only on the rows it will transform, so no resample or world sees
 statistics of rows outside it.
 """
@@ -88,7 +88,7 @@ def scale(x_rows: NDArray[np.float64], scaling: Scaling) -> NDArray[np.float32]:
         Rows of one resample or world.
     scaling : {"standard", "robust"}
         ``sklearn.preprocessing.StandardScaler`` or ``RobustScaler``
-        (Pedregosa et al. 2011, JMLR 12:2825); constant columns are left at
+        (Pedregosa et al. 2011, JMLR 12:2825). Constant columns are left at
         their centred value.
 
     Returns
@@ -156,8 +156,8 @@ class ResamplePlan:
         Parameters
         ----------
         r, s : int
-            Resample indices; ``r`` is the fitted resample, ``s`` the one whose
-            unseen rows are predicted.
+            Resample indices, ``r`` being the fitted resample and ``s`` the one
+            whose unseen rows are predicted.
 
         Returns
         -------
@@ -178,9 +178,9 @@ def make_plan(n: int, *, n_resamples: int, fraction: float, seed: int) -> Resamp
     n : int
         Number of rows.
     n_resamples : int
-        Number of resamples, at least 2 so that a pair exists.
+        Number of resamples, at least 2 for a pair to exist.
     fraction : float
-        Fraction in ``(0, 1]``; each resample holds ``round(fraction * n)`` rows.
+        Fraction in ``(0, 1]``. Each resample holds ``round(fraction * n)`` rows.
     seed : int
         Base seed.
 
@@ -234,10 +234,11 @@ def measurement_draw(
     rng : numpy.random.Generator
         Generator of the world.
     x_err_rows : ndarray of shape (m, d), optional
-        Finite per-value uncertainties; the draw is ``x + err * N(0, 1)``.
+        Finite per-value uncertainties, giving the draw ``x + err * N(0, 1)``.
     sampler : callable, optional
-        ``sampler(x_rows.copy(), row_indices, rng)`` returning an array of the
-        same shape; the caller's declared measurement-uncertainty sampler.
+        The caller's declared measurement-uncertainty sampler, called as
+        ``sampler(x_rows.copy(), row_indices, rng)`` and returning an array of
+        the same shape.
 
     Returns
     -------
