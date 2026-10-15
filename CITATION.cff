@@ -4,11 +4,12 @@ message: >-
   methodological paper listed under references.
 title: starfold
 abstract: >-
-  A population-recovery system that jointly searches UMAP and HDBSCAN
-  configurations, selects one by a label-free objective scored as a gap
-  against a matched null, and supplies possible-world recurrence evidence
-  and sequential matched-null calibration. It was developed from, and
-  extends, the methodology of Neitzel et al. (2025).
+  Starfold finds groups in a numeric table without labels and measures how
+  far they can be trusted. It searches UMAP and HDBSCAN settings with
+  Optuna, scores each setting without labels against structureless copies
+  of the table, refits the selected setting on random subsets to measure
+  how often each row and group recurs, and offers an optional Monte Carlo
+  calibration test. It extends the method of Neitzel et al. (2025).
 type: software
 authors:
   - family-names: Neitzel

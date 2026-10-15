@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from dataclasses import fields, replace
 from types import SimpleNamespace
 
@@ -28,6 +30,11 @@ def test_public_surface_has_no_worlds_wrapper() -> None:
     assert "worlds" not in starfold.__all__
     assert "worlds" not in api.__all__
     assert not hasattr(api, "worlds")
+
+
+def test_search_stays_a_function_after_other_names_load() -> None:
+    code = "import starfold; starfold.recover; assert callable(starfold.search), starfold.search"
+    subprocess.run([sys.executable, "-c", code], check=True)  # noqa: S603
 
 
 @pytest.mark.parametrize(

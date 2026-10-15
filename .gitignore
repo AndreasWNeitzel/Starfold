@@ -44,3 +44,6 @@ Thumbs.db
 
 # Notebook runs
 notebooks/runs/
+
+# Built manual
+docs/_build/

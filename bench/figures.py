@@ -2,7 +2,7 @@
 
 Reads ``summary.json`` written by ``bench.summarize`` (default
 ``bench/results/summary.json``) and writes ``bench_resolution`` and
-``bench_injection`` as PNG (embedded by the handbook) and PDF into ``--output``
+``bench_injection`` as PNG and PDF into ``--output``
 (default ``docs/figures``). No fit runs here.
 
 Group sizes are drawn in units of ``sqrt(15 m)``. Modularity maximisation

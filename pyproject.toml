@@ -57,6 +57,14 @@ bench = [
     "jupytext>=1.16",
     "ipykernel>=6.29",
 ]
+docs = [
+    "sphinx>=8",
+    "myst-parser>=4",
+    "furo>=2024.8",
+    "sphinx-design>=0.6",
+    "sphinx-copybutton>=0.5",
+    "numpydoc>=1.8",
+]
 dev = [
     "pytest>=8",
     "pytest-cov>=5",
@@ -68,7 +76,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/AndreasWNeitzel/starfold"
 Repository = "https://github.com/AndreasWNeitzel/starfold"
-Documentation = "https://github.com/AndreasWNeitzel/starfold/blob/main/docs/handbook.md"
+Documentation = "https://andreaswneitzel.github.io/Starfold/"
 Changelog = "https://github.com/AndreasWNeitzel/starfold/blob/main/CHANGELOG.md"
 Issues = "https://github.com/AndreasWNeitzel/starfold/issues"
 Paper = "https://doi.org/10.1051/0004-6361/202451718"
@@ -109,6 +117,7 @@ ignore = [
 "bench/**" = ["D", "ANN", "T201"]
 "notebooks/**" = ["D", "ANN", "T201", "INP001", "E402", "B018", "ERA001"]
 "scripts/**" = ["INP001"]
+"docs/conf.py" = ["INP001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

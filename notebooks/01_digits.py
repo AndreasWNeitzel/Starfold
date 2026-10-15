@@ -11,34 +11,191 @@
 # %% [markdown]
 # # First run: handwritten digits
 #
-# This notebook runs Starfold once on 1,797 real images of handwritten digits
-# and reads every part of the result: the flags, the groups, how often they
-# come back, and the settings that produced them. It also redraws five of the
-# Digits figures in the handbook, leaving the calibration figure to notebook 03.
+# Starfold sorts the rows of a numeric table into groups without being told
+# what the groups are. It then measures how far you can trust those groups.
+# This notebook runs it once on 1,797 real images of handwritten digits and
+# reads every part of the result, one cell at a time.
 #
-# From a clone, install with `uv sync --extra bench` (add `--extra gpu-cu13` or
-# `--extra gpu-cu12` for cuML), then open this file in Jupyter with the kernel of
-# the project's `.venv` (Jupytext reads it as a notebook).
+# ## What you will do
 #
-# Starfold never sees which digit an image shows: the true digits stay in `y`
-# and appear only in cells marked **post hoc**, to check the answer afterwards.
+# 1. Load a table of 1,797 images, one row per image and one column per pixel.
+# 2. Run Starfold with one function call, `starfold.recover`.
+# 3. Read the warnings it raises, the groups it found, and the settings it chose.
+# 4. Look at a map of the groups, and at figures that show how often each group
+#    and each row comes back when Starfold repeats the fit on random parts of
+#    the table.
+# 5. Only at the end, compare the groups with the true digits, which Starfold
+#    never saw.
+# 6. Save the result to disk and load it back.
 #
-# On a laptop RTX 3060 with cuML the run takes about 80 seconds, 314 fits and
-# 1.4 GB of host memory. No CPU timing is recorded; expect the CPU path to take
-# several times longer, and set `N_JOBS = 3` to run fits in parallel. The
-# display refit further down adds one UMAP fit on the CPU.
+# You do not need to know UMAP, HDBSCAN or Optuna beforehand. The next two
+# sections explain them, and every other term is explained where it first
+# appears. The manual covers the same run as a tutorial:
+# https://andreaswneitzel.github.io/Starfold/tutorial/digits.html (part 1) and
+# https://andreaswneitzel.github.io/Starfold/tutorial/digits-refits.html (part 2).
+#
+# ## What you need
+#
+# - A clone of the Starfold repository and Python 3.11 or 3.12. In the clone,
+#   run `uv sync --extra bench`. Add `--extra gpu-cu13` or `--extra gpu-cu12` if
+#   you have an NVIDIA GPU and want cuML (NVIDIA's GPU versions of UMAP and
+#   HDBSCAN). Without it, Starfold runs on the CPU.
+# - Jupyter, using the kernel of the project's `.venv`. This file is a plain
+#   Python script that Jupytext opens as a notebook.
+# - A few minutes. On a laptop RTX 3060 with cuML the run takes 80.4 s when it
+#   has the GPU to itself. It makes 314 fits (one fit is one run of UMAP
+#   followed by HDBSCAN) and uses about 1.4 GB of memory. The outputs stored
+#   with this notebook show 182 s because notebook 02 ran at the same time.
+#   The CPU time is not measured. Expect several times longer, and set
+#   `N_JOBS = 3` (the number of CPU worker processes) to run fits in parallel.
+#
+# ## The one rule of this notebook
+#
+# Starfold never sees which digit an image shows. The true digits stay in `y`
+# and appear only in cells marked **post hoc** (Latin for "after this"). Those
+# cells check the answer after the fact. Nothing marked post hoc influences
+# the groups. With your own data there will usually be no true labels, and
+# you stop before the post hoc cells.
 
 # %% [markdown]
-# ## UMAP and HDBSCAN, briefly
+# ## UMAP, HDBSCAN and Optuna
 #
-# UMAP turns the 64 pixel columns into a few coordinates, keeping images that
-# look alike close together. HDBSCAN then finds dense clumps in those
-# coordinates: each clump is a group, and rows between clumps are noise
-# (label -1).
+# Starfold is built from three existing tools. This section says what each one
+# does; you need nothing more to follow the notebook. The manual has a page on
+# each:
 #
-# Their settings can turn the same table into a handful of groups or hundreds.
-# Starfold chooses the settings without labels and then measures how
-# reproducible the answer is.
+# - https://andreaswneitzel.github.io/Starfold/concepts/umap.html
+# - https://andreaswneitzel.github.io/Starfold/concepts/hdbscan.html
+# - https://andreaswneitzel.github.io/Starfold/concepts/optuna.html
+#
+# **UMAP** (McInnes, Healy and Melville 2018, arXiv:1802.03426) turns the 64
+# pixel columns into a few coordinates. This map is called the *embedding*, and
+# images that look alike sit close together in it. UMAP finds the most similar
+# rows of every row and arranges the map so that those links stay short. The
+# axes of the map have no units and no meaning. Only which rows sit near which
+# counts.
+#
+# **HDBSCAN** (Campello, Moulavi and Sander 2013,
+# doi:10.1007/978-3-642-37456-2_14; McInnes and Healy 2017, arXiv:1705.07321)
+# then finds dense clumps in the map. Each clump is a *group*. A row that lies
+# between clumps belongs to no group and gets the label -1, called *noise*
+# (notebook 02 says "unassigned"). Noise means that no clump claimed the row. It
+# does not mean the measurement was bad.
+#
+# **Optuna** (Akiba et al. 2019, arXiv:1907.10902) is a search library. It
+# proposes a *setting*, receives a score for it, and uses the scores so far to
+# propose the next one. Each proposal with its score is a *trial*.
+#
+# A setting is one complete choice of six values. Different settings can turn
+# the same table into a handful of groups or into hundreds:
+#
+# - `n_neighbors` (UMAP): how many similar rows each row looks at. Small values
+#   keep fine detail and large values the broad layout. Library default 15.
+# - `min_dist` (UMAP): how tightly the map packs similar rows. Default 0.1.
+# - `n_components` (UMAP): how many coordinates the map has. Default 2.
+# - `min_cluster_size` (HDBSCAN): the smallest clump that may be called a group.
+#   Default 5.
+# - `min_samples` (HDBSCAN): how smooth the density estimate is; larger values
+#   call more rows noise. Default 5.
+# - `selection_method` (HDBSCAN): `eom` keeps the most persistent clumps and
+#   `leaf` the finest ones. Default `eom`.
+#
+# Starfold uses Optuna to choose the setting without any labels. It then
+# measures how reproducible the answer is. Before UMAP, it also rescales the
+# columns so that no column dominates because of its units. The default,
+# `Config(scaling="standard")`, centres each column and divides it by its
+# standard deviation.
+
+# %% [markdown]
+# ## Terms used in these notebooks
+#
+# You do not need to read this list now. Every term is explained again, with
+# the numbers, in the section that uses it. Come back here when you want to
+# look a word up. The manual's glossary has the same terms:
+# https://andreaswneitzel.github.io/Starfold/glossary.html
+#
+# **The table and the fits**
+#
+# - **row, column**: a row is one object (an image here, a star in notebook 02),
+#   and a column is one number measured for every object (a pixel, an abundance).
+# - **fit**: one run of UMAP and then HDBSCAN on some rows, which puts every row
+#   in a group or in noise.
+# - **labels, partition**: `labels` holds one integer per row, the group number
+#   or -1 for noise. The set of groups it defines is the *partition*. Group
+#   numbers are arbitrary names: two fits agree when they group rows alike, not
+#   when they use the same numbers.
+# - **seed**: a whole number that fixes every random choice, so the same seed
+#   gives the same run again.
+# - **subset**: a random 80 percent of the rows, drawn without replacement.
+# - **full fit**: the one fit of the chosen setting on all rows. It gives
+#   `labels`, the partition that Starfold reports.
+# - **refit**, also **world** (as in `result.worlds`): a fit of the chosen setting
+#   on one random subset with a new seed. Starfold makes 32. Every measure of
+#   reproducibility below is taken over these refits.
+#
+# **Choosing the setting**
+#
+# - **setting, trial**: see above. `params` holds a setting.
+# - **Sobol design**: trials 1 to 16, placed to cover the range of every value
+#   evenly, without learning from any score.
+# - **TPE** (tree-structured Parzen estimator; Bergstra et al. 2011): Optuna's
+#   sampler for the later trials. It sorts earlier trials into good and poor and
+#   proposes new settings where the good ones sit.
+# - **pruning**: stopping a trial early because its first fits score below the
+#   median of the finished trials.
+# - **score**: one number per setting, computed without labels from three
+#   measures on subsets (prediction agreement, coverage, modularity). It is zero
+#   if any of the three is zero and it never reads the number of groups.
+# - **copy**: a version of the table with every column's values kept but shuffled
+#   so that no groups remain. Every value in it was measured; only which row holds
+#   it changes. Also called a structureless copy.
+# - **gap**: the score on the table minus the score on a copy. A setting that
+#   scores as well on structureless data gains nothing.
+# - **fresh re-score**: a second scoring of the best trials on new subsets and new
+#   copies, made because the best score of many trials is partly luck (the
+#   *winner's curse*).
+#
+# **Reading the evidence**
+#
+# - **recurrence**: how often something comes back across the refits. Group
+#   recurrence, support and unresolved mass all measure it.
+# - **count interval**: the 5th to 95th percentile of the number of groups the
+#   refits found. It is a *stability interval*, the range over refits, and not a
+#   confidence interval.
+# - **support, own support**: for a row and a group of the full fit, how much of
+#   the row's refit group sits in that group, averaged over the refits that drew
+#   the row. Own support is the support for the row's own group.
+# - **unresolved**: the same average for "no group": refits that called the row
+#   noise, or put it in a refit group that the full fit calls noise. Unresolved
+#   mass is its average over all rows.
+# - **Jaccard overlap**: shared rows divided by rows in either of two groups; 1
+#   means the same rows.
+# - **ARI** (adjusted Rand index; Hubert and Arabie 1985,
+#   doi:10.1007/BF01908075): how alike two ways of grouping the same rows are, 1
+#   for identical and about 0 for chance. Group numbers do not matter.
+# - **co-association**: for a pair of rows, the share of refits that put both in
+#   the same group. **Contrast** is its average over pairs inside a group minus
+#   its average over pairs in different groups.
+# - **flag**: a short name for one weakness or event in a run, derived from the
+#   evidence arrays, for people and scripts to check.
+# - **strengths**: HDBSCAN's within-fit membership strength of a row. They are not
+#   probabilities.
+#
+# **The calibration test**
+#
+# - **p-value**: the share of copies that score at least as high as the table,
+#   counting the table as one more draw. A small p means the table beats almost
+#   every copy. It holds only for the declared family of copies, and it is not
+#   the probability that the groups are real.
+# - **alpha**: the level at which the test is called supportive, 0.05 by default.
+
+# %% [markdown]
+# ## Find the repository
+#
+# The notebook imports a few helpers from the repository's `bench/` folder, so
+# it needs to know where your clone is. This cell walks up from the current
+# folder until it finds `pyproject.toml` and prints that folder. If it raises an
+# error, open the notebook from inside the clone.
 
 # %%
 import sys
@@ -62,15 +219,26 @@ print(ROOT)
 # %% [markdown]
 # ## Parameters
 #
-# `ENGINE = "auto"` uses cuML when it imports and sees a GPU, and otherwise
-# warns and runs on the CPU. Set `FIGURES = ROOT / "docs" / "figures"` to
-# rewrite the handbook PNGs (with `None`, nothing is written).
+# These four values are the only ones you might change.
+#
+# - `RANDOM_STATE` is the seed. Every random choice of the run derives from it
+#   (the subsets, the copies, the refits), so the same seed repeats the run.
+# - `ENGINE = "auto"` uses cuML when it imports and sees a GPU. Otherwise it
+#   prints a warning and runs on the CPU.
+# - `N_JOBS` is the number of CPU worker processes.
+# - `FIGURES = None` writes no files. Set it to `ROOT / "docs" / "figures"` to
+#   rewrite the Digits PNG files that the manual shows.
 
 # %% tags=["parameters"]
 RANDOM_STATE = 0
 ENGINE = "auto"
 N_JOBS = 1
 FIGURES = None
+
+# %% [markdown]
+# The next cell imports the libraries, sets small font sizes for the figures,
+# and defines `save_figure`, which writes a figure only when `FIGURES` is set.
+# It prints nothing.
 
 # %%
 import matplotlib.pyplot as plt
@@ -112,8 +280,13 @@ def save_figure(fig, name):
 # %% [markdown]
 # ## The data
 #
-# Each row is one 8 by 8 image, flattened to 64 pixel values from 0 to 16,
-# while the true digit of each image is kept aside in `y`.
+# The table comes with scikit-learn. Each row is one 8 by 8 image of a
+# handwritten digit, flattened to 64 pixel values from 0 (dark) to 16
+# (bright). `X` holds the table that Starfold sees. `y` holds the true digit of
+# each image and stays aside until the post hoc cells.
+#
+# You should see 1797 images, 64 pixel columns and 10 classes (the digits 0
+# to 9).
 
 # %%
 X, y = load_digits(return_X_y=True)
@@ -123,11 +296,35 @@ print(f"true digits, kept aside: {np.unique(y).size} classes")
 # %% [markdown]
 # ## One call
 #
-# `recover` searches the settings, fits the chosen setting on all rows, refits
-# it on 32 random 80 percent subsets, checks the result with a co-association
-# matrix, and raises flags wherever the evidence is weak. The calibration test
-# is off by default, given that it costs far more than the rest of the run
-# (the section on it below says how to run it).
+# `starfold.recover` does the whole procedure in one call:
+#
+# 1. It searches the settings and picks one.
+# 2. It fits the chosen setting once on all rows. This is the *full fit*, and
+#    its labels are the *partition* (the split of the rows into groups) that
+#    Starfold reports.
+# 3. It refits that setting on 32 random 80 percent subsets, to see which groups
+#    and which rows come back. Each of these is a *refit*.
+# 4. It checks the partition against the refits with a co-association matrix (a
+#    table of how often each pair of rows was grouped together).
+# 5. It raises *flags*, short warning names, wherever the evidence is weak.
+#
+# `starfold.Config()` holds the budgets (up to 48 trials, 3 subsets per trial, 32
+# refits) and the scaling. This cell uses the defaults. The calibration test is
+# off by default because it costs far more than the rest of the run. It asks
+# whether structureless copies of the table score as high as the table, and a
+# later section shows how to run it.
+#
+# This is the cell that takes a few minutes. When it finishes, it prints:
+#
+# - which engine ran (`cuml` for the GPU, `cpu` otherwise);
+# - how many rows were kept. Rows with a missing or infinite value are dropped,
+#   never filled in, and here all 1797 are kept;
+# - the seconds and the number of fits for each stage, and the peak memory.
+#
+# The stage names are `search` (choosing the setting), `reference` (the full fit,
+# plus one fit of the library defaults for comparison), `worlds` (the 32
+# refits), `consensus` (the co-association check) and `null` (the calibration
+# test, 0 here because it is off). Almost all of the time goes into the search.
 
 # %%
 config = starfold.Config()
@@ -145,9 +342,22 @@ print(f"peak host memory: {prov['peak_rss_mb']:.0f} MB")
 # %% [markdown]
 # ## Flags first
 #
-# Flags are the machine-readable warnings; read them before any number.
-# `null_not_run` is expected here, and one of the two `search_...` flags is
-# always raised, saying only how the search ended.
+# A flag is a short name for one weakness or event in the run. Starfold derives
+# it from the evidence, so a script can test for it as well as a person. Read
+# the flags before any number.
+#
+# Starfold defines 16 flags. The cell below gives each one a plain-language
+# meaning in `FLAG_TEXT` and prints the ones this run raised. It stops with an
+# error if your Starfold version has a different list of flags. The manual
+# lists them all: https://andreaswneitzel.github.io/Starfold/reference/flags.html
+#
+# Not every flag is a fault. `null_not_run` is expected here, because the
+# calibration test was left off. One of the two `search_...` flags is always
+# raised, and it only says how the search ended.
+#
+# Some meanings use terms that later sections explain (fresh re-score,
+# unresolved mass, co-association). Read past them now and come back once they
+# are defined.
 
 # %%
 FLAG_TEXT = {
@@ -188,20 +398,51 @@ for flag in result.flags:
     print(f"- {flag}: {FLAG_TEXT[flag]}")
 
 # %% [markdown]
+# **Reading the flags.** The stored run raised 4 of the 16 flags. Two only
+# describe the run: `search_budget_exhausted` (the search used all 48 trials)
+# and `null_not_run` (the test was off). The other two are warnings to follow
+# up:
+#
+# - `count_unstable`: the number of groups changes a lot from refit to refit.
+#   The section "How many groups" shows by how much.
+# - `consensus_disagrees`: one of two summaries of the co-association check is
+#   low. The section "The co-association check" shows why it can be low while
+#   the groups still hold.
+#
+# Neither flag says the groups are wrong. Each one tells you which evidence to
+# read before you rely on the groups.
+
+# %% [markdown]
 # ## Groups, count and reproducibility
 #
-# `labels` has one entry per kept row, mapped back to `X` by `result.kept_rows`.
-# Each refit fits the chosen setting again on a random 80 percent of the rows.
+# `labels` is the partition from the full fit. It holds one entry per kept row:
+# the group number, or -1 for noise. `result.kept_rows` maps it back to the
+# rows of `X`. It comes from one fit, not from a vote. To see how much it
+# depends on the particular rows and seeds, Starfold has fitted the same setting
+# again on 32 random 80 percent subsets (the refits). Three numbers summarise
+# what changed:
 #
 # - **count interval**: the 5th to 95th percentile of the number of groups the
-#   refits found, rounded outward to whole numbers; it is a stability range,
-#   not a confidence interval.
-# - **unresolved mass**: in each refit, a row counts 1 if it lands in noise,
-#   and otherwise the share of its refit group that the fit on all rows calls
-#   noise. This is averaged over the refits that drew the row, then over rows.
-# - **group recurrence**: for each group, the mean over refits of its best
-#   Jaccard overlap with a refit group (shared rows over rows in either), where
-#   1 means the group comes back exactly.
+#   refits found, rounded outward to whole numbers. It is a stability interval,
+#   the range over refits, and not a confidence interval. A narrow interval
+#   that contains the full fit's count means the count is reproducible, which
+#   does not make it correct.
+# - **unresolved mass**: how much of the table the refits fail to place in a
+#   group that the full fit also has. In each refit, a row counts 1 if it lands
+#   in noise, and otherwise the share of its refit group that the full fit calls
+#   noise. This is averaged over the refits that drew the row, then over rows. 0
+#   means every refit agrees with the full fit, and above 0.5 the groups describe
+#   a minority of the rows.
+# - **group recurrence**: for each group, how often it comes back. In every
+#   refit, the group is matched with the refit group that overlaps it most, and
+#   the overlap is the Jaccard index (rows in both, divided by rows in either).
+#   Recurrence is the mean of that overlap over refits, and 1 means the group
+#   comes back with exactly the same members each time. The band beside it is
+#   the 5th to 95th percentile over refits.
+#
+# The cell prints the number of groups and noise rows in the full fit, the count
+# interval, the unresolved mass, and one line per group with its size,
+# recurrence and band.
 
 # %%
 w = result.worlds
@@ -222,13 +463,40 @@ for group, (recurrence, (low, high), size) in enumerate(
     )
 
 # %% [markdown]
+# **Reading the output.** In the stored run the full fit found 10 groups and
+# called 30 of 1797 rows noise. Three things stand out:
+#
+# - The refits found anywhere from 3 to 16 groups. That wide interval is why
+#   `count_unstable` was raised. Treat the count of 10 as one fit's answer,
+#   not as a finding.
+# - The unresolved mass is 0.044, so the refits place almost every row in a
+#   group that the full fit also has.
+# - Recurrence varies by group. Groups 0 and 1 come back with the same members
+#   every time (1.00). Group 3 (324 rows) and group 5 (19 rows) sit near 0.5,
+#   and their wide bands say they often split or merge in a refit.
+#
+# Use recurrence to decide which groups to lean on and which to report with
+# caution. A group that recurs is reproducible, which still does not make it a
+# true population.
+
+# %% [markdown]
 # ## The settings
 #
-# `params` is the setting the search chose on 80 percent subsets, and
-# `deployed_params`, which produced `labels`, is the same setting with
-# `min_cluster_size` and `min_samples` scaled up to all rows. `default_params`
-# are the umap-learn and hdbscan defaults, fitted once on all rows as the
-# comparison (`default_labels`).
+# This cell prints the six values of three settings side by side. Each column
+# is one setting:
+#
+# - `params` (chosen) is the setting the search picked. It was tested on 80 percent
+#   subsets.
+# - `deployed_params` produced `labels`. `min_cluster_size` and `min_samples`
+#   count rows, and a group that holds 5 of 80 rows holds 6.25 of 100, so both are
+#   multiplied by the ratio of the rows in the full fit to the rows in a subset.
+#   The other four values do not change.
+# - `default_params` are the umap-learn and hdbscan defaults, fitted once on all
+#   rows as the comparison (`default_labels`).
+#
+# In the stored output below, the search moved away from the defaults: 4 map dimensions
+# instead of 2, and larger `min_cluster_size` and `min_samples`. The deployed
+# column shows the two row counts scaled up from 11 and 9 to 14 and 11.
 
 
 # %%
@@ -249,26 +517,79 @@ for name in result.params.to_dict():
 # %% [markdown]
 # ## How the setting was chosen
 #
-# The search tries up to 48 settings: trial 0 is the library defaults,
-# trials 1 to 16 a Sobol design that spreads over the space, and the rest come
-# from TPE (tree-structured Parzen estimator), a sampler that learns from
-# earlier trials.
+# This section is the longest in the notebook. It explains how one setting won
+# out of 48. You can skim it on a first pass and come back later; the manual
+# covers the same ground at
+# https://andreaswneitzel.github.io/Starfold/metrics/score.html and
+# https://andreaswneitzel.github.io/Starfold/concepts/copies-and-gaps.html.
 #
-# Each trial is fitted on 3 shared 80 percent subsets. A fit on one subset
-# predicts the group of each row it never saw from that row's nearest
-# neighbours, and the prediction is compared with the fit on another subset
-# that did see the row. Two more terms count the share of rows both fits assign and how well the
-# groups follow the neighbour graph of the table itself. A zero in any of the
-# three makes the score zero.
+# Optuna runs up to 48 trials, each one a setting:
 #
-# The same setting is also scored on a copy of the table with the groups
-# removed, in which every column keeps exactly its values and the overall
-# correlation between columns stays but the rows form one smooth elliptical
-# cloud. The trial score is the excess over the copy, called the gap.
+# - trial 0 is the library defaults, so Starfold always weighs the answer that
+#   the tools would give without a search;
+# - trials 1 to 16 are a Sobol design, which places settings to cover the range
+#   of every value evenly and uses no score;
+# - later trials come from TPE (tree-structured Parzen estimator), which learns
+#   from the earlier scores and proposes settings where the good ones sit.
 #
-# The top 3 trials and the defaults are then scored again on fresh subsets and
-# fresh copies, and the largest fresh gap wins. That table is the
-# sensitivity report: close runners-up mean the choice among them is not sharp.
+# **The score.** Every trial is fitted on the same 3 subsets, so that a difference
+# in score comes from the settings and not from which rows were drawn. Three
+# measures come from those fits:
+#
+# - *prediction agreement*: a fit on one subset predicts a group for each row it
+#   never saw, from that row's nearest neighbours among the rows it did see. The
+#   prediction is compared with the fit on another subset that did see the row,
+#   using the ARI (adjusted Rand index: 1 for the same grouping, about 0 for
+#   chance). A setting that tears a smooth region into small clumps cannot
+#   predict unseen rows.
+# - *coverage*: the share of those rows that both fits assign to a group, so that
+#   calling most rows noise does not pay.
+# - *modularity* (Newman 2006, doi:10.1073/pnas.0601602103): every row is linked
+#   to its 15 nearest rows in the table's own scaled columns, before any map is
+#   drawn, and modularity is the share of links that stay inside groups beyond
+#   what chance would give. It gives no credit for a separation that UMAP
+#   invents.
+#
+# The score is the cube root of their product, so a zero in any one of them makes
+# it zero. It never reads the number of groups.
+#
+# **The copy and the gap.** Some settings score well on any table: cut into
+# compact pieces, a smooth cloud gives pieces that come back and look tidy. To
+# discount this, the same setting is also scored on a structureless copy of the
+# table, on the same subsets. The copy keeps every column's values exactly and the
+# overall correlation between columns, and reorders which values sit together, so
+# the rows form one smooth elliptical cloud with no groups (a Gaussian copula,
+# explained in notebook 03). The trial score is the excess over the copy, called
+# the gap (Tibshirani, Walther and Hastie 2001,
+# doi:10.1111/1467-9868.00293).
+#
+# **Pruning and stopping.** From trial 17, a trial is pruned, meaning stopped
+# early, if its score after two of its three fits is below the median of the
+# finished trials. Up to 3 pruned trials that were ahead of the best finished
+# trial are completed at the end ("completed after pruning"). From trial 33, the
+# search stops once the best score has improved by less than 0.01 over 16 trials.
+#
+# **The fresh re-score.** The best of many noisy scores is partly luck, and so
+# too high (the winner's curse). The top 3 finished trials and the defaults are
+# therefore scored again on new subsets and new copies, which they were not
+# chosen on, and the largest fresh gap wins, with ties going to the defaults.
+# This is why the winner need not be the trial with the highest gap during the
+# search. The table of these candidates is the sensitivity report: close
+# runners-up mean that the choice among them is not sharp.
+#
+# **What the cell prints.** First, how many trials ran and how they ended.
+# Then a table of the candidates of the fresh re-score, the chosen one first:
+#
+# - `search gap`: the trial's gap during the search;
+# - `fresh score` and `fresh gap`: the score and the gap from the re-score;
+# - the last column: how many groups each of the 3 fresh fits found.
+#
+# The last lines compare the chosen setting with the defaults on the fresh
+# scores, once per ordered pair of subsets (six pairs). `beats the defaults
+# under the objective` only says that the chosen fresh gap is larger than the
+# defaults'. Whether the difference exceeds the noise is the flag
+# `default_within_noise` (raised when the difference is within 2 standard
+# errors of the six paired differences).
 
 # %%
 s = result.search
@@ -297,18 +618,41 @@ print(f"beats the defaults under the objective: {s.beats_default_under_objective
 print(f"chosen setting is the defaults: {s.selected_is_default}")
 
 # %% [markdown]
+# **Reading the output.** In the stored run all 48 trials ran and 14 were
+# pruned. Trial 33 was chosen with a fresh gap of 0.661, against 0.565 for the
+# defaults. Trial 37 had the highest gap during the search (0.797) but only
+# 0.414 when re-scored: the winner's curse at work, and the reason for the
+# re-score. Five of the six paired differences favour the chosen setting, and
+# `default_within_noise` was not raised, so the choice over the defaults is
+# clear under this objective.
+#
+# The last column shows something the score never looked at: the defaults'
+# fresh fits found 33 to 41 groups, the chosen setting's 11 to 15. The score
+# rewards reproducible groups, not a particular count.
+
+# %% [markdown]
 # ## A picture of the groups
 #
-# The groups were found in the UMAP coordinates of the deployed setting, with
-# up to 10 dimensions (the figure title gives the number). To draw them, this
-# cell runs one more UMAP on the standardised pixels with the same
-# `n_neighbors` and `min_dist` but two dimensions. It is a display refit only:
-# distances in it are not the ones HDBSCAN saw.
+# HDBSCAN found the groups in the UMAP coordinates of the deployed setting, which
+# can have up to 10 dimensions (the figure title gives the number). A screen has
+# two. So this cell runs one more UMAP, on the CPU, on the standardised pixels
+# (each pixel rescaled to mean 0 and variance 1). It uses the same `n_neighbors`
+# and `min_dist` but two dimensions. This is a display refit only: the axes have
+# no units, and its distances are not the ones HDBSCAN saw. Neighbours on the map
+# are usually neighbours in the table. Do not over-read the gaps between islands
+# or their sizes.
 #
-# The left panel (post hoc) shows the true digits, the middle panel Starfold's
-# groups with opacity set by each row's own support (floored at 0.1 so every
-# row stays visible), and the right panel one fit of the library defaults with
-# one seed.
+# Each point is one image, drawn at the same place in all three panels:
+#
+# - left panel (post hoc): coloured by the true digits, which Starfold never
+#   used;
+# - middle panel: Starfold's groups. The opacity of each point is its *own
+#   support*, a 0-to-1 measure of how reliably the row comes back with its group
+#   (defined under "Support per row"). It is floored at 0.1 so every row stays
+#   visible. Faint points are rows that did not come back reliably;
+# - right panel: one fit of the library defaults with one seed, for comparison.
+#
+# Grey points are noise, the rows HDBSCAN assigns to no group.
 
 # %%
 x = X[result.kept_rows]
@@ -393,14 +737,29 @@ save_figure(fig, "digits_partitions.png")
 plt.show()
 
 # %% [markdown]
+# **How to read it.** Compare the middle panel with the left one: where a
+# Starfold group covers one digit's island, the group matches a digit. Then
+# compare the middle with the right: the defaults cut the same islands into
+# many more small groups. Faint regions in the middle panel mark where the
+# grouping is fragile.
+
+# %% [markdown]
 # ## Settings against groups
 #
-# Each point is one complete trial of the search, with its score on the
-# horizontal axis and the number of groups its fits found on the vertical axis.
+# Each point is one complete trial of the search (a trial that ran all its fits),
+# with its score on the horizontal axis (the gap over the copy, as defined above)
+# and the number of groups its fits found on the vertical axis (the median over
+# the trial's fits, on a logarithmic scale). The colour says how the trial was
+# proposed: by the Sobol design, by TPE, or as one of the pruned trials completed
+# at the end. The star is the library defaults (trial 0) and the ring is the
+# trial that was chosen after the fresh re-score.
+#
 # No new fit runs here: everything comes from `result.search.trials`. Pruned
 # trials stopped after two fits and have no gap, so they are left out. The score
-# never reads the group count, and the dotted line at the true number of digits
-# is post hoc.
+# never reads the group count, so nothing pulls the points toward a particular
+# height, and the dotted line at the true number of digits is post hoc. A
+# trial that finds no group at all cannot be drawn on a log axis and is counted
+# in the title.
 
 # %%
 complete = [t for t in s.trials if t.state == "complete"]
@@ -453,13 +812,42 @@ save_figure(fig, "digits_settings_vs_groups.png")
 plt.show()
 
 # %% [markdown]
+# **How to read it.** Read the figure from left to right. In the stored run the
+# low-scoring trials found anything from a few groups to dozens. The
+# high-scoring trials sit in a narrower band of counts, and the defaults (the
+# star) score lower than most TPE trials. The score never saw the count, so the
+# narrowing is a side effect of rewarding reproducible groups. It is still not
+# evidence for any particular number of groups.
+
+# %% [markdown]
 # ## Support per row
 #
-# A row's own support says how reliably the refits put it back with the
-# members of its group, from 0 to 1, with its unresolved share recording what
-# went to noise instead. Keeping only high-support rows gains purity at the
-# cost of completeness. The right panel (post hoc) shows how support relates
-# to rows that match their group's majority digit.
+# The previous sections asked how whole groups behave. This one asks the same
+# of each row. The manual page is
+# https://andreaswneitzel.github.io/Starfold/metrics/support.html.
+#
+# The 32 refits each fit a random 80 percent of the rows. Take a row and a refit
+# that drew it. Either the refit called the row noise, or it put the row in a
+# refit group. That refit group is made of rows that the full fit split among
+# its own groups (or called noise).
+#
+# - *Support* of the row for a group of the full fit is the average, over the
+#   refits that drew the row, of the share of the row's refit group that sits in
+#   that full-fit group. *Own support*, from 0 to 1, is the support for the row's
+#   own group. High means the row keeps company with the same rows every time.
+# - The *unresolved share* is the same average for the outcome "no group": a
+#   refit that called the row noise counts 1, and otherwise the share of its refit
+#   group that the full fit calls noise. Support summed over groups plus the
+#   unresolved share is 1 on every row a refit drew.
+#
+# The cell draws three histograms (bar charts of how many rows fall in each
+# range of values):
+#
+# - left: own support of every grouped row. Mass piled near 1 is good;
+# - middle: the unresolved share of every row, with its mean (the unresolved
+#   mass) as a dashed line. Mass piled near 0 is good;
+# - right (post hoc): the left histogram again, with each bar split by whether
+#   the row's true digit is the majority digit of its group.
 
 
 # %%
@@ -510,12 +898,32 @@ save_figure(fig, "digits_support.png")
 plt.show()
 
 # %% [markdown]
+# **How to read it.** In the stored run most grouped rows have own support near
+# 1, and most rows have an unresolved share near 0. The right panel shows that
+# rows which do not match their group's digit also reach high support. High
+# support means a row keeps the same company, not that the company is right.
+# Keeping only high-support rows gains some purity at the cost of completeness.
+
+# %% [markdown]
 # ## Recurrence per group
 #
+# This figure draws the recurrence numbers printed earlier. The manual page is
+# https://andreaswneitzel.github.io/Starfold/metrics/recurrence.html.
+#
+# For each group of the full fit, every refit is searched for the group that
+# overlaps it best. The overlap is the Jaccard index: rows in both groups divided
+# by rows in either, 1 for identical sets and 0 for disjoint ones. The group's
+# *recurrence* is the mean of that best overlap over the refits.
+#
 # Hennig (2007, doi:10.1016/j.csda.2006.11.025) reads a mean Jaccard of 0.85
-# or more as a highly stable group and 0.5 or less as a dissolved one.
-# Here they are marks to read against, not filters. The right panel (post hoc)
-# asks whether groups that recur are also pure.
+# or more as a highly stable group and 0.5 or less as a dissolved one. Here
+# these lines are marks to read against, not filters. A group below 0.5 is not
+# removed.
+#
+# - Left: recurrence of each group, with the 5 to 95 percent band over refits.
+# - Middle: the size of each group in the full fit, in rows.
+# - Right (post hoc): recurrence against purity, the share of the group that has
+#   its majority digit. It asks whether groups that recur are also pure.
 
 # %%
 index = np.arange(w.group_recurrence.size)
@@ -558,12 +966,30 @@ save_figure(fig, "digits_groups.png")
 plt.show()
 
 # %% [markdown]
+# **How to read it.** In the stored run groups 0 and 1 sit at the top, above
+# the 0.85 line, with almost no band. Group 5 falls below 0.5 and group 3 sits
+# slightly above it. Most other groups have a mean between the two lines but a band
+# that reaches far down: they usually come back, but some refits split or merge
+# them. The right panel shows that the two largest groups (3 and 7) are also
+# the least pure. A group can recur without being pure, and a stable partition
+# is not thereby a true one.
+
+# %% [markdown]
 # ## How many groups
 #
-# The figure shows the number of groups each refit found, with the stability
-# interval shaded. A narrow interval that holds the count of the fit on all
-# rows means the count is reproducible under resampling. It does not mean the
-# count is true.
+# The figure shows the number of groups each of the 32 refits found. Each bar is
+# the share of refits at one count, and the shaded band is the count interval.
+# The manual page is
+# https://andreaswneitzel.github.io/Starfold/metrics/count-interval.html.
+#
+# The interval is the 5th to the 95th percentile of those counts, rounded
+# outward. It is a stability interval: the range the count takes when the rows
+# are resampled (and, where a table has measurement errors, redrawn). It is not
+# a confidence interval for a true number of groups. A narrow interval that
+# holds the count of the full fit means the count is reproducible under
+# resampling. It does not mean the count is true. The number of arbitrary,
+# overlapping populations cannot be pinned down without a declared target
+# quantity and assumptions.
 
 # %%
 values, freq = np.unique(w.count_values, return_counts=True)
@@ -585,13 +1011,42 @@ save_figure(fig, "digits_counts.png")
 plt.show()
 
 # %% [markdown]
+# **How to read it.** In the stored run the interval runs from 3 to 16. Most
+# refits found 10 to 16 groups. A few found only 3 or 4, and one found 19.
+# This spread is what raised `count_unstable`. Report the interval with the
+# count, and do not treat the count of 10 as a result.
+
+# %% [markdown]
 # ## What else the refits recorded
 #
-# `support` holds, for every row and group, how often the refits put the row
-# with that group, summing to 1 with `unresolved` on every row a refit drew.
-# `property_median` and `property_band` give each group's median value per
-# column across refits, in original units. `strengths` are HDBSCAN's
-# within-fit membership strengths, not probabilities.
+# The cell below prints the rest of what the refits stored beside the labels.
+# You will rarely need all of it, but each line is a check you can cite.
+#
+# - `refit fits`, `failures`: how many refits ran and how many raised an error
+#   (a failed refit is recorded, not hidden).
+# - `refits that drew each row`: with 80 percent subsets, each row is drawn by
+#   about 26 of the 32 refits, and this line gives the smallest and largest count.
+# - `support`: the matrix defined under "Support per row", one row per table row
+#   and one column per group. With `unresolved`, each drawn row sums to 1, which
+#   the printed identity checks.
+# - `agreement of each refit with labels`: for every refit, the ARI between its
+#   groups and `labels` on the rows both assign, times the share of rows both
+#   assign. Both parts lower the number, so it is 1 only for the same partition.
+# - `property_median` and `property_band`: for each group and column, the median
+#   value over refits and its 5 to 95 percent band, in the original units of the
+#   column. "Measurement draws" says whether the refits also redrew each value
+#   from an error (`X_err`); here there is none, so the band comes from
+#   resampling alone.
+# - `strengths`: HDBSCAN's within-fit membership strength of a row, from 0 to 1,
+#   1 at the core of a group. It describes one fit and is not a probability.
+# - `backend comparison`: "not run" unless `Config(check_backends=True)`, which fits
+#   the chosen setting on the CPU and the GPU engine and compares the partitions
+#   (never the label numbers, which differ between engines).
+#
+# In the stored run no refit failed, each row was drawn by 16 to 31 refits,
+# and the identity holds. The median agreement of a refit with `labels` is
+# 0.79, with a range from 0.13 to 0.89: most refits resemble the full fit, and
+# a few differ a lot.
 
 # %%
 sampled = w.n_sampled > 0
@@ -620,12 +1075,26 @@ print("backend comparison:", "not run" if result.backends is None else result.ba
 # %% [markdown]
 # ## The co-association check
 #
-# Over the refits, the check counts how often each pair of rows lands in the
-# same group. If the groups hold, pairs inside a group co-occur far more often
-# than pairs across groups; the contrast is the difference and needs no label
-# matching. The check also cuts that pair matrix into groups and compares the
-# cut with `labels` (agreement). However, the cut can fail on matrices with
-# many ties, raising `consensus_disagrees` even when the contrast is high.
+# The check asks whether the grouping is a property of the rows or of one fit's
+# label numbers. The manual page is
+# https://andreaswneitzel.github.io/Starfold/metrics/coassociation.html.
+#
+# For every pair of rows, the check counts the share of refits that put the two
+# in the same group, among the refits that assigned both. That share is the
+# *co-association* of the pair. It needs no matching of label numbers between
+# refits, since only "same group or not" is used.
+#
+# - *within* and *between*: the mean co-association over pairs of rows in the same
+#   group of `labels`, and over pairs in different groups. If the groups hold,
+#   the first is high and the second low. Their difference is the *contrast*.
+# - *agreement of the cut*: HDBSCAN is run once more, on the co-association
+#   turned into a distance (1 minus the share), and its groups are compared with
+#   `labels` by ARI times the share of rows both assign. Above 5,792 rows the
+#   check keeps a subset of 4,096 rows, because the pair matrix grows with the
+#   square of the rows, and prints `subset: True`.
+#
+# The cut can fail on matrices with many ties, so `consensus_disagrees` (agreement
+# below 0.5) can be raised even when the contrast is high. Read the two together.
 
 # %%
 c = result.consensus
@@ -637,15 +1106,45 @@ print(f"agreement of the cut with labels (ARI times coverage): {c.agreement:.3f}
 print(f"groups in the cut: {np.unique(c.labels[c.labels >= 0]).size}")
 
 # %% [markdown]
+# **Reading the output.** In the stored run pairs inside a group are grouped
+# together in 0.820 of the refits, pairs across groups in 0.068, a contrast of
+# 0.751. That is a clear separation. The cut, however, found only 3 groups and
+# agrees with `labels` at 0.135, which raised `consensus_disagrees`. So the
+# pairs say the groups hold on average, while one automatic cut of the same
+# matrix merges them into a few large groups. Neither number settles it alone.
+# The per-group recurrence above tells you which groups the merging touches.
+
+# %% [markdown]
 # ## The calibration test
 #
-# It did not run: `result.null.skipped_reason` is `null_not_run`, and
-# `result.null.p_value` holds a placeholder of 1.0, not a result. The test asks
-# whether structureless copies of the table, run through the same exploration,
-# score as high as the table does. Each copy costs 102 fits, and the test draws
-# up to 19 copies (1,938 fits, about six times the rest of this run). Run it
-# once, on the result you report, with the same configuration, seed, engine
-# and `n_jobs`:
+# This test did not run here. `result.null.skipped_reason` is `null_not_run`,
+# and `result.null.p_value` holds a placeholder of 1.0, not a result. The
+# manual page is https://andreaswneitzel.github.io/Starfold/metrics/calibration-p.html.
+#
+# The test asks whether the search would have found something as good in data
+# with no groups. It makes a structureless copy of the table (see "Terms used in
+# these notebooks") and runs the opening of the search on it: trial 0 and the
+# 16 Sobol trials, 17 settings in all. A gap needs a score on the data and a
+# score on its own structureless copy. On a copy, that means 3 fits on the copy
+# and 3 on a copy of the copy: 6 fits per setting, 102 fits per copy.
+#
+# The best gap that any of the 17 settings reaches on the copy is recorded. This
+# is repeated for up to 19 copies, and it stops early once 3 copies have reached
+# the table's own value. That value is `exploration_max`, the best gap of the
+# same 17 settings on the real table. The search summary above printed it as
+# `best score of trial 0 and the Sobol design`.
+#
+# The p-value is (h + 1) / (L + 1), with L copies run and h of them at least as
+# high as the table (Phipson and Smyth 2010, doi:10.2202/1544-6115.1585). With 19
+# copies the smallest possible value is 1/20 = 0.05. It holds only for the
+# family of copies that was declared. The default family keeps each column's
+# values and the overall correlation between columns, and nothing else. The
+# p-value is not the probability that the groups are real. `structure_supported`
+# is true when p is at most alpha, 0.05 by default.
+#
+# Each copy costs 102 fits, and the test draws up to 19 copies (1,938 fits, about
+# six times the rest of this run). Run it once, on the result you report, with the
+# same configuration, seed, engine and `n_jobs`:
 #
 # ```python
 # null = starfold.null_test(
@@ -660,6 +1159,8 @@ print(f"groups in the cut: {np.unique(c.labels[c.labels >= 0]).size}")
 # ```
 #
 # Notebook 03 runs it on the run saved below and attaches it to the result.
+# The cell below only confirms that the test was skipped and that no family of
+# copies was declared (an empty tuple, `()`).
 
 # %%
 print("skipped:", result.null.skipped_reason, "| families:", result.null.families)
@@ -667,10 +1168,24 @@ print("skipped:", result.null.skipped_reason, "| families:", result.null.familie
 # %% [markdown]
 # ## Post hoc: against the true digits
 #
-# Only now do the true digits enter. The coverage-adjusted ARI is the adjusted
-# Rand index on rows both sides assign, floored at 0, times the share of rows
-# assigned, so calling most rows noise cannot score well. Below is the mean
-# image of each group, titled with its majority digit.
+# Only now do the true digits enter. Nothing in the search, the refits or the
+# scores above used them, so comparing with them tests the result instead of
+# tuning it. People made these labels for a benchmark. With your own data they
+# do not exist, and you would stop before this section. The manual shows how to
+# run this check on your own known labels:
+# https://andreaswneitzel.github.io/Starfold/howto/check-against-known-labels.html
+#
+# The cell prints the coverage-adjusted ARI for Starfold and for the library
+# defaults. It is the ARI (see "Terms used in these notebooks") on the rows that
+# both groupings assign, floored at 0, times the share of rows assigned. The
+# second factor means that calling most rows noise cannot score well. 1 means
+# Starfold's groups are the digits, and 0 means no better than chance. A higher
+# value on this one table is not a general claim about the method.
+#
+# The cell then draws the mean image of each group: the average of its rows' 8
+# by 8 pixel images, brighter for a higher pixel value. Each title gives the
+# group number, its size, and the share of its rows that show its majority
+# digit (the digit most of its rows show).
 
 # %%
 print(f"coverage-adjusted ARI, Starfold: {coverage_adjusted_ari(truth, labels):.3f}")
@@ -697,12 +1212,31 @@ fig.supylabel("pixel row")
 plt.show()
 
 # %% [markdown]
+# **How to read it.** In the stored run Starfold scores 0.740 and the defaults
+# 0.594. Eight of the ten mean images show a clear digit, with a majority share
+# of 85 percent or more. Groups 3 and 7, the two largest, are mixed: 56 percent
+# digit 5 and 58 percent digit 8. Group 3 also had one of the lowest
+# recurrences (0.54). Low recurrence warned about group 3 before the labels
+# were used; group 7 shows that a group can recur fairly well and still mix two
+# digits.
+
+# %% [markdown]
 # ## Save and reload
 #
-# `starfold.save` writes `result.json`, `arrays.npz` (read back with
-# `allow_pickle=False`) and a manifest of SHA-256 checksums. `starfold.load`
-# checks the checksums and derives the flags again from the arrays. The run
-# goes to `notebooks/runs/digits` (ignored by git).
+# Save the result so that you, or anyone else, can reload it later without
+# running the search again. `starfold.save` writes a folder with three files:
+#
+# - `result.json`: the settings, scores, flags and provenance (the versions, the
+#   configuration, the seed and the engine actually used);
+# - `arrays.npz`: the arrays such as `labels` and `support`. They are read back
+#   with `allow_pickle=False`, so the file cannot hold executable code;
+# - a manifest of SHA-256 checksums, fingerprints that change if any file is
+#   altered.
+#
+# `starfold.load` checks the checksums and derives the flags again from the
+# arrays. The cell stops with an error if the reloaded labels or flags differ.
+# The run goes to `notebooks/runs/digits`, which git ignores. The manual page
+# is https://andreaswneitzel.github.io/Starfold/howto/save-and-load.html.
 
 # %%
 path = starfold.save(result, RUN_DIR)
@@ -715,5 +1249,12 @@ print(f"saved to {path}; labels and flags match after reloading")
 # %% [markdown]
 # ## Next
 #
-# Notebook 02 runs Starfold on a real table with no labels at all, 9,242 APOGEE
-# stars. Notebook 03 runs the calibration test on the Digits run saved above.
+# You have run Starfold once and read every part of its result. Two notebooks
+# continue from here:
+#
+# - Notebook 02 runs Starfold on a real table with no labels at all, 9,242
+#   APOGEE stars, where no post hoc check is possible.
+# - Notebook 03 runs the calibration test on the Digits run saved above.
+#
+# The manual's page on reporting a result lists what to write down from a run
+# like this one: https://andreaswneitzel.github.io/Starfold/howto/report-your-result.html

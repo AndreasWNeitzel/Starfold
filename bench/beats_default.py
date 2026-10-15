@@ -1,4 +1,4 @@
-"""Does the selected configuration beat the library defaults on labelled data?
+"""Compare the selected configuration with the library defaults on labelled data.
 
 For each dataset the procedure runs with the labels hidden. Afterwards the
 emitted partition, the consensus check, and the default configuration over

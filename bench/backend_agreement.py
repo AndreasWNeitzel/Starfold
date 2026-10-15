@@ -1,4 +1,4 @@
-"""Backend agreement: does the cuML path emit the partition the CPU path does?
+"""Backend agreement: check that the cuML path emits the partition the CPU path does.
 
 Labels differ by permutation and floating-point summation order, so the
 backends are compared by partition agreement: the adjusted Rand index on

@@ -12,6 +12,8 @@ importing umap-learn.
 from __future__ import annotations
 
 import importlib
+import sys
+import types
 from typing import TYPE_CHECKING, Any
 
 __version__ = "0.2.0"
@@ -73,6 +75,10 @@ def __getattr__(name: str) -> Any:  # noqa: ANN401 - lazy attribute dispatch
     module = importlib.import_module(module_name)
     value = getattr(module, name)
     globals()[name] = value
+    # Importing starfold.search binds the submodule to the package name
+    # ``search``; put the function back so starfold.search stays callable.
+    if isinstance(globals().get("search"), types.ModuleType):
+        globals()["search"] = sys.modules["starfold.search"].search
     return value
 
 
