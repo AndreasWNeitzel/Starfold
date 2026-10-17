@@ -559,3 +559,26 @@ def test_provenance_records_the_measurement_model() -> None:
     other = _provenance(sampler=functools.partial(np.add, 2.0))["measurement"]
     assert record["repr"] != other["repr"]
     assert _provenance(sampler=(1).__add__)["measurement"]["kind"] == "sampler"
+
+
+def test_failed_search_trial_raises_its_flag(tmp_path) -> None:
+    from dataclasses import replace  # noqa: PLC0415 - local to this test
+
+    result = _result()
+    assert "search_trial_failures" not in result.flags
+    trials = list(result.search.trials)
+    trials[0] = replace(trials[0], state="failed", score=0.0, error="RuntimeError: boom")
+    search = replace(result.search, trials=tuple(trials))
+    flags = derive_flags(
+        labels=result.labels,
+        search=search,
+        worlds=result.worlds,
+        consensus=result.consensus,
+        null=result.null,
+        backends=result.backends,
+        rows_rejected=0,
+        n_jobs_forced=False,
+    )
+    assert "search_trial_failures" in flags
+    failed = Result(**{**result.__dict__, "search": search, "flags": flags})
+    assert "search_trial_failures" in load(save(failed, tmp_path / "run")).flags

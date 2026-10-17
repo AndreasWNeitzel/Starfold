@@ -96,7 +96,9 @@ Decision: all 1,797 rows were kept, so every row is in the result. Always check 
 A {term}`flag` is a short name for one weakness or event in a run. Read the flags before any number.
 
 ```python
-print(f"{len(result.flags)} of 16 flags raised")
+from starfold.result import FLAG_VOCABULARY
+
+print(f"{len(result.flags)} of {len(FLAG_VOCABULARY)} flags raised")
 for flag in result.flags:
     print(f"- {flag}")
 ```
@@ -104,7 +106,7 @@ for flag in result.flags:
 You see:
 
 ```text
-4 of 16 flags raised
+4 of 17 flags raised
 - search_budget_exhausted
 - count_unstable
 - consensus_disagrees
@@ -219,7 +221,7 @@ Decision: the chosen setting beat the defaults on the fresh gap, 0.661 against 0
 ## What you learned
 
 - A run ends in flags first. Read them before any number.
-- Four of 16 flags were raised. None says the search found nothing, and `consensus_disagrees` is read together with the contrast.
+- Four of 17 flags were raised. None says the search found nothing, and `consensus_disagrees` is read together with the contrast.
 - The group count of one fit (10) is not yet a finding.
 - The search chose a setting that beat the defaults on the fresh gap, by a small margin.
 

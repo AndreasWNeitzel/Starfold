@@ -1,6 +1,6 @@
 # Flags
 
-This page lists all 16 {term}`flags <flag>` that `result.flags` can hold, the exact condition that raises each one, what it means and what to do.
+This page lists all 17 {term}`flags <flag>` that `result.flags` can hold, the exact condition that raises each one, what it means and what to do.
 
 ```{eval-rst}
 .. index::
@@ -29,6 +29,7 @@ A flag is a short name for one event or weakness in a run. Starfold derives flag
 | `search_budget_exhausted` | `search.stop_reason == "budget"` | No |
 | `selected_is_default` | `search.selected_is_default` is True | No |
 | `default_within_noise` | The winner is not the default, and `abs(score_selected - score_default) <= 2 * std(paired_differences, ddof=1) / sqrt(len(paired_differences))`, with at least 2 differences | No |
+| `search_trial_failures` | Any entry of `search.trials` has state `"failed"` | Yes |
 | `no_groups_in_reference` | No entry of `labels` is 0 or above | Yes |
 | `high_unresolved_mass` | `worlds.unresolved_mass > 0.5` | No |
 | `count_unstable` | Fewer than half of `worlds.count_values` equal `worlds.count_reference` | Yes: do not quote a single group count |
@@ -51,6 +52,8 @@ A flag is a short name for one event or weakness in a run. Starfold derives flag
 `selected_is_default`: trial 0 won the fresh re-score, with ties going to trial 0. Selection is by fresh {term}`gap`. Trial 0 is the library defaults clipped into your `Space` bounds, so with narrower bounds it is not exactly the library default. No searched setting did better. Report this as the outcome. The defaults are a valid answer.
 
 `default_within_noise`: the two fresh scores differ by no more than twice the standard error of their paired differences (6 differences at 3 resamples). The flag compares the fresh scores of the two settings. The search picks the setting with the larger fresh {term}`gap`, which is the fresh score minus the mean score on the copies. Each setting's copy score differs, so the two criteria need not rank the settings the same way. The flag is never raised when the defaults were selected, because the differences are then all 0. Do not claim that the search improved on the defaults. See {doc}`../metrics/default-comparison`.
+
+`search_trial_failures`: at least one search trial raised an error. A failed trial scores 0, so it can never win, but the search had fewer usable settings than its budget. If no trial completed, the selected setting is trial 0 with a score of 0, and the result means nothing. Read the `error` field of each failed entry of `result.search.trials` and fix the cause before using the result.
 
 `no_groups_in_reference`: every row of the emitted partition is noise. Check the columns and the scaling ({doc}`../howto/prepare-table`, {doc}`../howto/choose-scaling`), and lower the `min_cluster_size` range ({doc}`../howto/custom-space`). See {doc}`../troubleshooting`.
 

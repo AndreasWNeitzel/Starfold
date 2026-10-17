@@ -16,7 +16,7 @@ This section lists every public function, option, result field, flag and saved f
 | {doc}`api` | The signature and docstring of each public function and class |
 | {doc}`config` | Every field of `Config` and `Space`, with its default and its cost |
 | {doc}`result` | Every field of `Result` and its parts, with the metric page that explains it |
-| {doc}`flags` | The 16 flags, the exact condition for each and what to do |
+| {doc}`flags` | The 17 flags, the exact condition for each and what to do |
 | {doc}`artifacts` | The files `save` writes and what `load` checks |
 
 ```{toctree}

@@ -71,7 +71,7 @@ To run it inside `recover` instead, pass `config=starfold.Config(null_families=(
 
 ## Reading the flags
 
-`result.flags` names every caveat the evidence raised, from a fixed list of 16 (`starfold.result.FLAG_VOCABULARY`). `starfold.load` recomputes them from the stored arrays instead of trusting the saved list. The most common:
+`result.flags` names every caveat the evidence raised, from a fixed list of 17 (`starfold.result.FLAG_VOCABULARY`). `starfold.load` recomputes them from the stored arrays instead of trusting the saved list. The most common:
 
 - `search_stopped_early` or `search_budget_exhausted`: one of the two is always present and says only how the search ended.
 - `null_not_run`: the calibration test did not run inside `recover` (the default). A separate `null_test` returns its own evidence and leaves this flag in place.
@@ -80,7 +80,7 @@ To run it inside `recover` instead, pass `config=starfold.Config(null_families=(
 - `consensus_disagrees`: the partition cut from the refits agrees poorly with `labels`.
 - `no_structure_supported`: the calibration test ran and its p-value is above `alpha`.
 
-The manual's [flag reference](https://andreaswneitzel.github.io/Starfold/reference/flags.html) lists all 16, each with its meaning and what to do about it.
+The manual's [flag reference](https://andreaswneitzel.github.io/Starfold/reference/flags.html) lists all 17, each with its meaning and what to do about it.
 
 ## Scope and limits
 

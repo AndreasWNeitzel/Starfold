@@ -346,7 +346,7 @@ print(f"peak host memory: {prov['peak_rss_mb']:.0f} MB")
 # it from the evidence, so a script can test for it as well as a person. Read
 # the flags before any number.
 #
-# Starfold defines 16 flags. The cell below gives each one a plain-language
+# Starfold defines 17 flags. The cell below gives each one a plain-language
 # meaning in `FLAG_TEXT` and prints the ones this run raised. It stops with an
 # error if your Starfold version has a different list of flags. The manual
 # lists them all: https://andreaswneitzel.github.io/Starfold/reference/flags.html
@@ -374,6 +374,7 @@ FLAG_TEXT = {
     "refit outcome is noise rather than its group",
     "count_unstable": "fewer than half of the refits found the same number of groups "
     "as the fit on all rows",
+    "search_trial_failures": "at least one search trial raised an error; see its error field",
     "world_fit_failures": "at least one refit raised an error; see result.worlds.world_errors",
     "consensus_subsampled": "the co-association check ran on a seeded subset of rows "
     "to stay inside its memory budget",
@@ -398,7 +399,7 @@ for flag in result.flags:
     print(f"- {flag}: {FLAG_TEXT[flag]}")
 
 # %% [markdown]
-# **Reading the flags.** The stored run raised 4 of the 16 flags. Two only
+# **Reading the flags.** The stored run raised 4 of the 17 flags. Two only
 # describe the run: `search_budget_exhausted` (the search used all 48 trials)
 # and `null_not_run` (the test was off). The other two are warnings to follow
 # up:

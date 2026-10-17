@@ -13,6 +13,7 @@ New code base and API. Code written for 0.0.1 needs porting.
 - `save` and `load` write checksummed JSON and NumPy arrays and re-derive the flags on load. Results saved by 0.0.1 do not load.
 - Removed: `UnsupervisedPipeline`, `PipelineResult`, and every 0.0.1 helper, plotting function and dashboard.
 - `starfold.search` stays the search function after other public names load (it used to become the submodule).
+- New flag `search_trial_failures`: at least one search trial raised an error. When every trial fails, the selected setting is the failed trial 0, and the flag says so.
 - Provenance records the measurement model (`measurement`: none, an `X_err` fingerprint, or the sampler name) and the pynndescent version.
 - `load` refuses a manifest that is unreadable or lacks a checksum, and `save` writes each array with `allow_pickle=False` on every supported NumPy.
 - `measurement_draw` and `run_worlds` refuse negative uncertainties. `search_stopped_early` now means fewer than `n_trials` trials ran.

@@ -288,7 +288,7 @@ print(f"saved to {RUN}")
 # ## Flags
 #
 # A flag is a short name for one weakness, limit or event of a run, derived from the stored
-# evidence, so that a script can check it. Starfold defines 16. A flag tells you where to look;
+# evidence, so that a script can check it. Starfold defines 17. A flag tells you where to look;
 # it is not always a fault. `null_not_run` is expected, because the calibration test was not
 # run. So is `consensus_subsampled` on all stars, because the co-association check below uses
 # 4,096 of them. The cell prints each raised flag with a one-line reading. Terms in it, such as
@@ -305,6 +305,7 @@ MEANING = {
     "no_groups_in_reference": "the fit on all stars found no groups",
     "high_unresolved_mass": "the mean unresolved mass is above 0.5",
     "count_unstable": "fewer than half the refits find the partition's number of groups",
+    "search_trial_failures": "at least one search trial raised an error; see its error field",
     "world_fit_failures": "at least one refit raised an error; see result.worlds.world_errors",
     "consensus_subsampled": "the co-association check ran on a seeded subset of stars",
     "consensus_disagrees": "the cut of the co-association matrix agrees with the partition "

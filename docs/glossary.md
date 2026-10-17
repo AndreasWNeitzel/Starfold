@@ -72,7 +72,7 @@ engine
 
 flag
   A short name for one event or weakness in a run, derived from the evidence arrays so that people and scripts can check it.
-  Starfold lists all 16 in `result.flags` ({doc}`/reference/flags`).
+  Starfold lists all 17 in `result.flags` ({doc}`/reference/flags`).
 
 fresh re-score
   A second scoring of the best {term}`trials <trial>` and the defaults on new subsets and new {term}`structureless copies <structureless copy>`.
