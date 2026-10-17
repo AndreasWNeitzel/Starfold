@@ -261,8 +261,8 @@ def measurement_draw(
         if x_err_rows.shape != x_rows.shape:
             msg = f"x_err_rows shape {x_err_rows.shape} differs from x_rows {x_rows.shape}."
             raise ValueError(msg)
-        if not np.all(np.isfinite(x_err_rows)):
-            msg = "x_err_rows must be finite."
+        if not np.all(np.isfinite(x_err_rows)) or np.any(x_err_rows < 0):
+            msg = "x_err_rows must be finite and non-negative."
             raise ValueError(msg)
         return x_rows + x_err_rows * rng.standard_normal(x_rows.shape)
     if sampler is not None:

@@ -1,4 +1,4 @@
-# Tutorial: two disc populations in 9,242 APOGEE stars, part 1
+# Tutorial: two groups in 9,242 APOGEE stars, part 1
 
 ```{eval-rst}
 .. index::
@@ -157,15 +157,21 @@ unresolved mass 0.154
 
 Unassigned stars (what the digits tutorial calls {term}`noise`) are stars that no dense region claimed. They are not bad measurements.
 
-- {term}`Recurrence` is how often a group comes back across {term}`refit` fits. Each group is matched with the best-overlapping refit group, and the overlap is the {term}`Jaccard index`. Both groups average above 0.85, the descriptive mark that Hennig (2007, doi:10.1016/j.csda.2006.11.025) gives for a highly stable group.
+- {term}`Recurrence` is how often a group comes back across {term}`refit` fits. Each group is matched with the best-overlapping refit group, and the overlap is the {term}`Jaccard index`. Both groups average above 0.85, the mark that the help page of the R function `clusterboot` (Hennig, R package fpc, [clusterboot help](https://rdrr.io/cran/fpc/man/clusterboot.html)) gives for a highly stable cluster.
 - The {term}`count interval` is 2 to 2: 31 of the 32 refits found 2 groups and one found 3. It is a {term}`stability interval`, the range over refits. It is not a {term}`confidence interval` for a true number of groups.
 - The {term}`unresolved mass` is 0.154: on average, 15 percent of a star's refit outcomes were "no group".
 
 The chosen {term}`setting` is worth a look too:
 
 ```python
+def show(value):
+    return f"{value:.3g}" if isinstance(value, float) else str(value)
+
+
+settings = (result.params, result.deployed_params, result.default_params)
+print(f"{'':18}{'on subsets':>12}{'all stars':>12}{'defaults':>12}")
 for field in result.params.to_dict():
-    print(f"{field:18}{getattr(result.params, field)!s:>12}{getattr(result.deployed_params, field)!s:>12}")
+    print(f"{field:18}" + "".join(f"{show(getattr(s, field)):>12}" for s in settings))
 ```
 
 The notebook prints a table of three columns. You see:

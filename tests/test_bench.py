@@ -15,7 +15,7 @@ from bench import backend_agreement, controls, datasets, injection_recovery, nul
 from bench.beats_default import trial_spearman
 from sklearn.datasets import load_digits
 
-from starfold import Config
+from starfold import Config, Space
 
 RESULTS = Path(__file__).resolve().parent.parent / "bench" / "results"
 
@@ -217,11 +217,18 @@ def test_inject_adds_contrast_times_k_rows_per_group() -> None:
     assert np.bincount(injection[injection >= 0]).tolist() == [20, 20]
 
 
-def test_config_from_provenance_drops_space_and_unknown_keys() -> None:
+def test_config_from_provenance_keeps_space_and_drops_unknown_keys() -> None:
     config = null_stage.config_from_provenance(
-        {"n_trials": 20, "n_explore": 8, "space": {"n_neighbors": [5, 50]}, "retired": 1}
+        {
+            "n_trials": 20,
+            "n_explore": 8,
+            "space": {"n_neighbors": [5, 50], "min_cluster_size": None},
+            "retired": 1,
+        }
     )
-    assert config == Config(n_trials=20, n_explore=8)
+    assert config == Config(n_trials=20, n_explore=8, space=Space(n_neighbors=(5, 50)))
+    with pytest.raises(ValueError, match="unknown bounds"):
+        null_stage.config_from_provenance({"space": {"n_neighbors_range": [30, 40]}})
 
 
 def test_searched_ranking_reads_the_best_trial() -> None:

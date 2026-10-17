@@ -21,11 +21,11 @@ This page lists every field of `Config` and `Space` with its type, default, mean
 
 A fit is one run of {term}`UMAP` followed by {term}`HDBSCAN`. Costs are counted in fits because wall time depends on the machine. Recorded runs with the default `Config` and the calibration test off used 314 fits on Digits (1,797 rows), 334 on APOGEE (9,242 rows) and 258 on Letter (20,000 rows). These numbers come from each run's provenance and are recorded in the benchmark results. Wall time per fit is not measured here.
 
-`Config(...)` raises `ValueError` in four cases: a range is empty or reaches zero on a log axis, `n_explore` is not a power of two, `n_null_max` cannot reach `alpha`, or a value is outside the range in the tables below. The message names the field.
+`Config(...)` raises `ValueError` in four cases: a numeric range is empty or reaches zero on a log axis, `n_explore` is not a power of two, `n_null_max` cannot reach `alpha`, or a budget is outside the range in the tables below. The message names the field. `Config` does not catch every unusable `Space`. An empty `selection_method` tuple, or `min_dist` bounds outside 0 to 1, pass construction and fail later in the search.
 
 ## `Space`
 
-`Space` holds the ranges of the six {term}`setting` values that the search may propose. Every field is a tuple of bounds, inclusive at both ends. {term}`Trial <trial>` 0 is always the library default, moved to the nearest bound when a bound excludes it.
+`Space` holds the ranges of the six {term}`setting` values that the search may propose. The five numeric fields are tuples of bounds, inclusive at both ends. `selection_method` is a tuple of allowed choices. {term}`Trial <trial>` 0 is always the library default, with each numeric value moved to the nearest bound when a bound excludes it. Its selection method is `"eom"` when offered, otherwise the first choice you list.
 
 | Field | Type and default | What it controls | Cost effect |
 |---|---|---|---|
@@ -33,7 +33,7 @@ A fit is one run of {term}`UMAP` followed by {term}`HDBSCAN`. Costs are counted 
 | `min_dist` | `tuple[float, float]`, `(0.0, 0.5)` | Bounds of {term}`min_dist`, searched on a linear scale. | Not measured. |
 | `n_components` | `tuple[int, int]`, `(2, 10)` | Bounds of {term}`n_components`, searched on a linear integer scale. | Not measured. |
 | `min_cluster_size` | `tuple[int, int] or None`, `None` | Bounds of {term}`min_cluster_size`, searched on a log scale. `None` means `[5, min(max(50, n // 20), 1023)]` with `n` the number of rows. | Not measured. |
-| `min_samples_fraction` | `tuple[float, float]`, `(0.05, 1.0)` | Bounds of `min_samples / min_cluster_size` (see {term}`min_samples`), searched on a log scale. | Not measured. |
+| `min_samples_fraction` | `tuple[float, float]`, `(0.05, 1.0)` | Bounds of `min_samples / min_cluster_size` (see {term}`min_samples`), searched on a log scale. The ratio cannot exceed 1, because `min_samples` is capped at `min_cluster_size`. A lower bound above 1 is not rejected and cannot be honoured. | Not measured. |
 | `selection_method` | `tuple[str, ...]`, `("eom", "leaf")` | The allowed values of the {term}`selection method`. | None. |
 
 ## `Config`: search
@@ -66,7 +66,7 @@ These fields set the {term}`refit` count, the {term}`consensus check` and the op
 | `world_fraction` | `float`, `0.8` | Fraction of rows each refit draws without replacement, strictly between 0 and 1. | Not measured. |
 | `null_families` | `tuple[str, ...]`, `()` | Families of {term}`structureless copy` for the calibration test inside `recover`. Empty means the test does not run (`null_not_run`). | See `n_null_max`. |
 | `null_procedure` | `"exploration"` or `"full_search"`, `"exploration"` | What each copy replays: the `n_explore + 1` opening trials, or the whole search. | `"exploration"`: 102 fits per copy at the defaults. `"full_search"`: higher, not measured. |
-| `n_null_max` | `int`, `19` | Largest number of copies per family. Must be at least `ceil(1 / alpha) - 1`. | Up to 1,938 fits at 19 copies, about six times the rest of a run. |
+| `n_null_max` | `int`, `19` | Largest number of copies per family. Must be at least `ceil(1 / alpha) - 1`. | Up to 1,938 fits per family at 19 copies, about six times the rest of a run. Each extra family adds as many. |
 | `null_exceedances` | `int`, `3` | The family stops once this many copies reach the table's value. At least 1. | Stops the test sooner when the table is not distinguishable. |
 | `alpha` | `float`, `0.05` | The {term}`alpha` level for `structure_supported`. Strictly between 0 and 1. | Smaller `alpha` forces a larger `n_null_max`. |
 | `consensus_budget_bytes` | `int`, `536870912` (512 MiB) | Memory the co-association matrices may use. | The dense check needs `16 * n**2` bytes, so it fits up to 5,792 rows at the default. |

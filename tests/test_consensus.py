@@ -351,3 +351,42 @@ def test_association_contrast_matches_pairwise_means():
     other = [(i, j) for i in assigned for j in assigned if reference[i] != reference[j]]
     assert within == pytest.approx(np.mean([1.0 - distance[i, j] for i, j in same]), abs=1e-12)
     assert between == pytest.approx(np.mean([1.0 - distance[i, j] for i, j in other]), abs=1e-12)
+
+
+@pytest.mark.parametrize(
+    ("reference_value", "world_value", "cut_value", "expected_within"),
+    [(-1, -1, -1, None), (0, 0, 0, 0.875)],
+)
+def test_consensus_check_degenerate_reference_groups(
+    monkeypatch, reference_value, world_value, cut_value, expected_within
+):
+    n_worlds, n_rows = 4, 8
+    reference = np.full(n_rows, reference_value, dtype=np.int32)
+    world_labels = np.full((n_worlds, n_rows), world_value, dtype=np.int16)
+    cut_labels = np.full(n_rows, cut_value, dtype=np.int32)
+
+    class FixedCut:
+        def __init__(self, **_kwargs):
+            self.labels_ = cut_labels.copy()
+
+        def fit(self, distance):
+            assert distance.shape == (n_rows, n_rows)
+            return self
+
+    monkeypatch.setattr("starfold.consensus.HDBSCAN", FixedCut)
+    check = consensus_check(
+        world_labels,
+        _params(min_cluster_size=2, min_samples=1),
+        reference,
+        budget_bytes=16 * n_rows * n_rows,
+        check_rows=n_rows,
+        seed=0,
+    )
+
+    assert check.agreement == 0.0
+    assert np.isnan(check.between_association)
+    assert np.isnan(check.contrast)
+    if expected_within is None:
+        assert np.isnan(check.within_association)
+    else:
+        assert check.within_association == pytest.approx(expected_within)

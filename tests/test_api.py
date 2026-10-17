@@ -45,7 +45,7 @@ def test_search_stays_a_function_after_other_names_load() -> None:
         ({"n_resamples": 1}, "at least 2"),
         ({"resample_fraction": 1.0}, "between 0 and 1"),
         ({"n_worlds": 1}, "between 2 and 32767"),
-        ({"n_null_max": 5}, "cannot reach alpha"),
+        ({"n_null_max": 5}, "too small to attain alpha"),
         ({"alpha": 0.0}, "alpha"),
         ({"null_families": ("elliptical_gaussian",)}, "null_families"),
         ({"null_procedure": "search"}, "null_procedure"),
@@ -213,3 +213,74 @@ def test_null_test_evidence_does_not_depend_on_n_jobs(two_blobs) -> None:
     assert serial.skipped_reason is None
     assert sum(serial.n_realisations) > 0
     assert replace(concurrent, seconds=0.0) == replace(serial, seconds=0.0)
+
+
+def test_null_stage_full_search_uses_selected_score_and_full_replay(monkeypatch):
+    replay_modes = []
+    marker = object()
+
+    def search(_x, **kwargs):
+        replay_modes.append(kwargs.get("exploration_only", False))
+        return SimpleNamespace(score_selected=0.2, exploration_max=0.4, n_fits=5)
+
+    def null_test(x, observed, statistic, *, statistic_name, **_kwargs):
+        assert observed == 0.75
+        assert statistic_name == "full_search_max"
+        assert statistic(np.ones_like(x)) == (0.2, 5)
+        return marker
+
+    monkeypatch.setattr(api, "_search", search)
+    monkeypatch.setattr("starfold.nulls.null_test", null_test)
+    x = np.zeros((8, 2))
+    searched = SimpleNamespace(
+        score_selected=0.75,
+        exploration_max=0.4,
+        plan=SimpleNamespace(m=6),
+    )
+
+    result = _null_stage(
+        x,
+        searched,
+        config=Config(
+            null_procedure="full_search",
+            null_families=("gaussian_copula",),
+        ),
+        random_state=0,
+        engine="cpu",
+        n_jobs=1,
+    )
+
+    assert result is marker
+    assert replay_modes == [False]
+
+
+def test_recover_rejects_nonpositive_job_count_before_search(monkeypatch):
+    monkeypatch.setattr(
+        api,
+        "_search",
+        lambda *_args, **_kwargs: pytest.fail("search must not start"),
+    )
+
+    with pytest.raises(ValueError, match="n_jobs"):
+        recover(np.ones((60, 3)), engine="cpu", n_jobs=0)
+
+
+def test_recover_auto_fallback_passes_cpu_to_search(monkeypatch):
+    monkeypatch.setattr(
+        _engine,
+        "_cuml_probe",
+        lambda: (False, "ImportError: no cuml"),
+    )
+
+    def stop_search(_x, *, engine, **_kwargs):
+        assert engine == "cpu"
+        raise _StageReachedError
+
+    monkeypatch.setattr(api, "_search", stop_search)
+    x = np.ones((60, 3))
+
+    with (
+        pytest.warns(RuntimeWarning, match="running on the CPU"),
+        pytest.raises(_StageReachedError),
+    ):
+        recover(x, engine="auto")

@@ -415,6 +415,15 @@ def test_search_stop_reasons(monkeypatch, step, reason, n_ran):
     assert result.stop_reason == reason
 
 
+def test_patience_on_the_final_trial_reports_the_budget(monkeypatch):
+    config = Config(n_trials=6, n_explore=2, patience=2, min_improvement=0.01)
+    fixed = dict.fromkeys(_design(config, 120, 11), (0.5, 0.5))
+    evaluator = FakeEvaluator(fixed, sequence=[(0.3, 0.5)] * 6)
+    result, _log = _run(monkeypatch, config, evaluator)
+    assert len(result.trials) == 6
+    assert result.stop_reason == "budget"
+
+
 def test_search_keeps_the_default_on_a_fresh_tie(monkeypatch):
     config = Config(n_trials=6, n_explore=2, n_rescore=2)
     design = _design(config, 120, 11)

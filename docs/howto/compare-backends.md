@@ -41,6 +41,7 @@ This guide fits one setting on both backends with `starfold.compare_backends` an
 3. Read the three numbers per seed.
 
    ```python
+   print(agreement.ari, agreement.coverage, agreement.agreement)
    print(agreement.mean_normalised)
    print(agreement.n_groups_cpu, agreement.n_groups_cuml)
    ```

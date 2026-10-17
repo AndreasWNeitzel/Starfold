@@ -336,9 +336,9 @@ if not result.flags:
 #   for the group that overlaps it best. The overlap is the Jaccard index: the stars the two
 #   share divided by the stars in either. 1 is identical membership and 0 is none. Recurrence is
 #   the average over refits, so 1 means the group comes back with the same members every time.
-#   The printed 5 to 95 percent band is the range of that overlap over refits. Hennig (2007,
-#   doi:10.1016/j.csda.2006.11.025) reads 0.85 and above as highly stable and 0.5 and below as
-#   dissolved.
+#   The printed 5 to 95 percent band is the range of that overlap over refits. The help page
+#   of the R function `clusterboot` (Hennig, R package fpc) reads a mean of 0.85 and above as
+#   highly stable. It says a Jaccard of 0.5 or less in one resample means the cluster dissolved.
 # - **Count interval.** The number of groups each refit found, summarised by its 5th to 95th
 #   percentile. `interval 2 to 2` means both percentiles are 2, so nearly every refit found 2
 #   groups. It is a stability interval (the range over refits), not a confidence interval for
@@ -379,10 +379,11 @@ print(f"interval {worlds.count_interval[0]} to {worlds.count_interval[1]}")
 print(f"unresolved mass {result.unresolved_mass:.3f}")
 
 # %% [markdown]
-# In the recorded run, both groups have recurrence above Hennig's 0.85 mark, with bands that stay
-# above it. 31 refits found 2 groups and one found 3, which falls outside the 5 to 95 percent
-# interval. The unresolved mass of 0.154 means most stars keep a group across refits. Together
-# these say the split is reproducible under resampling. They do not say it is the true split.
+# In the recorded run, both groups have recurrence above the clusterboot 0.85 mark, with bands
+# that stay above it. 31 refits found 2 groups and one found 3, which falls outside the 5 to 95
+# percent interval. The unresolved mass of 0.154 means most stars keep a group across refits.
+# Together these say the split is reproducible under resampling. They do not say it is the true
+# split.
 #
 # ## The setting the search chose
 #
@@ -882,7 +883,7 @@ print(
 # - *groups per refit*: the count interval over the 32 refits. "2 to 2" means nearly every
 #   refit found two groups (31 of 32 in this run).
 # - *group recurrence*: the mean best Jaccard overlap of each group with the refit groups, with
-#   its 5 to 95 percent band over refits. Both groups are above Hennig's 0.85 mark.
+#   its 5 to 95 percent band over refits. Both groups are above the clusterboot 0.85 mark.
 # - *unresolved mass*: on average, 15 percent of a star's refit outcomes were "no group".
 # - *co-association within, between, contrast*: the refits that assigned both stars of a pair
 #   put them together 98 percent of the time for pairs in the same group, and 0.3 percent of the

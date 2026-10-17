@@ -29,7 +29,7 @@ If you fit the groups on one random part of your table, do the same groups come 
 
 Starfold draws three random subsets of your {term}`row`s, each holding 80 percent of them. It fits UMAP and HDBSCAN on each subset. For every ordered pair of subsets (A, B), it takes the rows that are in B but not in A. Six pairs exist with three subsets.
 
-For each such row, Starfold looks at the 15 closest rows that A did see ({term}`nearest neighbours`, measured in your {term}`column`s after {term}`scaling`, found exactly). It gives the row the most common {term}`group` label among them. Noise counts as a label, so a row whose neighbours are mostly {term}`noise` is predicted as noise. The prediction is then compared with the label that the fit on B gave the same row.
+For each such row, Starfold looks at the 15 closest rows that A did see (all of them when A saw fewer) ({term}`nearest neighbours`, measured in your {term}`column`s after {term}`scaling`, found exactly). It gives the row the most common {term}`group` label among them. Noise counts as a label, so a row whose neighbours are mostly {term}`noise` is predicted as noise. The prediction is then compared with the label that the fit on B gave the same row.
 
 The comparison uses the {term}`adjusted Rand index` (ARI). The index looks at every pair of rows and asks whether the two labellings treat the pair alike (together in both, or apart in both). Group numbers do not matter, only who sits with whom. Here are three toy labellings of the same six rows, compared with the labelling `0 0 0 1 1 1`:
 

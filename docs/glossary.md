@@ -24,7 +24,7 @@ alpha
 
 column
   One quantity measured for every object in your table, such as a pixel value or an abundance.
-  Starfold gives every column equal weight after {term}`scaling`, so the columns you choose define what "similar" means ({doc}`/howto/prepare-table`).
+  Starfold puts every column on a common scale with {term}`scaling`, which does not give each column equal influence, so the columns you choose define what "similar" means ({doc}`/howto/prepare-table`).
 
 confidence interval
   A range computed by a rule that covers the true value in a stated share of repeated studies.
@@ -84,10 +84,10 @@ full fit
 
 gap
   The {term}`score` of a setting on your table minus its score on a {term}`structureless copy`.
-  Starfold maximises it, so a setting that scores as well on structureless data gains nothing ({doc}`/metrics/gap`).
+  Starfold maximises it by default, so a setting that scores as well on structureless data gains nothing. With `Config(gap_family=None)` it maximises the score instead ({doc}`/metrics/gap`).
 
 Gaussian copula
-  A way to draw a random table that keeps every column's values and the correlations between columns, by converting each column to normal scores, drawing from a multivariate normal and reordering the values to match.
+  A way to draw a random table that keeps every column's values exactly and couples the columns through one Gaussian dependence. It converts each column to normal scores, fits a shrunk correlation to them, draws from a multivariate normal with it and reorders the values to match. The copy's correlations come close to the table's but are not exact, and two peaks in one column stay.
   Starfold uses it as its default family of {term}`structureless copy` ({doc}`/concepts/copies-and-gaps`).
 
 group
@@ -148,7 +148,7 @@ noise
 
 null hypothesis
   The default claim that a test tries to reject.
-  Starfold's null hypothesis is that your table is one structureless population from the declared copy family, and the {term}`p-value` holds only for that family ({doc}`/metrics/calibration-p`).
+  Starfold's null hypothesis is that your table is one structureless population from the declared copy family, and the {term}`p-value` holds only for that family and the procedure simulated ({doc}`/metrics/calibration-p`).
 
 Optuna
   A Python library that searches for good values of a set of numbers by proposing them, receiving a score and using the scores so far to propose the next.
@@ -159,7 +159,7 @@ partition
   Group numbers are arbitrary names, so two partitions agree when they split the rows alike and not when they use the same numbers ({doc}`/concepts/pipeline`).
 
 p-value
-  The share of {term}`structureless copies <structureless copy>` whose statistic is at least as high as the table's, counting the table as one more draw. If the table is itself a draw from the copy family, p is spread about evenly over its possible values.
+  The share of {term}`structureless copies <structureless copy>` whose statistic is at least as high as the table's, counting the table as one more draw. If the table is itself a draw from the copy family, p at or below 0.05 comes up at most about 5 percent of the time. With several families, Starfold reports the largest of their p-values.
   Starfold prints `null.p_value`; a small value means the table beats almost every copy, and it is not the probability that the groups are real ({doc}`/metrics/calibration-p`).
 
 posterior
@@ -179,7 +179,7 @@ pruning
   Starfold prunes only convergence trials, after two of their three fits ({doc}`/concepts/optuna`).
 
 recurrence
-  How much of a group comes back in the {term}`refits <refit>`: for each refit, the best {term}`Jaccard index` match of the group, averaged over refits. 1 means the same rows every time and 0 means the group never comes back.
+  How much of a group comes back in the {term}`refits <refit>`: for each refit, the best {term}`Jaccard index` match of the group, averaged over refits. 1 means a refit group holds exactly the drawn members every time and 0 means the group never comes back.
   Starfold's group recurrence, {term}`support` and {term}`unresolved mass` all measure it, and none is a {term}`posterior` ({doc}`/metrics/recurrence`).
 
 refit
@@ -199,7 +199,7 @@ scaling
   Starfold fits the scaler inside each subset on its own rows only, with `"standard"` (mean and standard deviation) or `"robust"` (median and interquartile range) ({doc}`/howto/choose-scaling`).
 
 score
-  The one number per {term}`setting` that Starfold maximises: the cube root of the product of {term}`prediction agreement`, {term}`coverage` and {term}`modularity`.
+  The one number per {term}`setting` on your table, the base of the {term}`gap` that the search maximises by default: the cube root of the product of {term}`prediction agreement`, {term}`coverage` and {term}`modularity`.
   It is 0 whenever any of the three is 0 and it never reads the number of groups ({doc}`/metrics/score`).
 
 seed
@@ -231,7 +231,7 @@ strengths
   They are not probabilities; Starfold stores them as `result.strengths` ({doc}`/metrics/strengths`).
 
 structureless copy
-  A version of your table that keeps every value of every column and changes only which row each value sits in, so that no groups remain, and every number in it was measured.
+  A version of your table that keeps every value of every column and changes only which row each value sits in, so that structure across columns is lost, and every number in it was measured. Structure inside one column, such as two peaks, stays.
   Starfold scores settings on it to compute the {term}`gap` and runs the calibration test on it ({doc}`/concepts/copies-and-gaps`).
 
 support
@@ -243,12 +243,12 @@ own support
   Starfold keeps it as `result.worlds.own_support`, and it is NaN for {term}`noise` rows ({doc}`/metrics/support`).
 
 TPE
-  The tree-structured Parzen estimator, an Optuna sampler that sorts earlier trials into good and poor and proposes new settings where the good ones sit.
+  The tree-structured Parzen estimator, an Optuna sampler that sorts earlier trials into good and poor, draws candidates near the good ones and keeps the one most typical of good trials and least typical of poor ones.
   Starfold uses it after the {term}`Sobol design`, in its multivariate form ({doc}`/concepts/optuna`).
 
 trial
   One proposed {term}`setting` with its {term}`score`.
-  Starfold runs up to 48 trials, and trial 0 is always the library defaults ({doc}`/concepts/optuna`).
+  Starfold runs up to 48 trials, and trial 0 is the library defaults, moved to the nearest bound if your ranges exclude them ({doc}`/concepts/optuna`).
 
 UMAP
   A method that turns a table into a low-dimensional map by arranging rows so that each row stays near its most similar rows.

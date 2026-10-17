@@ -27,7 +27,7 @@ Cite the software and the methodological paper. The repository file `CITATION.cf
 2. The paper Starfold grew out of: Neitzel, A. W., Campante, T. L., Bossini, D., and Miglio, A. 2025, Astronomy & Astrophysics 695, A243, [doi:10.1051/0004-6361/202451718](https://doi.org/10.1051/0004-6361/202451718).
 3. The tools: McInnes, Healy and Melville (2018) for UMAP, Campello, Moulavi and Sander (2013) and McInnes, Healy and Astels (2017) for HDBSCAN, and Akiba et al. (2019) for Optuna.
 
-Also cite the method papers for any number you report. The group recurrence (the best Jaccard match of a group over resamples) follows the cluster-wise stability of Hennig (2007), which says nothing on choosing the number of groups. The gap follows Tibshirani, Walther and Hastie (2001). The p-value follows Phipson and Smyth (2010) and Besag and Clifford (1991). The co-association check follows Fred and Jain (2005) and Monti et al. (2003).
+Also cite the method papers for any number you report. The group recurrence (the best Jaccard match of a group over resamples) follows the cluster-wise stability of Hennig (2007), which says nothing on choosing the number of groups. The 0.85 and 0.5 marks come from the `clusterboot` help page of the R package fpc (Hennig, fpc: Flexible Procedures for Clustering, https://CRAN.R-project.org/package=fpc), not from the paper. The gap follows Tibshirani, Walther and Hastie (2001). The p-value follows Phipson and Smyth (2010) and Besag and Clifford (1991). The co-association check follows Fred and Jain (2005) and Monti et al. (2003).
 
 ## BibTeX for the software and the tools
 

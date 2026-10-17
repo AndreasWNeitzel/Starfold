@@ -179,6 +179,8 @@ def test_measurement_draw_rejects_bad_shapes_and_values(single_gaussian):
         measurement_draw(single_gaussian, rows, rng, x_err_rows=np.zeros((200, 4)))
     bad_err = np.zeros_like(single_gaussian)
     bad_err[0, 0] = np.nan
+    with pytest.raises(ValueError, match="non-negative"):
+        measurement_draw(single_gaussian, rows, rng, x_err_rows=-np.ones_like(single_gaussian))
     with pytest.raises(ValueError, match="x_err_rows must be finite"):
         measurement_draw(single_gaussian, rows, rng, x_err_rows=bad_err)
     with pytest.raises(ValueError, match="sampler returned shape"):

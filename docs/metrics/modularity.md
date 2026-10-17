@@ -18,7 +18,7 @@ Do the {term}`group`s follow the neighbourhoods in your own table, before any ma
 
 ## A picture
 
-A graph is a set of dots joined by lines. Here each dot is a {term}`row` of your table, and each row is joined to its 15 {term}`nearest neighbours`, measured in your {term}`column`s after {term}`scaling`. The search is exact up to 20,000 rows per subset and approximate above that. The map that UMAP draws is not used, so UMAP cannot invent a separation that this term would reward. Starfold drops the direction of the lines: two rows are joined if either one lists the other. Every line counts the same.
+A graph is a set of dots joined by lines. Here each dot is a {term}`row` of your table, and each row is joined to up to 15 {term}`nearest neighbours` (all other rows on a subset of 16 rows or fewer), measured in your {term}`column`s after {term}`scaling`. The search is exact up to 20,000 rows per subset and approximate above that. The map that UMAP draws is not used, so UMAP cannot invent a separation that this term would reward. Starfold drops the direction of the lines: two rows are joined if either one lists the other. Every line counts the same.
 
 A community is a set of dots that are joined to each other more than chance would join them. Modularity scores a labelling of the dots by counting the lines that stay inside the groups. It compares that count with the count expected if the same dots were joined at random, each keeping its number of lines.
 
@@ -32,7 +32,7 @@ High picture: two dense clumps of dots, each joined almost only to itself, with 
 | Perfect result | approaches 1 as the groups grow in number and isolation, never reaches it |
 | Pure chance | about 0 |
 
-Rows in {term}`noise` keep their lines in the graph but belong to no group, so they lower the value. One group that holds every row gives exactly 0. A graph with no lines gives 0.
+Rows in {term}`noise` keep their lines in the graph but belong to no group. Their lines count in the total, never as lines inside a group, so their effect on the value depends on the graph. One group that holds every row gives exactly 0. A graph with no lines gives 0.
 
 ## How to read a value
 

@@ -63,7 +63,7 @@ The errors enter the {term}`refit` stage only. They do not change the search for
   result = starfold.recover(X_kept, measurement_sampler=sampler, random_state=0)
   ```
 
-  The function receives a copy of the sampled rows, the positions of those rows in the matrix of kept rows, and a NumPy random generator. It returns an array of the same shape with finite values. With `n_jobs` above 1 it must be picklable ({doc}`run-parallel`). Use the generator it gives you, so the draws follow `random_state`.
+  The function receives a copy of the sampled rows, the positions of those rows in the matrix of kept rows, and a NumPy random generator. It returns an array of the same shape with finite values. With `n_jobs` above 1 it must be picklable ({doc}`run-parallel`). Use the generator it gives you, so the draws follow `random_state`. Draw only from that generator and keep no state between calls, or the refits stop being independent.
 
 - **No errors.** Leave both arguments out. The refits then differ only in which rows they drew.
 

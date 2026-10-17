@@ -19,7 +19,7 @@ Did the search find a setting that scores better than the UMAP and HDBSCAN defau
 
 ## A picture
 
-Trial 0 of every search is the library defaults. Starfold weighs them like any other setting, so you always see what the tools would have given without a search. At the end, the top three complete trials and the defaults are scored again on new subsets and three new {term}`structureless copy`s. The setting with the largest fresh {doc}`gap` is chosen, and ties go to the defaults.
+Trial 0 of every search is the library defaults. Starfold weighs them like any other setting, so you always see what the tools would have given without a search. At the end, the top three complete trials and the defaults are scored again on new subsets and three new {term}`structureless copy`s. The setting with the largest fresh {doc}`gap` is chosen. Ties go to the lowest trial number, so the defaults win any tie they are part of.
 
 High picture: the chosen setting has a fresh gap of 0.372 and the defaults have -0.001 (recorded APOGEE run). The defaults do no better on the data than on a copy, and the chosen setting does. The fresh re-score reduces the winner's curse, but does not remove it. Low picture: the two fresh scores differ by less than the noise between subsets. Then the choice between them is not resolved, even when the chosen gap is larger.
 

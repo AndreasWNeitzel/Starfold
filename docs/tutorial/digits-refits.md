@@ -92,9 +92,9 @@ The notebook prints the group size too. You see:
 
 ![Three panels: recurrence of each group with its band, group sizes in rows, and recurrence against purity.](../figures/manual/01_04.png)
 
-Read it aloud. In the left panel, each black dot is a group, with its recurrence on the vertical axis and a bar for its 5 to 95 percent band. The dotted blue line at 0.85 and the dashed orange line at 0.5 are descriptive marks from Hennig (2007, doi:10.1016/j.csda.2006.11.025) for cluster-wise stability. A mean Jaccard index of about 0.85 or more is highly stable, and about 0.5 or less is dissolved. The middle panel shows group sizes in rows. In the right panel, each dot is a group, coloured by size. Recurrence is on the horizontal axis. The vertical axis is the share of its rows that have the group's majority digit (post hoc).
+Read it aloud. In the left panel, each black dot is a group, with its recurrence on the vertical axis and a bar for its 5 to 95 percent band. The dotted blue line at 0.85 and the dashed orange line at 0.5 are the marks of the R function `clusterboot` (Hennig, R package fpc, [clusterboot help](https://rdrr.io/cran/fpc/man/clusterboot.html)). Its help page calls a mean Jaccard of 0.85 or more highly stable. It says a Jaccard of 0.5 or less in one resample means the cluster dissolved. The middle panel shows group sizes in rows. In the right panel, each dot is a group, coloured by size. Recurrence is on the horizontal axis. The vertical axis is the share of its rows that have the group's majority digit (post hoc).
 
-A good picture has dots near 1 with short bars, as groups 0 and 1 have. A bad picture has dots near or below the dashed line with bars that run down to 0. Group 5 has 19 rows, a recurrence of 0.45 and a band from 0.02 to 0.94: by Hennig's marks it is dissolved. Groups 2 to 9 have bars that reach below 0.3, so in some refits their best overlap is poor.
+A good picture has dots near 1 with short bars, as groups 0 and 1 have. A bad picture has dots near or below the dashed line with bars that run down to 0. Group 5 has 19 rows, a recurrence of 0.45 and a band from 0.02 to 0.94: its mean matches the `clusterboot` dissolution mark. Groups 2 to 9 have bars that reach below 0.3, so in some refits their best overlap is poor.
 
 Decision: the marks are for reading, not filters, and Starfold does not remove group 5. Only groups 0 and 1 recur almost unchanged. Group 5 (0.45) is below the 0.5 mark. Groups 2, 3, 4, 6, 7, 8 and 9 (0.54 to 0.84) sit between the two marks, so report them as groups whose membership changes with the rows drawn. Group 3 at 0.54 is the clearest case, and {doc}`../metrics/recurrence` says what to do with it. A group can recur and still be impure: the right panel has a large group (group 3, 324 rows) with 56 percent purity.
 
@@ -175,7 +175,7 @@ Decision: keep the folder with the script and the seed. Together they make the r
 ## What you learned
 
 - A run ends in flags, a count interval, recurrence per group and support per row. Read them in that order.
-- Ten groups were found. Two of them (0 and 1) recur almost exactly, seven sit between Hennig's marks (0.54 to 0.84), and one (group 5, 0.45) is dissolved by the 0.5 mark.
+- Ten groups were found. Two of them (0 and 1) recur almost exactly, seven sit between the `clusterboot` marks (0.54 to 0.84), and one (group 5, 0.45) has a mean that matches the 0.5 dissolution mark.
 - The count is not stable: 3 to 16 groups across refits. Quote the interval.
 - High own support did not give a purer sample in this run (0.81 against 0.83).
 - The true digits check the result after the fact and never tune it.

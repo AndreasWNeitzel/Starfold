@@ -328,9 +328,10 @@ def summarize_worlds(
     noise, while world noise places mass 1 on unresolved. Group recurrence is
     the maximum Jaccard similarity between the group's sampled members and any
     world cluster (Hennig 2007, doi:10.1016/j.csda.2006.11.025), averaged over
-    the worlds that sampled at least one member. Hennig's descriptive
-    reference points (0.85 stable, below 0.5 dissolved) are never applied as
-    gates. Ties in the best match resolve to the lowest cluster id. Bands are
+    the worlds that sampled at least one member. The rough guidelines of the
+    R function ``fpc::clusterboot`` (Hennig, CRAN package fpc; a mean of 0.85
+    or more highly stable, a value of 0.5 or less dissolved) are never
+    applied as gates. Ties in the best match resolve to the lowest cluster id. Bands are
     5th and 95th percentiles over worlds with linear interpolation, and
     ``count_interval`` is the integer hull (floor, ceil) of those
     percentiles. ``world_agreement`` is the adjusted Rand index (Hubert and
@@ -449,6 +450,9 @@ def _validate_run(
     if x_err is not None:
         if x_err.shape != x.shape:
             msg = f"x_err must have shape {x.shape}, got {x_err.shape}."
+            raise ValueError(msg)
+        if not np.all(np.isfinite(x_err)) or np.any(x_err < 0):
+            msg = "x_err must be finite and non-negative."
             raise ValueError(msg)
         if has_sampler:
             msg = "x_err and sampler are exclusive; supply one perturbation."

@@ -1,6 +1,6 @@
 # Calibration p-value
 
-This page explains the calibration p-value, the share of structureless copies of your table that reach at least as high a gap as the table.
+This page explains the calibration p-value, an add-one estimate of the share of structureless copies of your table that reach at least as high a gap as the table.
 
 ```{eval-rst}
 .. index::
@@ -53,9 +53,9 @@ Look at the empty space between the last bar and the dashed line. No copy reache
 
 ## Range and reference values
 
-- Range: from 1/(L+1) to 1, with L the copies drawn. With 19 copies the smallest value is 1/20 = 0.05. The p-value can never be 0. Below, h is the number of copies at or above the table (an exceedance is one such copy).
+- Range: p = (h+1)/(L+1) (Phipson and Smyth 2010), with h the copies at or above the table (an exceedance is one such copy) and L the copies drawn. It runs from 1/(L+1) to 1. With 19 copies the smallest value is 1/20 = 0.05. The p-value can never be 0.
 - Perfect result: the floor, 0.05 at 19 copies, meaning no copy reached the table. It does not say by how much the table won.
-- Pure chance: if the table is a draw from the declared family, p is spread roughly evenly over 1/(L+1) to 1 (Phipson and Smyth 2010). A value near 1 means most copies score at least as high as the table, and happens under the null only by chance.
+- Pure chance: if the table is a draw from the declared family, the p-value is valid. The chance that p is at most alpha is at most alpha (Besag and Clifford 1991, doi:10.1093/biomet/78.2.301). It is not spread evenly, because the test stops at 3 exceedances. A value near 1 often comes from an early stop, when the first copies all reach the table.
 
 | Copies L | p for h = 0 | h = 1 | h = 2 | h = 3 |
 |---|---|---|---|---|
@@ -68,7 +68,7 @@ The table is the recorded output of `notebooks/03_calibration.py`. A lower floor
 
 ## How to read a value
 
-The level {term}`alpha` is 0.05 by default. `structure_supported` is true when the p-value is at most alpha. The readings below hold at the default 19 copies only. With 99 copies, for example, three exceedances give 0.04 and four give 0.05, so a p at or below 0.05 no longer means that no copy reached the table.
+The level {term}`alpha` is 0.05 by default. `structure_supported` is true when the p-value is at most alpha. The readings below hold at the default 19 copies only. With 99 copies, for example, the floor is 0.01. Three exceedances stop the test and give p = 4/(L+1), with L the copies used by then. So a p at or below 0.05 no longer means that no copy reached the table.
 
 | p-value (19 copies) | Reading | Decision |
 |---|---|---|
@@ -80,7 +80,7 @@ The bands follow the notebooks. Neither reading says anything about how many gro
 
 ## What misleads
 
-- A small p-value is not the probability that the groups are real. It is valid only for the declared family of copies (by default `gaussian_copula`, which keeps the columns' values and their correlations) and for the procedure that was simulated.
+- A small p-value is not the probability that the groups are real. It is valid only for the declared family of copies and for the procedure that was simulated. The default family, `gaussian_copula`, keeps every column's values exactly. It couples the columns through a fitted, shrunk Gaussian dependence on normal scores, so it does not reproduce the observed correlations exactly. It keeps any multimodality of a single column, and removes only multimodality that needs several columns together.
 - A large p-value is not a finding of no groups. In the APOGEE record, one copy reached a best gap of 0.366 against the table's 0.362. The interval on the share of copies is wide (0.001 to 0.260) because 19 copies are few.
 - The test stops after 3 copies reach the table's value (Besag and Clifford 1991, a rule that ends the simulation once the answer is clear). At the default 19 copies, p after that stop is at least 4/(L+1), so it is at least 0.2 and cannot reach 0.05. More copies would only refine a value above alpha. With more than 19 copies allowed, this statement no longer holds.
 - The placeholder 1.0 is not a measurement. When no family was declared, `skipped_reason` is `null_not_run`, `p_value` is 1.0 and `structure_supported` is false. When the table's own statistic is zero or below, `skipped_reason` is `observed_statistic_zero`.
@@ -101,7 +101,7 @@ evidence = starfold.null_test(
 )
 ```
 
-Here `config` is the `Config` the run used. From the command line, `python -m bench.null_stage <dataset> <result folder> --output <folder>` runs the same test and writes `<dataset>_null.json` into the folder you name. Without `--output` it writes to `bench/results`, where it would overwrite the recorded file. The notebook `notebooks/03_calibration.py` read the recorded test records in `bench/results/` and printed the lines below.
+Here `config` is the `Config` the run used. From the command line, `python -m bench.null_stage <dataset> <result folder> --output <folder>` replays the saved run's settings and writes `<dataset>_null.json` into the folder you name. Without `--output` it writes to `bench/results`, where it would overwrite the recorded file. The notebook `notebooks/03_calibration.py` read the recorded test records in `bench/results/` and printed the lines below.
 
 ```python
 for name, record in records.items():

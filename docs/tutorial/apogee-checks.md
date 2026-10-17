@@ -1,4 +1,4 @@
-# Tutorial: two disc populations in 9,242 APOGEE stars, part 2
+# Tutorial: two groups in 9,242 APOGEE stars, part 2
 
 ```{eval-rst}
 .. index::
@@ -62,7 +62,7 @@ Decision: read the contrast first. A contrast near 1 says the refits agree with 
 
 ## Step 9: compare the copy and the gap
 
-Every trial was scored twice on the same subsets, once on the data and once on a {term}`structureless copy` of the table. The default copy is made with a {term}`Gaussian copula`: every column keeps exactly its measured values, and the overall correlation between columns is kept. The values are rearranged among the stars, so one smooth elliptical cloud remains and there are no groups. The search ranks settings by the {term}`gap`, the score on the data minus the score on the copy.
+Every trial was scored twice on the same subsets, once on the data and once on a {term}`structureless copy` of the table. The default copy is made with a {term}`Gaussian copula`: every column keeps exactly its measured values, and the columns are linked by a fitted, shrunk Gaussian dependence. The values are rearranged among the stars, so structure that needs several columns together is removed. A column with two peaks keeps both peaks. The search ranks settings by the {term}`gap`, the score on the data minus the score on the copy.
 
 ![Scatter of the score on the data against the score on the structureless copy for each trial, with a dashed no-advantage line.](../figures/manual/02_05.png)
 
@@ -107,7 +107,7 @@ The `--output` folder keeps your record apart from the recorded file `bench/resu
 
 One copy reached a best gap of 0.3655 against the table's 0.3620. Since p is above 0.05, Starfold raises `no_structure_supported` once the test is attached to the result with `--update-result`. The test does not support structure at that level, for this family of copies.
 
-Three reasons can explain that, and this run cannot separate them. The statistic uses only the 17 opening trials, and its power against the full-search statistic is not measured. With 19 copies, p moves in steps of 0.05, and one copy decided the outcome. The copy keeps the correlations between iron, magnesium and the orbits, and those correlations carry much of the two-sequence signal.
+Three reasons can explain that, and this run cannot separate them. The statistic uses only the 17 opening trials, and its power against the full-search statistic is not measured. With 19 copies, p moves in steps of 0.05, and one copy decided the outcome. The copy keeps a Gaussian dependence between iron, magnesium and the orbits, and that dependence may carry much of the two-sequence signal.
 
 The {term}`Monte Carlo interval` of 0.001 to 0.260 is wide because 19 copies are few. It is a 95 percent Clopper-Pearson interval (Clopper and Pearson 1934, doi:10.1093/biomet/26.4.404) for the chance that a copy reaches the table's value. It says how well the simulation pinned the p-value, and not how sure you can be that the groups are real. The readings "p at most 0.05 means no copy reached the table" and "p above 0.05 means at least one did" hold at the default 19 copies only. See {doc}`../metrics/calibration-p`.
 

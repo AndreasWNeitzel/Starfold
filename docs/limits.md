@@ -33,11 +33,11 @@ Starfold recovers groups that come back when the table is resampled, and it meas
 
 **A stability interval is not a confidence interval.** The {term}`count interval` and the recurrence bands are the 5th to 95th percentile of a quantity over refits. They describe how much the answer moves under resampling. They do not cover a true value with a stated probability.
 
-**A p-value holds only for the declared family.** The calibration {term}`p-value` is the share of {term}`structureless copies <structureless copy>` that score at least as high as your table. It is valid only for the family you simulated (`gaussian_copula` or `independent_marginals`) and the procedure that was replayed. It is not the probability that the groups are real. It carries no per-group test, and it does not say how many groups exist.
+**A p-value holds only for the declared family.** The calibration {term}`p-value` is `(h + 1) / (L + 1)`, where `L` is the number of {term}`structureless copies <structureless copy>` and `h` the number that score at least as high as your table. It is valid only for the family you simulated (`gaussian_copula` or `independent_marginals`) and the procedure that was replayed. It is not the probability that the groups are real. It carries no per-group test, and it does not say how many groups exist.
 
-**The group count is not a finding.** The score never reads the count, and no step tunes or judges on it. On the benchmark the count can differ greatly from the class count (Gas drift: 390 groups for 6 classes; Letter: 284 for 26). The number of overlapping populations is not identifiable without a declared estimand and assumptions. Quote the {term}`count interval`, and do not quote `n_groups` as an estimate.
+**The group count is not a finding.** The score never reads the count, and the search does not tune on it. The flag `count_unstable` only reports whether the count holds across refits. On the benchmark the count can differ greatly from the class count (Gas drift: 390 groups for 6 classes; Letter: 284 for 26). The number of overlapping populations is not identifiable without a declared estimand and assumptions. Quote the {term}`count interval`, and do not quote `n_groups` as an estimate.
 
-**The default comparison is not a significance test.** `beats_default_under_objective` is True whenever the chosen fresh gap is larger than the defaults'. The flag `default_within_noise` tests whether the difference exceeds twice the standard error of 6 paired differences. The six differences come from three subsets and overlap, so that estimate is optimistic. Read the flag as a coarse screen.
+**The default comparison is not a significance test.** `beats_default_under_objective` is True whenever the chosen fresh gap is larger than the defaults'. The flag `default_within_noise` tests whether the difference exceeds twice the standard error of 6 paired differences. The six differences come from three subsets and overlap, so that estimate is likely optimistic. Its bias is not measured. Read the flag as a coarse screen.
 
 **No per-group significance exists.** The p-value concerns the partition as a whole.
 
@@ -80,13 +80,13 @@ Starfold matched or beat the defaults (within 0.02) on 6 of 6 development tables
 
 ## Data Starfold does not handle
 
-- **Text, categories and time series.** The table must be numbers. A category coded 0, 1, 2 is not a distance. Columns are compared by Euclidean distance after {term}`scaling <scaling>`.
+- **Text, categories and time series.** The table must be numbers. Rows are treated as independent, so time order is ignored. A category coded 0, 1, 2 is not a distance. Columns are compared by Euclidean distance after {term}`scaling <scaling>`.
 - **Fewer than 50 finite rows or fewer than 2 columns.** `recover` raises a `ValueError`.
 - **Missing values.** A row with NaN or infinity anywhere is dropped and counted, never filled in (flag `rows_rejected_nonfinite`). Filling gaps with a column mean would create a false dense clump.
 - **Duplicate rows.** A row listed twice counts twice.
 - **Tables above 20,000 rows.** Letter (20,000 rows) is the largest table run. Above 20,000 rows the full-data reference fit uses an approximate neighbour graph. Above 20,000 rows per resample (about 25,000 rows at the default 80 percent) the search graph is approximate too, and a run reproduces only with the same `n_jobs`. GPU memory was not recorded.
 - **Real measurement uncertainties.** `X_err` and `measurement_sampler` work, but no run with real measured uncertainties has been validated (the bundled APOGEE table carries none). An invented error bar produces an invented spread.
-- **Selection functions and scientific feature construction.** Starfold is domain-agnostic. You supply the features, the selection function and the measurement model through explicit inputs.
+- **Selection functions and scientific feature construction.** Starfold is domain-agnostic. You supply the features and the measurement model through explicit inputs. `recover` takes no selection function, so handle selection effects before you build the table.
 - **Python outside 3.11 and 3.12.** The package declares `requires-python >=3.11,<3.13`.
 
 See {doc}`howto/report-your-result` for what you may write in a paper, {doc}`start/overview` for what Starfold does, {doc}`metrics/index` for the numbers it prints, and {doc}`troubleshooting` for symptoms.

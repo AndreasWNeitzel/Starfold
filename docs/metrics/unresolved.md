@@ -1,6 +1,6 @@
 # Unresolved mass
 
-This page explains unresolved mass, the share of refit outcomes that place a row in no group of the full fit.
+This page explains unresolved mass, the average share of refit outcomes that falls outside every group of the full fit. A refit can count a row fully or in part.
 
 ```{eval-rst}
 .. index::
@@ -51,7 +51,7 @@ Look at the tall bar near 0 and the dashed line next to it. Nearly all rows are 
 ## Range and reference values
 
 - Range: 0 to 1.
-- Perfect result: 0. Every refit agrees with the full fit on every row.
+- Perfect result: 0. No refit calls a drawn row noise, and no refit cluster holds rows that the full fit calls noise. It does not show that refits keep the groups apart, so check {doc}`support`.
 - Pure chance: not applicable.
 
 ## How to read a value
@@ -62,7 +62,7 @@ The 0.5 mark is the threshold of the `high_unresolved_mass` {term}`flag` in the 
 |---|---|---|
 | Below 0.1 | Refits place almost every row | Read the other numbers as usual |
 | Between 0.1 and 0.5 | A noticeable share of outcomes is noise | Check which groups lose rows with {doc}`support` |
-| Above 0.5 | The groups describe a minority of the rows | Describe the groups as a minority of the table (flag `high_unresolved_mass`) |
+| Above 0.5 | Most refit outcomes fall outside every full-fit group | Report the flag `high_unresolved_mass`. Report the full fit's share of grouped rows separately, and check `world_fit_failures` |
 
 ## What misleads
 

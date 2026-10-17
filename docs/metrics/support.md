@@ -48,12 +48,12 @@ The left panel below shows own support for every grouped row of the recorded Dig
 
 ![Left: own support of every grouped Digits row. Middle: the unresolved share of every row. Right: own support split by a post hoc check against the true digits.](../figures/digits_support.png)
 
-Look at the left panel. Most rows sit between 0.8 and 1.0, with a tail toward 0. Rows in the tail keep changing company. Rows at 1.0 land with the same partners in every refit.
+Look at the left panel. Most rows sit between 0.8 and 1.0, with a tail toward 0. Rows in the tail keep changing company. Rows at 1.0 only ever share a refit cluster with rows of their own full-fit group.
 
 ## Range and reference values
 
 - Range: 0 to 1 per row. For each sampled row, the support over all groups plus the {term}`unresolved mass` of the row sums to 1.
-- Perfect result: own support 1. The row's refit group is always exactly its full-fit group.
+- Perfect result: own support 1. Every refit cluster that holds the row has only rows of its full-fit group. That cluster can still be just part of the group.
 - Pure chance: not applicable.
 
 ## How to read a value
@@ -105,7 +105,7 @@ $$
 \text{unresolved}[i] = \frac{1}{|W_i|}\sum_{w \in W_i} u_{w,i},
 $$
 
-where $u_{w,i} = 1$ if refit $w$ calls row $i$ noise and $u_{w,i} = s_{k0}$ otherwise. Then $\sum_g \text{support}[i,g] + \text{unresolved}[i] = 1$, and $\text{own\_support}[i] = \text{support}[i, \text{label}_i]$.
+where $u_{w,i} = 1$ if refit $w$ calls row $i$ noise and $u_{w,i} = s_{k0}$ otherwise. Then $\sum_g \text{support}[i,g] + \text{unresolved}[i] = 1$, and $\text{own\_support}[i] = \text{support}[i, \text{label}_i]$ for rows with $\text{label}_i \ge 0$. Rows that the full fit calls noise have NaN own support.
 :::
 
 ## Learn more

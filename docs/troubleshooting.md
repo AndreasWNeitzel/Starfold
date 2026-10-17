@@ -1,6 +1,6 @@
 # Troubleshooting
 
-This page lists 16 things you may see in a result or a run, with the likely causes, the check to run, and the fix. Find the heading that matches what you see.
+This page lists 15 things you may see in a result or a run, with the likely causes, the check to run, and the fix. Find the heading that matches what you see.
 
 ```{eval-rst}
 .. index::
@@ -48,11 +48,11 @@ Fix. Quote the interval and not `n_groups`. Drop irrelevant columns, or add rows
 
 ## Every group has low recurrence
 
-Causes. The table may hold no groups that come back: check the calibration p-value. A group that recurs between 0.5 and 0.85 is a separate case ({doc}`the recurrence page <metrics/recurrence>`). A refit that raised an error counts as all noise in that refit, which lowers recurrence. Large `X_err` values perturb every refit, so an inflated or invented error bar produces a low recurrence.
+Causes. The table may hold no groups that come back: check the calibration p-value. A group that recurs below 0.85 but above 0.5 is a separate case ({doc}`the recurrence page <metrics/recurrence>`). A refit that raised an error counts as all noise in that refit, which lowers recurrence. Large `X_err` values perturb every refit, so an inflated or invented error bar produces a low recurrence.
 
 Check. Print `result.worlds.group_recurrence`, `result.worlds.group_recurrence_band` and `result.worlds.world_errors`. Check `result.flags` for `world_fit_failures`, `count_unstable` and `no_structure_supported`.
 
-Fix. Remove a failing input (the error text is in `world_errors`). Check that `X_err` holds real standard deviations ({doc}`howto/measurement-errors`). Recurrence is a rate over refits and not a probability ({doc}`metrics/recurrence`).
+Fix. Remove a failing input (the error text is in `world_errors`). Check that `X_err` holds real standard deviations ({doc}`howto/measurement-errors`). Recurrence is a rate over refits, not the probability that a group is real ({doc}`metrics/recurrence`).
 
 ## Consensus agreement is 0.0 but contrast is high
 
@@ -109,7 +109,7 @@ Fix. Do not claim that the search improved on the defaults. The result is still 
 
 ## The run is much slower than expected
 
-Causes. `null_families` is set, which adds up to 1,938 fits, about six times the rest of a run. The CPU is running instead of the GPU. The table is large, since every fit sees 0.8 of the rows.
+Causes. `null_families` is set, which adds up to 1,938 fits per family, about six times the rest of a run. The CPU is running instead of the GPU. The table is large, since every fit sees 0.8 of the rows.
 
 Check. Print `result.provenance["stage_seconds"]`, `["stage_fits"]` and `["engine_resolved"]`. Recorded runs with the test off used 314 fits (Digits) and 334 fits (APOGEE).
 
@@ -123,7 +123,7 @@ Causes. `recover` checks the table and `Config` checks its own fields when you b
 |---|---|
 | `X must keep at least 50 finite rows` | Fewer than 50 rows have only finite values. |
 | `X must have at least 2 columns` | The table has one column. |
-| `X must be a numeric array` | The table has text or objects. |
+| `X must be a numeric array` | The table cannot be converted to floats, for example because it holds non-numeric text. |
 | `X_err must have the same shape as X` | Wrong shape. `X_err` must also be finite and non-negative on kept rows. |
 | `Give X_err or measurement_sampler, not both` | Both were passed. |
 | `n_explore must be a power of two` | For example 12 or 20. |
@@ -136,9 +136,9 @@ Fix. The message names the field. See {doc}`howto/prepare-table`.
 
 ## `load` refuses my file
 
-Causes. A checksum in `manifest.json` does not match the file. The format tag is unknown (files saved by Starfold 0.0.1 do not load). The support identity fails on a sampled row. The stored flags differ from the flags derived from the arrays.
+Causes. A checksum in `manifest.json` does not match the file. The format tag is not `"starfold-result-2"`. The support identity fails on a sampled row. The stored flags differ from the flags derived from the arrays.
 
-Check. Read the message: it names the file, the format, or both flag lists.
+Check. Read the message. It names the manifest or the file with a checksum problem, the unknown format, the support identity, or both flag lists.
 
 Fix. Save the result again from the run that produced it. Do not edit `result.json` by hand. See {doc}`reference/artifacts` and {doc}`howto/save-and-load`.
 

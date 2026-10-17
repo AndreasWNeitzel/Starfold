@@ -915,10 +915,11 @@ plt.show()
 # by rows in either, 1 for identical sets and 0 for disjoint ones. The group's
 # *recurrence* is the mean of that best overlap over the refits.
 #
-# Hennig (2007, doi:10.1016/j.csda.2006.11.025) reads a mean Jaccard of 0.85
-# or more as a highly stable group and 0.5 or less as a dissolved one. Here
-# these lines are marks to read against, not filters. A group below 0.5 is not
-# removed.
+# The help page of the R function `clusterboot` (Hennig, R package fpc,
+# https://rdrr.io/cran/fpc/man/clusterboot.html) reads a mean Jaccard of 0.85
+# or more as highly stable. It says a Jaccard of 0.5 or less in one resample
+# means the cluster dissolved. Here these lines are marks to read against, not
+# filters. A group below 0.5 is not removed.
 #
 # - Left: recurrence of each group, with the 5 to 95 percent band over refits.
 # - Middle: the size of each group in the full fit, in rows.
@@ -941,8 +942,8 @@ axes[0].errorbar(
     color="k",
     label="mean over refits, 5 to 95 percent band",
 )
-axes[0].axhline(0.85, ls=":", color=TAB10(0), label="0.85: highly stable (Hennig 2007)")
-axes[0].axhline(0.5, ls="--", color=TAB10(1), label="0.5: dissolved (Hennig 2007)")
+axes[0].axhline(0.85, ls=":", color=TAB10(0), label="0.85: highly stable (clusterboot)")
+axes[0].axhline(0.5, ls="--", color=TAB10(1), label="0.5: dissolution mark (clusterboot)")
 axes[0].set_ylim(0.0, 1.05)
 axes[0].xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 axes[0].set_xlabel("group")
@@ -967,9 +968,10 @@ plt.show()
 
 # %% [markdown]
 # **How to read it.** In the stored run groups 0 and 1 sit at the top, above
-# the 0.85 line, with almost no band. Group 5 falls below 0.5 and group 3 sits
-# slightly above it. Most other groups have a mean between the two lines but a band
-# that reaches far down: they usually come back, but some refits split or merge
+# the 0.85 line, with almost no band. Group 5 falls below 0.5, which matches the
+# clusterboot dissolution mark, and group 3 sits slightly above it. Most other
+# groups have a mean between the two lines but a band that reaches far down:
+# they usually come back, but some refits split or merge
 # them. The right panel shows that the two largest groups (3 and 7) are also
 # the least pure. A group can recur without being pure, and a stable partition
 # is not thereby a true one.

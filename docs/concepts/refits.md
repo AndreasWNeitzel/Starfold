@@ -26,7 +26,7 @@ That is a refit. A {term}`refit` (also called a possible world) is one fit of th
 Each refit gives a partition. Starfold compares them with the full fit, which used all rows, and reports:
 
 - **{term}`Support`** for a row and a group: the average share of the row's refit group that lies in that full-fit group, taken over the refits that drew the row. **{term}`Own support`** is the support for the row's own group. It says how reliably refits keep the row with its group. It is not a probability and not a purity.
-- **{term}`Recurrence`** for a group: in every refit, the group is matched with the refit group of highest {term}`Jaccard index` (shared rows over rows in either). Recurrence is the mean of those Jaccard values over refits. 1 means the group comes back with the same members each time.
+- **{term}`Recurrence`** for a group: in every refit, the group is matched with the refit group of highest {term}`Jaccard index` (shared rows over rows in either). Recurrence is the mean of those Jaccard values over refits. 1 means that in every refit one refit group holds exactly the drawn members of the group, and no other rows.
 - **{term}`Unresolved mass`**: for one refit, a row scores 1 if the refit called it noise, and otherwise the share of its refit group that the full fit calls noise. Starfold averages over the refits that drew the row, then over rows.
 - **{term}`Count interval`**: the 5th to 95th percentile of the number of groups the refits found, rounded outward to whole numbers.
 - **{term}`Co-association`**: see the next section.
@@ -64,11 +64,11 @@ A stable partition is not a true partition.
 - Recurrence is an algorithmic recurrence rate. It is not a {term}`posterior`.
 - A {term}`stability interval` describes spread over refits. It does not cover a true value with a stated probability, so it is not a {term}`confidence interval`.
 - The number of groups is not a finding unless its estimand is declared. The estimand is the real quantity you say the count measures, together with your assumptions about it. Starfold never tunes or judges on the group count.
-- Hennig (2007, doi:10.1016/j.csda.2006.11.025) assesses the stability of single clusters with Jaccard values. It gives two reference marks: a mean Jaccard of 0.85 or more reads as highly stable, and 0.5 or less as dissolved. Starfold quotes them and never uses them to drop a group. The paper does not address how to choose the number of groups, and the count interval rests on no source for choosing a count.
+- Hennig (2007, doi:10.1016/j.csda.2006.11.025) assesses the stability of single clusters with Jaccard values. It gives no cutoff on the mean. The marks Starfold quotes come from the help page of the R function `clusterboot` (Hennig, R package fpc, [clusterboot help](https://rdrr.io/cran/fpc/man/clusterboot.html)): a mean of 0.85 or more is highly stable, and 0.5 or less in one resample means the cluster dissolved. Starfold never uses them to drop a group. The paper does not address how to choose the number of groups, and the count interval rests on no source for choosing a count.
 
 ## Read a recurrence between the marks
 
-A value between 0.5 and 0.85, such as 0.54 for digits group 3 (band 0.25 to 0.81), is neither stable nor dissolved by the marks above. `[no-source: internal-reasoning]` Do the following.
+A value below 0.85 is not highly stable by the `clusterboot` guidelines, and below 0.6 they say not to trust it. Digits group 3 has 0.54 (band 0.25 to 0.81). `[no-source: internal-reasoning]` Do the following.
 
 1. Read the band. A band that reaches below 0.5 means some refits lost the group.
 2. Find which group it merges with across refits. Look at the co-association between this group and each other group: a high value shows that the refits join them.

@@ -84,7 +84,7 @@ strengths of grouped rows: median 1.00
 ```
 
 :::{dropdown} Formula
-Starfold does not compute the strengths. HDBSCAN builds a hierarchy of clusters over the mutual-reachability graph. For a row in a selected cluster, the strength is the row's $\lambda$ value divided by the largest $\lambda$ in that cluster. That gives a number between 0 and 1. The $\lambda$ value is the inverse of the distance scale at which the row leaves the cluster. See Campello, Moulavi and Sander (2013) for the hierarchy and the hdbscan documentation for the exact membership rule.
+Starfold does not compute the strengths. HDBSCAN builds a hierarchy of clusters over the mutual-reachability graph. In the hdbscan package, used on the CPU backend, the strength of a row in a selected cluster is the row's $\lambda$ value divided by the largest $\lambda$ in that cluster. That gives a number between 0 and 1. The $\lambda$ value is the inverse of the distance scale at which the row leaves the cluster. See Campello, Moulavi and Sander (2013) for the hierarchy and the hdbscan documentation for the exact membership rule.
 :::
 
 ## Learn more

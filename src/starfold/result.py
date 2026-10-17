@@ -15,6 +15,7 @@ import hashlib
 import json
 import platform
 import sys
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -61,7 +62,8 @@ class Result:
     Attributes
     ----------
     labels : ndarray of int32, shape (n_kept,)
-        Emitted partition, one full-data fit of ``params``, with -1 for noise.
+        Emitted partition, one full-data fit of ``deployed_params``, with -1
+        for noise.
     strengths : ndarray of float32, shape (n_kept,)
         HDBSCAN within-fit strengths of that fit, not posteriors.
     default_labels : ndarray of int32, shape (n_kept,)
@@ -208,8 +210,27 @@ def build_provenance(
     n_input_rows: int,
     stage_seconds: dict[str, float],
     stage_fits: dict[str, int],
+    x_err: NDArray[np.float64] | None = None,
+    sampler: object | None = None,
 ) -> dict[str, Any]:
     """Assemble the provenance record of one run, as listed in ``Result.provenance``."""
+    if x_err is not None:
+        measurement: dict[str, Any] = {
+            "kind": "x_err",
+            "x_err_fingerprint": matrix_fingerprint(x_err),
+        }
+    elif sampler is not None:
+        # The repr carries bound arguments (a functools.partial shows them);
+        # state hidden inside a closure or an instance is not recorded.
+        name = getattr(sampler, "__qualname__", type(sampler).__qualname__)
+        module = getattr(sampler, "__module__", type(sampler).__module__)
+        measurement = {
+            "kind": "sampler",
+            "sampler": f"{module}.{name}",
+            "repr": repr(sampler)[:500],
+        }
+    else:
+        measurement = {"kind": "none"}
     return {
         "starfold_version": _package_version(),
         "python": sys.version.split()[0],
@@ -225,6 +246,7 @@ def build_provenance(
         "n_kept_rows": int(x.shape[0]),
         "n_features": int(x.shape[1]),
         "input_fingerprint": matrix_fingerprint(x),
+        "measurement": measurement,
         "stage_seconds": {k: float(v) for k, v in stage_seconds.items()},
         "stage_fits": {k: int(v) for k, v in stage_fits.items()},
         "total_fits": int(sum(stage_fits.values())),
@@ -370,7 +392,12 @@ def save(result: Result, path: str | Path) -> Path:
     json_path = directory / "result.json"
     npz_path = directory / "arrays.npz"
     json_path.write_text(json.dumps(payload, indent=1, sort_keys=True), encoding="utf-8")
-    np.savez_compressed(npz_path, allow_pickle=False, **_arrays(result))
+    # np.savez_compressed takes allow_pickle only from NumPy 2.1; writing each
+    # member with np.save refuses object arrays on every supported version.
+    with zipfile.ZipFile(npz_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, array in _arrays(result).items():
+            with archive.open(f"{name}.npy", "w", force_zip64=True) as member:
+                np.save(member, array, allow_pickle=False)
     manifest = {"result.json": _sha256(json_path), "arrays.npz": _sha256(npz_path)}
     (directory / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     return directory
@@ -503,11 +530,11 @@ def _backends(payload: dict[str, Any] | None) -> BackendAgreement | None:
     return BackendAgreement(
         agreement=tuple(float(v) for v in payload["agreement"]),
         mean_agreement=float(payload["mean_agreement"]),
-        ari=tuple(float(v) for v in payload.get("ari", unknown)),
-        coverage=tuple(float(v) for v in payload.get("coverage", unknown)),
-        assigned_cpu=tuple(float(v) for v in payload.get("assigned_cpu", unknown)),
-        assigned_cuml=tuple(float(v) for v in payload.get("assigned_cuml", unknown)),
-        normalised=tuple(float(v) for v in payload.get("normalised", unknown)),
+        ari=tuple(_float_or_nan(v) for v in payload.get("ari", unknown)),
+        coverage=tuple(_float_or_nan(v) for v in payload.get("coverage", unknown)),
+        assigned_cpu=tuple(_float_or_nan(v) for v in payload.get("assigned_cpu", unknown)),
+        assigned_cuml=tuple(_float_or_nan(v) for v in payload.get("assigned_cuml", unknown)),
+        normalised=tuple(_float_or_nan(v) for v in payload.get("normalised", unknown)),
         mean_normalised=_float_or_nan(payload.get("mean_normalised")),
         n_groups_cpu=tuple(int(v) for v in payload["n_groups_cpu"]),
         n_groups_cuml=tuple(int(v) for v in payload["n_groups_cuml"]),
@@ -539,11 +566,27 @@ def load(path: str | Path) -> Result:
     Raises
     ------
     ValueError
-        If a checksum does not match, the format is unknown, the support
-        identity fails, or the stored flags differ from the re-derived ones.
+        If the manifest is unreadable or incomplete, a checksum does not
+        match, the format is unknown, the support identity fails, or the
+        stored flags differ from the re-derived ones.
     """
     directory = Path(path)
-    manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    try:
+        manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        msg = f"manifest.json in {directory} is not valid JSON: {error}."
+        raise ValueError(msg) from error
+    if not isinstance(manifest, dict):
+        msg = f"manifest.json in {directory} must map file names to checksums."
+        raise ValueError(msg)  # noqa: TRY004 - a corrupt file, reported like the others
+    missing = {"result.json", "arrays.npz"} - set(manifest)
+    if missing:
+        msg = f"manifest.json in {directory} has no checksum for {', '.join(sorted(missing))}."
+        raise ValueError(msg)
+    extra = set(manifest) - {"result.json", "arrays.npz"}
+    if extra:
+        msg = f"manifest.json in {directory} lists unexpected files: {', '.join(sorted(extra))}."
+        raise ValueError(msg)
     for name, expected in manifest.items():
         actual = _sha256(directory / name)
         if actual != expected:

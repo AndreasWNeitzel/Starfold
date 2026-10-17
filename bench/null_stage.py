@@ -1,8 +1,8 @@
 """Run the matched null test on a saved search, separately from the search.
 
 Replays the saved run's null procedure on up to ``n_null_max`` null matrices
-per family with the saved seed and configuration. The search space reverts to
-the default, so only default-space runs are matched exactly.
+per family with the saved seed, configuration and search space. The engine and
+worker count default to the saved run's resolved engine and n_jobs.
 
 The dataset is reloaded by name and cut to the saved run's kept rows; a
 fingerprint mismatch with the saved provenance stops the run. The record is
@@ -18,16 +18,28 @@ from pathlib import Path
 from typing import Any
 
 from bench import datasets
-from starfold import Config, load, null_test, save
+from starfold import Config, Space, load, null_test, save
 from starfold.result import derive_flags, matrix_fingerprint
+
+_SPACE_FIELDS = frozenset(Space.__dataclass_fields__)
 
 
 def config_from_provenance(record: dict[str, Any]) -> Config:
     """Rebuild the configuration a saved run used."""
     stored = dict(record)
-    stored.pop("space", None)
+    space = stored.pop("space", None)
     fields = {f for f in Config.__dataclass_fields__ if f != "space"}
-    return Config(**{k: v for k, v in stored.items() if k in fields})
+    config = Config(**{k: v for k, v in stored.items() if k in fields})
+    if space is None:
+        return config
+    unknown = set(space) - _SPACE_FIELDS
+    if unknown:
+        msg = (
+            f"the saved search space has unknown bounds {sorted(unknown)}; the replay would differ."
+        )
+        raise ValueError(msg)
+    bounds = {k: None if v is None else tuple(v) for k, v in space.items()}
+    return replace(config, space=Space(**bounds))
 
 
 def main() -> None:
@@ -40,8 +52,12 @@ def main() -> None:
         help="directory written by starfold.save, for example output/bench/<dataset>",
     )
     parser.add_argument("--output", type=Path, default=Path("bench/results"))
-    parser.add_argument("--engine", default="auto", choices=["auto", "cpu", "cuml"])
-    parser.add_argument("--n-jobs", type=int, default=1)
+    parser.add_argument(
+        "--engine",
+        choices=["auto", "cpu", "cuml"],
+        help="default: the engine the saved run resolved to",
+    )
+    parser.add_argument("--n-jobs", type=int, help="default: the saved run's n_jobs")
     parser.add_argument("--families", nargs="+", default=["gaussian_copula"])
     parser.add_argument("--n-null-max", type=int, default=19)
     parser.add_argument(
@@ -70,8 +86,8 @@ def main() -> None:
         config=config,
         families=tuple(args.families),
         random_state=int(result.provenance["random_state"]),
-        engine=args.engine,
-        n_jobs=args.n_jobs,
+        engine=args.engine or str(result.provenance["engine_resolved"]),
+        n_jobs=int(result.provenance["n_jobs"]) if args.n_jobs is None else args.n_jobs,
     )
     record = {
         "dataset": args.dataset,

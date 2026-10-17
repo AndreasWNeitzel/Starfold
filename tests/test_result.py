@@ -1,5 +1,7 @@
+import functools
 import hashlib
 import json
+import re
 import sys
 import types
 
@@ -13,6 +15,7 @@ from starfold.prep import make_plan
 from starfold.result import (
     FLAG_VOCABULARY,
     Result,
+    build_provenance,
     derive_flags,
     load,
     matrix_fingerprint,
@@ -296,6 +299,113 @@ def test_load_detects_tampering(tmp_path) -> None:
         load(directory)
 
 
+@pytest.mark.parametrize("missing", ["result.json", "arrays.npz"])
+def test_load_rejects_an_incomplete_manifest(tmp_path, missing) -> None:
+    directory = save(_result(), tmp_path / "run")
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text())
+    del manifest[missing]
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match=re.escape(f"no checksum for {missing}")):
+        load(directory)
+
+
+def test_load_names_a_truncated_manifest(tmp_path) -> None:
+    directory = save(_result(), tmp_path / "run")
+    (directory / "manifest.json").write_text("{")
+    with pytest.raises(ValueError, match=r"manifest\.json"):
+        load(directory)
+
+
+def test_save_refuses_object_arrays(tmp_path) -> None:
+    result = _result()
+    broken = Result(**{**result.__dict__, "strengths": result.strengths.astype(object)})
+    with pytest.raises(ValueError, match="allow_pickle"):
+        save(broken, tmp_path / "run")
+
+
+def test_backend_record_without_optional_fields_survives_a_resave(tmp_path) -> None:
+    directory = save(_result(), tmp_path / "run")
+    json_path = directory / "result.json"
+    payload = json.loads(json_path.read_text())
+    payload["backends"] = {
+        "agreement": [1.0],
+        "mean_agreement": 1.0,
+        "n_groups_cpu": [2],
+        "n_groups_cuml": [2],
+    }
+    json_path.write_text(json.dumps(payload, indent=1, sort_keys=True))
+    manifest_path = directory / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["result.json"] = hashlib.sha256(json_path.read_bytes()).hexdigest()
+    manifest_path.write_text(json.dumps(manifest))
+    first = load(directory)
+    second = load(save(first, tmp_path / "again"))
+    assert second.backends is not None
+    assert np.isnan(second.backends.ari[0])
+
+
+def _rewrite_result_json(directory, payload) -> None:
+    json_path = directory / "result.json"
+    json_path.write_text(json.dumps(payload, indent=1, sort_keys=True))
+    manifest = json.loads((directory / "manifest.json").read_text())
+    manifest["result.json"] = hashlib.sha256(json_path.read_bytes()).hexdigest()
+    (directory / "manifest.json").write_text(json.dumps(manifest, indent=1))
+
+
+def test_load_rejects_an_unknown_format(tmp_path) -> None:
+    directory = save(_result(), tmp_path / "run")
+    payload = json.loads((directory / "result.json").read_text())
+    payload["format"] = "starfold-result-1"
+    _rewrite_result_json(directory, payload)
+    with pytest.raises(ValueError, match="Unknown result format"):
+        load(directory)
+
+
+def test_load_rejects_stored_flags_that_differ_from_the_rederived_ones(tmp_path) -> None:
+    result = _result()
+    directory = save(result, tmp_path / "run")
+    payload = json.loads((directory / "result.json").read_text())
+    payload["flags"] = [] if result.flags else [FLAG_VOCABULARY[0]]
+    _rewrite_result_json(directory, payload)
+    with pytest.raises(ValueError, match="differ from re-derived flags"):
+        load(directory)
+
+
+def test_saved_result_json_has_the_expected_keys(tmp_path) -> None:
+    result = _result()
+    x = np.random.default_rng(1).normal(size=(result.labels.shape[0], 3))
+    provenance = build_provenance(
+        x=x,
+        config={"n_trials": 3},
+        random_state=0,
+        engine_requested="cpu",
+        engine_resolved="cpu",
+        n_jobs=1,
+        n_jobs_forced=False,
+        n_input_rows=x.shape[0],
+        stage_seconds={"total": 1.0},
+        stage_fits={"search": 1},
+    )
+    directory = save(Result(**{**result.__dict__, "provenance": provenance}), tmp_path / "run")
+    payload = json.loads((directory / "result.json").read_text())
+    assert set(payload) == {
+        "format",
+        "params",
+        "deployed_params",
+        "default_params",
+        "search",
+        "worlds",
+        "consensus",
+        "null",
+        "backends",
+        "flags",
+        "provenance",
+    }
+    assert "measurement" in payload["provenance"]
+    assert "pynndescent" in payload["provenance"]["libraries"]
+
+
 def test_load_reads_absent_association_fields_as_nan(tmp_path) -> None:
     result = _result()
     directory = save(result, tmp_path / "run")
@@ -399,3 +509,53 @@ def test_default_within_noise_is_silent_when_the_default_is_selected() -> None:
     )
     assert "selected_is_default" in flags
     assert "default_within_noise" not in flags
+
+
+def test_load_rejects_a_manifest_with_extra_files(tmp_path) -> None:
+    directory = save(_result(), tmp_path / "run")
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["../elsewhere"] = "0" * 64
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="unexpected files"):
+        load(directory)
+
+
+def test_load_rejects_a_manifest_that_is_not_a_mapping(tmp_path) -> None:
+    directory = save(_result(), tmp_path / "run")
+    (directory / "manifest.json").write_text(json.dumps(["result.json", "arrays.npz"]))
+    with pytest.raises(ValueError, match="must map file names"):
+        load(directory)
+
+
+def _provenance(**measurement):
+    x = np.arange(12.0).reshape(6, 2)
+    return build_provenance(
+        x=x,
+        config={},
+        random_state=0,
+        engine_requested="cpu",
+        engine_resolved="cpu",
+        n_jobs=1,
+        n_jobs_forced=False,
+        n_input_rows=6,
+        stage_seconds={},
+        stage_fits={},
+        **measurement,
+    )
+
+
+def test_provenance_records_the_measurement_model() -> None:
+    errors = np.full((6, 2), 0.1)
+    assert _provenance()["measurement"] == {"kind": "none"}
+    assert _provenance(x_err=errors)["measurement"] == {
+        "kind": "x_err",
+        "x_err_fingerprint": matrix_fingerprint(errors),
+    }
+    sampler = functools.partial(np.add, 1.0)
+    record = _provenance(sampler=sampler)["measurement"]
+    assert record["kind"] == "sampler"
+    assert record["sampler"] == "functools.partial"
+    other = _provenance(sampler=functools.partial(np.add, 2.0))["measurement"]
+    assert record["repr"] != other["repr"]
+    assert _provenance(sampler=(1).__add__)["measurement"]["kind"] == "sampler"

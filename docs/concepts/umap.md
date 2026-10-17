@@ -23,7 +23,7 @@ UMAP makes that sheet. First it finds, for every person, the few people most lik
 
 A 64-dimensional cloud does not fit on a flat sheet without damage, as a globe does not fit on a flat atlas page without damage. UMAP keeps the neighbour links and gives up the rest.
 
-- **Short distances are kept better than long ones.** Two rows that were neighbours stay close. The gap between two islands on the map does not say how far apart the groups are in your table.
+- **Short distances are kept better than long ones.** Two rows that were neighbours usually stay close, but not always. The gap between two islands on the map does not say how far apart the groups are in your table.
 - **Sizes change.** UMAP spreads dense regions and squeezes sparse ones, so the area of an island is not the number of rows or the spread of their values.
 - **Axes have no units.** "Display axis 1" is not a column. Only which rows sit near which counts.
 - **Different seeds draw different maps.** A {term}`seed` is the number that starts the random choices of a fit. The same table and settings with another seed can give a rotated, stretched or split layout.
@@ -32,13 +32,13 @@ These are the reasons Starfold does not trust the map on its own. It checks the 
 
 ## The settings Starfold searches
 
-Starfold searches three UMAP settings. The defaults are those of `umap-learn` and are always trial 0 of the search (the first setting it tries; see {doc}`optuna`).
+Starfold searches three UMAP settings. The defaults are those of `umap-learn` and are trial 0 of the search (the first setting it tries; see {doc}`optuna`). If you narrow a range so that it excludes a default, trial 0 uses the nearest bound instead.
 
 | Setting | Default | Range searched | What it does |
 |---|---|---|---|
 | {term}`n_neighbors` | 15 | 5 to 100 (log scale) | How many similar rows each row looks at. Small values keep fine detail and can tear a smooth region into pieces. Large values emphasise the broad layout and can merge small groups. |
 | {term}`min_dist` | 0.1 | 0.0 to 0.5 | How tightly the map packs neighbours. Low values make dense clumps that are simple for HDBSCAN to find. High values spread rows out. It changes the look of the map, not the neighbour links. |
-| {term}`n_components` | 2 | 2 to 10 | The number of map coordinates. More axes keep more of the table, and give HDBSCAN more room. |
+| {term}`n_components` | 2 | 2 to 10 | The number of map coordinates. More axes can keep more of the neighbour structure and give HDBSCAN more room, but they do not promise to. |
 
 Starfold also rescales each column before UMAP (the {term}`scaling` setting, `standard` by default), so that a column measured in large units does not dominate.
 

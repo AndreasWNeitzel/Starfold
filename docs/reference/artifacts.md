@@ -35,7 +35,7 @@ This page lists the files that `starfold.save` writes, how they are checksummed,
 
 The format tag in `result.json` is `"starfold-result-2"`. A non-finite Python float is stored as `null` and read back as NaN. A non-finite NumPy scalar can be written as `NaN`, which Python's JSON reader also accepts.
 
-The array file holds 18 arrays: `labels`, `strengths`, `default_labels`, `kept_rows`, `plan_indices`, `world_labels`, `n_sampled`, `support`, `unresolved`, `own_support`, `group_recurrence`, `group_recurrence_band`, `count_values`, `property_median`, `property_band`, `world_agreement`, `consensus_labels` and `consensus_rows`. Arrays are written and read with `allow_pickle=False`, so the file holds numbers and no Python objects.
+The array file holds 18 arrays: `labels`, `strengths`, `default_labels`, `kept_rows`, `plan_indices`, `world_labels`, `n_sampled`, `support`, `unresolved`, `own_support`, `group_recurrence`, `group_recurrence_band`, `count_values`, `property_median`, `property_band`, `world_agreement`, `consensus_labels` and `consensus_rows`. Each array is written as its own member with `np.save(allow_pickle=False)` and read with `allow_pickle=False`, so the file holds numbers and no Python objects.
 
 ## What is not saved
 
@@ -45,8 +45,8 @@ The array file holds 18 arrays: `labels`, `strengths`, `default_labels`, `kept_r
 
 `starfold.load(path)` runs these checks in order and raises `ValueError` at the first that fails.
 
-1. **Checksums.** It hashes every file named in `manifest.json` and compares the result with the stored value. A mismatch names the file.
-2. **Format.** The format tag must be `"starfold-result-2"`. Results saved by Starfold 0.0.1 do not load.
+1. **Checksums.** `manifest.json` must be valid JSON and hold a checksum for both `result.json` and `arrays.npz`. Then `load` hashes every file named in the manifest and compares the result with the stored value. Each error names the file.
+2. **Format.** The format tag must be `"starfold-result-2"`. A file with any other tag does not load.
 3. **Support identity.** On every row that at least one refit sampled, `sum_g support[i, g] + unresolved[i]` must equal 1 within 1e-4.
 4. **Flags.** It derives the flags again from the loaded arrays and compares them with the stored list. It refuses a file whose flags differ.
 

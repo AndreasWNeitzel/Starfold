@@ -73,6 +73,40 @@ class TrialRecord:
     matrix, ``null_score`` is NaN and ``score`` equals ``raw_score``. A pruned
     trial has a NaN ``null_score`` and keeps its leading-pair data score
     (resamples 0 and 1) as ``score``, ``raw_score`` and ``partial_score``.
+
+    Attributes
+    ----------
+    number : int
+        Optuna trial number, 0 for the default.
+    params : Params
+        Configuration of the trial.
+    state : {"complete", "pruned", "failed"}
+        Outcome of the trial.
+    score : float
+        Gap ``raw_score - null_score``, or ``raw_score`` when no copy is scored.
+    raw_score : float
+        Objective on the data.
+    null_score : float
+        Objective of the same configuration on the search's structureless
+        copy, NaN when none is scored.
+    partial_score : float or None
+        Leading-pair data score of a pruned trial, None otherwise.
+    stability : float
+        Held-out prediction agreement lane of the objective, NaN when pruned.
+    coverage : float
+        Joint coverage lane of the objective, NaN when pruned.
+    modularity : float
+        Input-space neighbourhood modularity lane, NaN when pruned.
+    fit_counts : tuple of int
+        Group count of each fit the trial ran.
+    fit_noise : tuple of float
+        Noise fraction of each fit the trial ran.
+    seconds : float
+        Wall time of the trial.
+    error : str or None
+        Error text of a failed trial, None otherwise.
+    phase : {"default", "exploration", "convergence", "completion"}
+        Search phase that produced the record.
     """
 
     number: int
@@ -94,7 +128,28 @@ class TrialRecord:
 
 @dataclass(frozen=True)
 class Candidate:
-    """A re-scored configuration, with ``fit_counts`` the cluster counts on the fresh plan."""
+    """A configuration re-scored on the fresh plan and fresh structureless copies.
+
+    Attributes
+    ----------
+    params : Params
+        Configuration of the candidate.
+    trial_number : int
+        Number of the search trial it comes from.
+    score : float
+        Search score of that trial on the common plan.
+    fresh_score : float
+        Objective on the data under the fresh plan.
+    fresh_pair_scores : tuple of float
+        Objective of each ordered resample pair under the fresh plan.
+    fit_counts : tuple of int
+        Group count of each fit on the fresh plan.
+    null_scores : tuple of float
+        Objective of the same configuration on each fresh structureless copy.
+    gap : float
+        ``fresh_score`` minus the mean of ``null_scores``, or ``fresh_score``
+        when no copy is scored.
+    """
 
     params: Params
     trial_number: int
@@ -110,11 +165,57 @@ class Candidate:
 class SearchResult:
     """Outcome of :func:`search`. Every score is the objective, never agreement with truth.
 
-    ``gap_selected`` and ``gap_default`` are the fresh scores minus the mean
-    score of the same configuration on the null matrices, the gap statistic
-    that selects the configuration (Tibshirani, Walther and Hastie 2001,
-    doi:10.1111/1467-9868.00293). Both equal the fresh scores when no null
-    matrix was scored.
+    In a full search, ``gap_selected`` and ``gap_default`` are the fresh
+    scores minus the mean score of the same configuration on the fresh null
+    matrices, the gap statistic that selects the configuration (Tibshirani,
+    Walther and Hastie 2001, doi:10.1111/1467-9868.00293). Both equal the
+    fresh scores when no null matrix was scored. In exploration-only mode
+    nothing is re-scored: both gaps, like ``score_selected`` and
+    ``score_default``, are search scores on the common plan.
+
+    Attributes
+    ----------
+    selected : Params
+        Selected configuration.
+    trials : tuple of TrialRecord
+        Every trial, in trial-number order.
+    candidates : tuple of Candidate
+        Re-scored candidates, largest gap first; empty in exploration-only mode.
+    score_selected : float
+        Fresh score of the selected configuration, or its search score in
+        exploration-only mode.
+    score_default : float
+        Fresh score of the default, or its search score in exploration-only
+        mode.
+    gap_selected : float
+        Fresh gap of the selected configuration, or its search score in
+        exploration-only mode.
+    gap_default : float
+        Fresh gap of the default, or its search score in exploration-only mode.
+    paired_differences : tuple of float
+        Fresh pair scores of the selected configuration minus those of the
+        default; empty in exploration-only mode.
+    beats_default_under_objective : bool
+        Whether ``gap_selected`` exceeds ``gap_default``.
+    selected_is_default : bool
+        Whether the selected configuration is trial 0.
+    exploration_max : float
+        Largest complete search score among the default and design trials,
+        0.0 when none completed.
+    stop_reason : {"patience", "budget", "exploration_only"}
+        Why the search stopped.
+    n_completed : int
+        Complete trials, completed pruned trials included.
+    n_pruned : int
+        Trials that remain pruned.
+    n_completed_after_prune : int
+        Pruned trials completed after the search.
+    n_fits : int
+        UMAP and HDBSCAN fits the search ran.
+    seconds : float
+        Wall time of the search.
+    plan : ResamplePlan
+        Common resample plan of the search scores.
     """
 
     selected: Params
@@ -469,7 +570,6 @@ class _Run:
     records: dict[int, TrialRecord] = field(default_factory=dict)
     pruned_fits: dict[int, tuple[Fit, ...]] = field(default_factory=dict)
     n_fits: int = 0
-    stopped_by_patience: bool = False
 
     def score(
         self,
@@ -534,7 +634,6 @@ class _Run:
             return
         window = self.best(trial.number) - self.best(trial.number - self.config.patience)
         if window < self.config.min_improvement:
-            self.stopped_by_patience = True
             study.stop()
 
     def trials(self) -> tuple[TrialRecord, ...]:
@@ -646,7 +745,10 @@ def search(
     then completed, given that the data score bounds the gap from above (the
     null score is non-negative). The top ``n_rescore`` trials plus the default
     are re-scored on a fresh plan and fresh null matrices, and the largest fresh
-    gap is selected, removing the winner's curse from the default comparison.
+    gap is selected. The fresh scores reduce the winner's curse of the search
+    scores but do not remove it: the selected gap is still the largest of up to
+    ``n_rescore + 1`` fresh gaps, the default's included, so it remains biased
+    upwards relative to the default's.
 
     Parameters
     ----------
@@ -678,6 +780,8 @@ def search(
         If ``engine`` is not ``"cpu"`` or ``"cuml"``, ``x`` is not
         two-dimensional, ``n_trials < n_explore + 1``, or
         :func:`resolve_space` rejects the space.
+    ImportError
+        If ``engine="cuml"`` and the cuML libraries cannot be imported.
     """
     started = time.perf_counter()
     engine = require_resolved(engine)
@@ -733,7 +837,7 @@ def search(
         paired = tuple(
             s - d for s, d in zip(top.fresh_pair_scores, default.fresh_pair_scores, strict=True)
         )
-        stop_reason = "patience" if run.stopped_by_patience or len(trials) < n_trials else "budget"
+        stop_reason = "patience" if len(trials) < n_trials else "budget"
         trials = run.trials()
     return SearchResult(
         selected=selected,

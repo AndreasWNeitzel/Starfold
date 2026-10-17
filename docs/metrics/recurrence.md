@@ -48,7 +48,7 @@ refit group C    : d x y z          shared 1, in either 7  ->  1/7 = 0.14
 
 In each refit, Starfold picks the refit group with the highest Jaccard index against the group and keeps that number. A group that scores 1.00 in every refit has recurrence 1. A group that refits keep splitting or dissolving scores low.
 
-The left panel below shows the recorded Digits run. Each dot is the mean over 32 refits. Each bar is the 5th to 95th percentile over refits.
+The left panel below shows the recorded Digits run. Each dot is the mean over 32 refits. Each bar is the 5th to 95th percentile over refits. The dotted line sits at 0.85 and the dashed line at 0.5, the two `clusterboot` marks described below.
 
 ![Left: recurrence of each of the 10 Digits groups with its 5 to 95 percent band. Middle: group sizes. Right: recurrence against purity, a post hoc check.](../figures/digits_groups.png)
 
@@ -57,27 +57,30 @@ Look at groups 0 and 1 (dots at 1.00, no visible bar) against group 5 (dot at 0.
 ## Range and reference values
 
 - Range: 0 to 1.
-- Perfect result: 1. The group has the same members in every refit.
+- Perfect result: 1. In every refit, the best-matching cluster holds exactly the group's members that the refit drew.
 - Pure chance: not applicable. A group of any size can score low without chance being the cause, and no value marks "random".
 
 ## How to read a value
 
-Hennig (2007) gives two descriptive reference marks for the mean Jaccard index of a cluster. About 0.85 or more means highly stable, and about 0.5 or less means dissolved. Starfold quotes only these two marks. It prints them as marks to read against, never uses them as filters, and never removes a group. The middle row of the table is advice from this manual, labelled `[no-source: internal-reasoning]`.
+Hennig (2007) proposes the mean Jaccard over resamples as the stability measure of a cluster, but gives no cutoff on that mean. The readings in the table come from the help page of the R function `clusterboot` (Hennig, R package fpc, [clusterboot help](https://rdrr.io/cran/fpc/man/clusterboot.html)). The help page calls them rough guidelines for its own bootstrap scheme. Starfold resamples in its own way, so read them as rough marks. It also warns that stability alone does not show that a cluster is valid. Starfold never uses these marks as filters and never removes a group. The decision column is advice from this manual, `[no-source: internal-reasoning]`.
 
-| Recurrence | Reading | Decision |
+| Recurrence | Reading (`clusterboot` help page) | Decision |
 |---|---|---|
-| 0.85 or more | Highly stable (Hennig 2007) | Describe the group as reproducible |
-| Between 0.5 and 0.85 | Between the two marks | Treat the group as tentative, and follow the steps below. `[no-source: internal-reasoning]` |
-| 0.5 or less | Dissolved (Hennig 2007) | Do not describe the group as a finding |
+| 0.85 or more | Highly stable | Describe the group as reproducible. |
+| 0.75 to 0.85 | Valid and stable | Describe the group as stable under resampling, and give its band. |
+| 0.6 to 0.75 | Shows a pattern, but which rows belong is doubtful | Treat the group as tentative, and follow the steps below. |
+| Below 0.6 | Should not be trusted | Do not describe the group as a finding. Follow the steps below. |
 
-### If your value is in the middle band
+The help page states the 0.5 mark for a single resample: a Jaccard of 0.5 or less there means the cluster dissolved. In Starfold it applies to the value of one refit, so read it against the lower end of the band. A mean below 0.5 matches the dissolution mark, but the mark itself is about one refit.
 
-Take group 3 of the recorded Digits run: recurrence 0.54, band 0.25 to 0.81, 324 rows. The value is above 0.5, but the lower end of the band is below it, so in some refits the group dissolves. The group is large, so the small-group caution below does not explain it. `[no-source: internal-reasoning]`
+### If your value is below 0.75
 
-1. Read the band. If its lower end is below 0.5, say that the group sometimes dissolves.
+Take group 3 of the recorded Digits run: recurrence 0.54, band 0.25 to 0.81, 324 rows. The mean is below 0.6, so the `clusterboot` guidelines say not to trust it. The lower end of the band is below 0.5, so by the dissolution mark some refits lost the group. The group is large, so the small-group caution below does not explain it. `[no-source: internal-reasoning]`
+
+1. Read the band. If its lower end is below 0.5, say that some refits lost the group.
 2. Find which group it merges with. Average the {term}`support` of the group's rows over the other groups. A second group with a large average means the refits move rows between the two. The {doc}`coassociation` page explains the within and between values that the same refits give.
 3. Do not report the group as a stable population. Report its value and band.
-4. Test it with more refits (`Config(n_worlds=...)`) or a different seed. If the value stays in the middle band, keep the group tentative. If it moves between bands, the estimate itself is not settled.
+4. Test it with more refits (`Config(n_worlds=...)`) or a different seed. If the value stays below 0.75, keep the group tentative. If it moves between bands, the estimate itself is not settled.
 
 ```python
 rows = result.labels == 3
@@ -134,6 +137,7 @@ A refit with no group scores 0. Ties go to the lowest refit group id. The band i
 
 ## Learn more
 
-- Hennig (2007), cluster-wise assessment of cluster stability with Jaccard values: [doi:10.1016/j.csda.2006.11.025](https://doi.org/10.1016/j.csda.2006.11.025). Verify the two marks against the paper before you cite them.
+- Hennig (2007), cluster-wise assessment of cluster stability with Jaccard values: [doi:10.1016/j.csda.2006.11.025](https://doi.org/10.1016/j.csda.2006.11.025). The paper proposes the mean Jaccard as the measure and gives no cutoff on it.
+- Hennig, fpc: Flexible Procedures for Clustering, R package, [CRAN](https://CRAN.R-project.org/package=fpc). The Details section of the [clusterboot help page](https://rdrr.io/cran/fpc/man/clusterboot.html) gives the 0.85, 0.75, 0.6 and 0.5 marks.
 - Jaccard index and other clustering comparisons in scikit-learn: [clustering performance evaluation](https://scikit-learn.org/stable/modules/clustering.html).
 - Glossary: {term}`Recurrence`, {term}`Jaccard index`, {term}`stability interval`. Related pages: {doc}`support`, {doc}`count-interval`.

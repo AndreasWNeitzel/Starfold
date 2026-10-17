@@ -77,9 +77,66 @@ class Config:
     six times the rest of a run. Run :func:`null_test` once on the result you
     report, or name the families here to run it inside ``recover``.
 
-    Construction raises ``ValueError`` when a range is empty or reaches zero
-    on a log axis, ``n_explore`` is not a power of two, ``n_null_max`` cannot
-    reach ``alpha``, or a budget or option is outside its allowed values.
+    Attributes
+    ----------
+    space : Space, default Space()
+        Search bounds.
+    scaling : {"standard", "robust"}, default "standard"
+        Feature scaling, fitted inside each resample and world.
+    n_trials : int, default 48
+        Largest number of search trials, the default and the design included.
+    n_explore : int, default 16
+        Sobol design trials after the default trial, a power of two.
+    n_resamples : int, default 3
+        Resamples of the common plan on which every trial is scored, at least 2.
+    resample_fraction : float, default 0.8
+        Fraction of rows in each resample, strictly between 0 and 1.
+    patience : int, default 16
+        Window, in trials, of the patience stopping rule.
+    min_improvement : float, default 0.01
+        Smallest gain of the best score over ``patience`` trials that keeps
+        the search running.
+    prune : bool, default True
+        Whether convergence trials may be median-pruned.
+    n_complete_pruned : int, default 3
+        Largest number of promising pruned trials completed after the search.
+    n_rescore : int, default 3
+        Top complete trials re-scored on the fresh plan, together with the
+        default.
+    n_null_rescore : int, default 3
+        Structureless copies on which each candidate is re-scored. Zero also
+        drops the copy scored during the search.
+    gap_family : {"gaussian_copula", "independent_marginals"} or None, default "gaussian_copula"
+        Generator of the structureless copies behind the gap, or None to score
+        the data alone.
+    n_worlds : int, default 32
+        Possible worlds, between 2 and 32767.
+    world_fraction : float, default 0.8
+        Fraction of rows each world draws without replacement.
+    null_families : tuple of str, default ()
+        Generator families of the matched null; empty skips it.
+    null_procedure : {"exploration", "full_search"}, default "exploration"
+        Search procedure replayed on each null realisation.
+    n_null_max : int, default 19
+        Largest number of null realisations per family.
+    null_exceedances : int, default 3
+        Exceedances at which the sequential null rule stops a family.
+    alpha : float, default 0.05
+        Declared level of the matched null.
+    consensus_budget_bytes : int, default 512 * 2**20
+        Largest size, in bytes, of the dense co-association matrix of the
+        consensus check.
+    consensus_check_rows : int, default 4096
+        Subset size of the consensus check when all rows exceed the budget.
+    check_backends : bool, default False
+        Whether to compare the CPU and cuML fits of the deployed configuration.
+
+    Raises
+    ------
+    ValueError
+        If a range is empty or reaches zero on a log axis, ``n_explore`` is
+        not a power of two, ``n_null_max`` cannot reach ``alpha``, or a budget
+        or option is outside its allowed values.
     """
 
     space: Space = field(default_factory=Space)
@@ -161,7 +218,8 @@ def _validate_evidence_budgets(config: Config) -> None:
         (0.0 < config.alpha < 1.0, "alpha must lie strictly between 0 and 1."),
         (
             config.n_null_max >= minimum_null,
-            "n_null_max cannot reach alpha; raise n_null_max or alpha.",
+            f"n_null_max={config.n_null_max} is too small to attain alpha={config.alpha}; "
+            f"increase n_null_max to at least {minimum_null} or choose a larger alpha.",
         ),
         (config.null_exceedances >= 1, "null_exceedances must be at least 1."),
         (
@@ -170,7 +228,8 @@ def _validate_evidence_budgets(config: Config) -> None:
         ),
         (
             16 * config.consensus_check_rows**2 <= config.consensus_budget_bytes,
-            "consensus_check_rows squared times 16 bytes must fit consensus_budget_bytes.",
+            "consensus_check_rows squared times 16 bytes must fit consensus_budget_bytes; "
+            "lower consensus_check_rows or increase consensus_budget_bytes.",
         ),
         (
             all(f in ("gaussian_copula", "independent_marginals") for f in config.null_families),
@@ -318,7 +377,7 @@ def recover(
     Raises
     ------
     ValueError
-        For an invalid matrix, uncertainties, or job count.
+        For an invalid matrix, uncertainties, job count, or ``engine`` value.
     ImportError
         Raised before any stage runs if ``engine="cuml"`` or
         ``config.check_backends`` is set and cuML cannot be used.
@@ -427,6 +486,8 @@ def recover(
         n_input_rows=n_input,
         stage_seconds=seconds,
         stage_fits=fits,
+        x_err=x_err,
+        sampler=measurement_sampler,
     )
     return Result(
         labels=reference.labels,
@@ -464,10 +525,16 @@ def null_test(
         The finite matrix the search used.
     search_result : SearchResult
         The search whose observed statistic is calibrated.
-    config, random_state, engine
-        Must match the search for the replay to be matched.
+    config : Config, optional
+        Configuration of the search, ``Config()`` when None. It must match
+        the search for the replay to be matched.
     families : tuple of str, default ("gaussian_copula",)
         Generator families, replacing ``config.null_families``.
+    random_state : int, default 0
+        Seed of the replayed search and of the null realisations. It must
+        match the search.
+    engine : {"auto", "cpu", "cuml"}, default "auto"
+        Backend of the replayed search. It must match the search.
     n_jobs : int, default 1
         As in ``recover``. Above 20000 rows per resample it must also match
         the search, because the approximate neighbour graph depends on it.
@@ -476,6 +543,15 @@ def null_test(
     -------
     NullEvidence
         Matched null outcome per generator family.
+
+    Raises
+    ------
+    ValueError
+        If ``X`` is invalid or has a non-finite row, a family is unknown, a
+        configuration value is invalid, ``n_jobs < 1``, or ``engine`` is not
+        a supported value.
+    ImportError
+        If ``engine="cuml"`` and cuML cannot be used.
     """
     cfg = replace(Config() if config is None else config, null_families=tuple(families))
     x, kept, _, _ = _prepare(X, None)

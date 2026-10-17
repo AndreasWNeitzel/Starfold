@@ -80,5 +80,6 @@ The DOI link opens the paper or its record.
 - [scikit-learn, clustering performance evaluation](https://scikit-learn.org/stable/modules/clustering.html#clustering-evaluation): the adjusted Rand index and related measures, with formulas and worked code.
 - von Luxburg (2010), [Clustering stability: an overview](https://doi.org/10.48550/arXiv.1007.1075): what stability can and cannot tell you about a clustering.
 - Hennig (2007), [Cluster-wise assessment of cluster stability](https://doi.org/10.1016/j.csda.2006.11.025): the resampling design behind group recurrence and its Jaccard matching.
+- Hennig, [fpc: Flexible Procedures for Clustering](https://CRAN.R-project.org/package=fpc), R package: the [clusterboot help page](https://rdrr.io/cran/fpc/man/clusterboot.html) gives the 0.85 and 0.5 marks that the figures draw.
 
 For the full reference list of Starfold's methods, see {doc}`citing`.

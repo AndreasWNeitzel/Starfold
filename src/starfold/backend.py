@@ -74,6 +74,11 @@ class Params:
         HDBSCAN core-distance neighbour count in ``[1, min_cluster_size]``.
     selection_method : {"eom", "leaf"}
         HDBSCAN cluster selection rule.
+
+    Raises
+    ------
+    ValueError
+        If a field lies outside the range stated above.
     """
 
     n_neighbors: int

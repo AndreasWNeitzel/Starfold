@@ -23,11 +23,11 @@ Shapes use these symbols: `n_kept` for the rows that were finite and used, `G` f
 
 ## `Result`
 
-`recover` returns one `Result`. It is immutable.
+`recover` returns one `Result`. Its fields cannot be reassigned, but the arrays it holds can still be changed in place.
 
 | Field | Type | Meaning | Explained on |
 |---|---|---|---|
-| `labels` | `int32`, `(n_kept,)` | The emitted {term}`partition`: one full-data fit of `params`, -1 for noise. | {doc}`../concepts/pipeline` |
+| `labels` | `int32`, `(n_kept,)` | The emitted {term}`partition`: one full-data fit of `deployed_params`, -1 for noise. | {doc}`../concepts/pipeline` |
 | `strengths` | `float32`, `(n_kept,)` | HDBSCAN within-fit strengths of that fit. They are not probabilities. | {doc}`../metrics/strengths` |
 | `default_labels` | `int32`, `(n_kept,)` | One full-data fit of the library defaults, kept as the external comparator. | {doc}`../metrics/default-comparison` |
 | `kept_rows` | `intp`, `(n_kept,)` | Indices into the input of the rows that were finite and used. `X[result.kept_rows]` lines up with `labels`. | {doc}`../howto/prepare-table` |
@@ -62,7 +62,7 @@ Three properties read from the parts: `n_groups` (number of groups in `labels`),
 | `n_fits`, `seconds` | `int`, `float` | Fits and wall time of the search. | {doc}`config` |
 | `plan` | `ResamplePlan` | The resample indices and seeds of the main plan. | {doc}`../concepts/pipeline` |
 
-Each `TrialRecord` holds `number`, `params`, `state` (`"complete"`, `"pruned"` or `"failed"`), `score` (the search {term}`gap` the sampler maximises, which is `raw_score` minus `null_score`; `raw_score` is the {term}`score` on your table and `null_score` the score on the {term}`structureless copy`), `partial_score`, `stability` (the {term}`prediction agreement`), `coverage`, `modularity`, `fit_counts` (groups per fit), `fit_noise` (noise share per fit), `seconds`, `error` and `phase` (`"default"`, `"exploration"`, `"convergence"` or `"completion"`). See {doc}`../metrics/score`, {doc}`../metrics/prediction-agreement`, {doc}`../metrics/coverage` and {doc}`../metrics/modularity`.
+Each `TrialRecord` holds `number`, `params`, `state` (`"complete"`, `"pruned"` or `"failed"`), `score` (the search {term}`gap` the sampler maximises, which is `raw_score` minus `null_score`, or `raw_score` alone when no copy was scored; `raw_score` is the {term}`score` on your table and `null_score` the score on the {term}`structureless copy`), `partial_score`, `stability` (the {term}`prediction agreement`), `coverage`, `modularity`, `fit_counts` (groups per fit), `fit_noise` (noise share per fit), `seconds`, `error` and `phase` (`"default"`, `"exploration"`, `"convergence"` or `"completion"`). See {doc}`../metrics/score`, {doc}`../metrics/prediction-agreement`, {doc}`../metrics/coverage` and {doc}`../metrics/modularity`.
 
 Each `Candidate` holds `params`, `trial_number`, `score` (search score), `fresh_score`, `fresh_pair_scores`, `fit_counts`, `null_scores` and `gap`.
 
@@ -107,7 +107,7 @@ Each `Candidate` holds `params`, `trial_number`, `score` (search score), `fresh_
 |---|---|---|---|
 | `families` | `tuple[str, ...]` | Families run, in order. | {doc}`../metrics/calibration-p` |
 | `statistic_name` | `str` | `"exploration_design_max"` or `"full_search_max"`. | {doc}`../metrics/calibration-p` |
-| `observed` | `float` | The statistic on your table: the largest search gap among the replayed trials (trials 0 to 16 by default). | {doc}`../metrics/calibration-p` |
+| `observed` | `float` | The statistic on your table. For `"exploration"` it is the largest search gap among trials 0 to 16 at the defaults. For `"full_search"` it is the selected setting's fresh score. | {doc}`../metrics/calibration-p` |
 | `values` | `tuple[tuple[float, ...], ...]` | The statistic on each copy, per family. | {doc}`../metrics/calibration-p` |
 | `n_realisations`, `exceedances` | `tuple[int, ...]` | Copies drawn, and copies at or above `observed`, per family. | {doc}`../metrics/calibration-p` |
 | `p_values` | `tuple[float, ...]` | `(exceedances + 1) / (n_realisations + 1)` per family. | {doc}`../metrics/calibration-p` |
@@ -131,7 +131,7 @@ Each `Candidate` holds `params`, `trial_number`, `score` (search score), `fresh_
 
 ## `provenance` keys
 
-`result.provenance` is a dictionary with these keys, all JSON types.
+`result.provenance` is a dictionary with these keys. In memory, `peak_rss_mb` is NaN when the platform does not report it. `save` writes a non-finite float as JSON `null`.
 
 | Key | Holds |
 |---|---|
@@ -143,6 +143,7 @@ Each `Candidate` holds `params`, `trial_number`, `score` (search score), `fresh_
 | `config` | The full `Config`, with `Space`, as nested JSON. |
 | `n_input_rows`, `n_kept_rows`, `n_features` | Rows given, rows kept and columns. |
 | `input_fingerprint` | SHA-256 of the kept matrix as C-ordered float64 bytes plus its shape. |
+| `measurement` | The measurement model of the refits. `{"kind": "none"}` without measurement errors. `{"kind": "x_err", "x_err_fingerprint": ...}` with `X_err`, where the fingerprint is the SHA-256 of the kept rows of `X_err`. `{"kind": "sampler", "sampler": "module.qualname", "repr": ...}` with `measurement_sampler`; the repr shows bound arguments of a `functools.partial`, but not state hidden in a closure. |
 | `stage_seconds`, `stage_fits`, `total_fits` | Wall time per stage (`search`, `reference`, `worlds`, `consensus`, `null`, `backends`, `total`), fits per stage (the same names except `consensus` and `total`) and the fit total. |
 | `peak_rss_mb` | Peak resident memory of the process in MB, NaN where unknown (saved as `null`). |
 

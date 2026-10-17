@@ -585,6 +585,10 @@ def test_run_worlds_rejects_bad_inputs(monkeypatch):
         run_worlds(x, PARAMS, labels[:-1], n_worlds=2, world_fraction=0.8, **common)
     with pytest.raises(ValueError, match="x_err must have shape"):
         run_worlds(x, PARAMS, labels, n_worlds=2, world_fraction=0.8, x_err=np.ones(3), **common)
+    with pytest.raises(ValueError, match="non-negative"):
+        run_worlds(
+            x, PARAMS, labels, n_worlds=2, world_fraction=0.8, x_err=-np.ones_like(x), **common
+        )
     with pytest.raises(ValueError, match="exclusive"):
         run_worlds(
             x,

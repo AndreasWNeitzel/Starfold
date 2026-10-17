@@ -24,9 +24,9 @@ Optuna is that loop. A {term}`setting` is one complete choice of values (here si
 
 Starfold uses Optuna's default loop with three additions.
 
-1. **Trial 0 is the library defaults.** Every search includes the answer you would get without one.
+1. **Trial 0 is the library defaults.** Every search includes the answer you would get without one. If your ranges exclude a default, trial 0 uses the nearest bound instead.
 2. **Trials 1 to 16 are a {term}`Sobol design`.** They try settings spread evenly over the allowed range of every value, and they do not use past scores. A Sobol design fills a six-value space more evenly than random draws do.
-3. **Later trials use {term}`TPE`.** This method looks at the past trials, splits them into good and poor, and tries settings near the good ones.
+3. **Later trials use {term}`TPE`, in its multivariate form.** This method splits the past trials into good and poor. It draws candidates near the good ones and keeps the candidate most typical of good trials and least typical of poor ones.
 
 The search runs up to 48 trials. From trial 17, a trial whose first two fits score below the median of the earlier first-pair scores is stopped early ({term}`pruning`). Up to three stopped trials that look promising are completed at the end. From trial 33, the search stops once the best gap has improved by less than 0.01 over 16 trials.
 
@@ -44,7 +44,7 @@ Starfold's score is computed without labels and without the number of groups. It
 
 The score is the cube root of the product of the three. A zero in any one makes it zero. Because it never reads the group count, nothing pulls the search toward a particular number of groups.
 
-The search does not rank trials by this score alone. It subtracts the score of the same setting on a {term}`structureless copy` of your table, and the difference is the {term}`gap`. The trial's number in the search is its gap. {doc}`copies-and-gaps` explains why.
+The search does not rank trials by this score alone. It subtracts the score of the same setting on a {term}`structureless copy` of your table, and the difference is the {term}`gap`. The trial's number in the search is its gap. If you switch the copy off with `Config(gap_family=None)`, the number is the score. {doc}`copies-and-gaps` explains why.
 
 ## Where the search misleads
 

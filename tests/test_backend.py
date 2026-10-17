@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import os
+import sys
+import warnings
+from types import ModuleType
 
 import numpy as np
 import pytest
@@ -347,3 +350,87 @@ def test_rescale_params_identity_and_bounds():
     assert huge.min_cluster_size >= huge.min_samples
     with pytest.raises(ValueError, match="row counts"):
         rescale_params(params, 0, 10)
+
+
+def test_knn_graph_dispatches_to_seeded_descent_above_row_limit(monkeypatch):
+    seen = []
+
+    def fail_brute(*_args, **_kwargs):
+        pytest.fail("large CPU inputs must use seeded descent")
+
+    def descent(x, k, *, seed, n_jobs):
+        seen.append((x.shape[0], k, seed, n_jobs))
+        indices = np.repeat(np.arange(x.shape[0], dtype=np.int32)[:, None], k, axis=1)
+        distances = np.zeros(indices.shape, dtype=np.float32)
+        return indices, distances
+
+    monkeypatch.setattr(backend, "_brute_knn", fail_brute)
+    monkeypatch.setattr(backend, "_descent_knn", descent)
+    x = np.zeros((backend._BRUTE_FORCE_MAX_ROWS + 1, 2), dtype=np.float32)  # noqa: SLF001
+
+    indices, distances = knn_graph(x, 2, engine="cpu", seed=17, n_jobs=3)
+
+    assert seen == [(x.shape[0], 2, 17, 3)]
+    assert indices.shape == distances.shape == (x.shape[0], 2)
+    np.testing.assert_array_equal(indices[:, 0], np.arange(x.shape[0]))
+
+
+@pytest.mark.parametrize(
+    ("labels", "expected_groups"),
+    [([-1] * 6, 0), ([0] * 6, 1)],
+)
+def test_fit_pipeline_counts_zero_and_one_groups(monkeypatch, labels, expected_groups):
+    x = np.ones((6, 2), dtype=np.float64)
+    params = Params(2, 0.1, 2, 2, 1, "eom")
+    labels = np.asarray(labels, dtype=np.int32)
+    monkeypatch.setattr(backend, "scale", lambda rows, _scaling: rows.astype(np.float32))
+
+    def fake_knn(rows, k, *, engine, seed):
+        del engine, seed
+        indices = np.repeat(np.arange(rows.shape[0], dtype=np.int32)[:, None], k, axis=1)
+        return indices, np.zeros(indices.shape, dtype=np.float32)
+
+    monkeypatch.setattr(backend, "knn_graph", fake_knn)
+    monkeypatch.setattr(
+        backend,
+        "fit_umap",
+        lambda rows, _params, **_kwargs: np.zeros((rows.shape[0], 2), dtype=np.float32),
+    )
+    monkeypatch.setattr(
+        backend,
+        "fit_hdbscan",
+        lambda embedding, _params, **_kwargs: (
+            labels.copy(),
+            np.ones(embedding.shape[0], dtype=np.float32),
+        ),
+    )
+
+    fit = fit_pipeline(x, params, seed=0, engine="cpu", scaling="standard")
+
+    assert fit.n_groups == expected_groups
+    np.testing.assert_array_equal(fit.labels, labels)
+
+
+def test_fit_umap_errors_when_umap_ignores_precomputed_graph(monkeypatch):
+    class FakeReducer:
+        def __init__(self, **_kwargs):
+            pass
+
+        def fit_transform(self, rows):
+            warnings.warn(
+                "precomputed_knn has a different number of samples than the data",
+                UserWarning,
+                stacklevel=2,
+            )
+            return np.zeros((rows.shape[0], 2), dtype=np.float32)
+
+    fake_umap = ModuleType("umap")
+    fake_umap.UMAP = FakeReducer
+    monkeypatch.setitem(sys.modules, "umap", fake_umap)
+    x = np.zeros((6, 2), dtype=np.float32)
+    params = Params(2, 0.1, 2, 2, 1, "eom")
+    indices = np.repeat(np.arange(6, dtype=np.int32)[:, None], 2, axis=1)
+    graph = (indices, np.zeros(indices.shape, dtype=np.float32))
+
+    with pytest.raises(UserWarning, match="precomputed_knn has a different number of samples"):
+        fit_umap(x, params, seed=0, engine="cpu", knn=graph)

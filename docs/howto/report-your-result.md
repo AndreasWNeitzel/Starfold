@@ -64,9 +64,9 @@ This guide shows which numbers of a Starfold result you may quote in a paper, an
 
    The noise in `default_within_noise` treats six overlapping pair differences as independent, so read it as a coarse screen.
 
-5. State the procedure once, with its seed and numbers. Give the table size, the columns, the scaling, the engine, the seed, the number of trials, the number of refits and the number of copies. All of them are in `result.provenance`.
+5. State the procedure once, with its seed and numbers. Give the table size, the columns, the scaling, the engine, the seed, the number of trials, the number of refits and the number of copies. `result.provenance` holds the seed, the engine and the configured budgets. Early stopping can run fewer trials and copies than budgeted, so read the counts from `len(result.search.trials)`, `result.worlds.world_labels.shape[0]` and `result.null.n_realisations`.
 
-6. Do not report a claim that goes beyond the flags and the table in step 2. If a recurrence sits between the marks 0.5 and 0.85, follow {doc}`the recurrence page <../metrics/recurrence>`.
+6. Do not report a claim that goes beyond the flags and the table in step 2. If a recurrence sits below the `clusterboot` mark of 0.85, follow {doc}`the recurrence page <../metrics/recurrence>`.
 
 ## Expected result
 
@@ -104,7 +104,7 @@ Each line follows from the statistical language of the project ({doc}`../limits`
 
 ## Variations
 
-- **Several seeds.** Report the recurrence of a group for each seed, and say which seeds gave which band. A group that crosses 0.5 or 0.85 between seeds is not reproducible at the level of the mark.
+- **Several seeds.** Report the recurrence of a group for each seed, and say which seeds gave which band. A group that crosses one of the `clusterboot` marks (0.85, 0.75, 0.6 or 0.5) between seeds is not reproducible at the level of that mark.
 - **No calibration test.** Write that the test was not run and quote no p-value. The placeholder p of 1.0 in `result.null` is not a result.
 - **Measurement errors.** If you passed `X_err`, say so, and say that the error bars were measured ones ({doc}`measurement-errors`). An invented error bar produces an invented spread.
 

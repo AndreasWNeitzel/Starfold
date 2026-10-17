@@ -31,12 +31,12 @@ HDBSCAN also reports a strength for each grouped row, from 0 to 1, where 1 is th
 
 ## The settings Starfold searches
 
-The defaults below are those of the libraries, and trial 0 of every search.
+The defaults below are those of the libraries, and trial 0 of every search. If you narrow a range so that it excludes a default, trial 0 uses the nearest bound instead.
 
 | Setting | Default | What it does |
 |---|---|---|
 | {term}`min_cluster_size` | 5 | The smallest clump that may be called a group. Raise it and small groups disappear or merge into bigger ones. |
-| {term}`min_samples` | 5 | How many neighbours a row looks at when HDBSCAN estimates the density around it. A larger value gives a smoother estimate and more rows become noise. |
+| {term}`min_samples` | 5 | How many neighbours a row looks at when HDBSCAN estimates the density around it. A larger value makes the clustering more conservative: more rows become noise and groups keep to denser regions. |
 | selection method | `eom` | Which clumps HDBSCAN keeps when clumps sit inside clumps. `eom` keeps the clumps that stay dense over the widest range of density levels (the persistent ones), which tend to be larger. `leaf` keeps the innermost, finest clumps, which gives more and smaller groups. |
 
 Starfold searches `min_cluster_size` from 5 up to a bound that depends on your table (at most 1,023), on a log scale. It searches `min_samples` as a fraction of `min_cluster_size`, from 0.05 to 1.0.

@@ -13,6 +13,11 @@ New code base and API. Code written for 0.0.1 needs porting.
 - `save` and `load` write checksummed JSON and NumPy arrays and re-derive the flags on load. Results saved by 0.0.1 do not load.
 - Removed: `UnsupervisedPipeline`, `PipelineResult`, and every 0.0.1 helper, plotting function and dashboard.
 - `starfold.search` stays the search function after other public names load (it used to become the submodule).
+- Provenance records the measurement model (`measurement`: none, an `X_err` fingerprint, or the sampler name) and the pynndescent version.
+- `load` refuses a manifest that is unreadable or lacks a checksum, and `save` writes each array with `allow_pickle=False` on every supported NumPy.
+- `measurement_draw` and `run_worlds` refuse negative uncertainties. `search_stopped_early` now means fewer than `n_trials` trials ran.
+- `python -m bench.null_stage` replays the saved search space, engine and worker count.
+- The recurrence marks 0.85 and 0.5 are now credited to the fpc `clusterboot` documentation, not Hennig (2007), and the manual describes the Gaussian copula family and sequential p-values correctly.
 - The manual is a Sphinx site built from `docs/` (install with `--extra docs`): tutorials, one page per metric, how-to guides, a flag reference, a glossary and an index. It replaces `docs/handbook.md`.
 - The APOGEE DR19 example table is now `bench/data/stellar_chemokinematics_apogee_dr19.npz`, read with `bench.datasets.example_table()` from a clone.
 

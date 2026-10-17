@@ -47,6 +47,7 @@ _PINNED_DISTRIBUTIONS = (
     "hdbscan",
     "optuna",
     "joblib",
+    "pynndescent",
 )
 
 
@@ -181,7 +182,7 @@ def library_versions() -> dict[str, str]:
     -------
     dict[str, str]
         Keys ``numpy``, ``scipy``, ``scikit-learn``, ``umap-learn``,
-        ``hdbscan``, ``optuna``, ``joblib`` and ``cuml``, each mapped to the
+        ``hdbscan``, ``optuna``, ``joblib``, ``pynndescent`` and ``cuml``, each mapped to the
         distribution version or ``"absent"``. RAPIDS wheels carry a CUDA
         suffix (``cuml-cu12``, ``cuml-cu13``), so ``cuml`` is matched by prefix.
     """

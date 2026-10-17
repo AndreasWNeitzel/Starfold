@@ -477,3 +477,15 @@ def test_stage_functions_reject_an_unresolved_engine():
     for call in calls:
         with pytest.raises(ValueError, match="engine must be"):
             call()
+
+
+def test_score_fits_one_group_across_resamples_has_zero_stability():
+    x, _truth, plan, adjacency = _line_setup()
+    fits = [_fake_fit(np.zeros(plan.m, dtype=np.int32)) for _ in plan.indices]
+
+    score = score_fits(fits, plan, adjacency, x=x, scaling="standard")
+
+    assert score.fit_counts == (1, 1, 1)
+    assert score.stability == 0.0
+    assert score.coverage == 1.0
+    assert score.score == 0.0

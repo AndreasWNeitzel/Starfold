@@ -25,6 +25,7 @@ EXPECTED_VERSION_KEYS = {
     "hdbscan",
     "optuna",
     "joblib",
+    "pynndescent",
     "cuml",
 }
 

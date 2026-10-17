@@ -19,7 +19,7 @@ How much better does a setting score on your table than on a {term}`structureles
 
 ## A picture
 
-A structureless copy keeps every value of every column, exactly as measured, so each column keeps its own distribution. It reorders which values sit together and keeps the rank correlation between columns, so the copy has one Gaussian dependence structure (elliptical when ranks are plotted) and no groups. Starfold scores each setting on the table and on the copy, on the same subsets, and takes the difference: the {term}`gap`.
+A structureless copy keeps every value of every column, exactly as measured, so each column keeps its own distribution. It reorders which values sit together, and couples the columns through one fitted, shrunk Gaussian dependence on normal scores. Its rank correlations come close to the table's but do not match exactly. The copy has no groups that need several columns together, but a single column with several peaks keeps them. Starfold scores each setting on the table and on the copy, on the same subsets, and takes the difference: the {term}`gap`.
 
 The figure below shows every complete trial of the recorded APOGEE run. The score on the data is on the horizontal axis and the score on the copy on the vertical axis.
 
@@ -99,7 +99,7 @@ search gap     = S(theta; X) - S(theta; X_copy)              one fixed copy, the
 fresh gap      = S(theta; X) - mean over 3 fresh copies of S(theta; X_copy)   fresh plan
 ```
 
-The fresh plan has new subsets and three new copies. The largest fresh gap among the top 3 complete trials and trial 0 is selected, with ties going to the lower trial number, so to the defaults. The gap family is set in `Config` by `gap_family` (`None` turns the gap off, and then the gap equals the score). The source is `search` and `_Run.rescore` in `src/starfold/search.py`, and `derive_flags` in `src/starfold/result.py`.
+The fresh plan has new subsets and three new copies. The largest fresh gap among the top 3 complete trials and trial 0 is selected, with ties going to the lowest trial number. The defaults win only a tie they are part of. The gap family is set in `Config` by `gap_family` (`None` turns the gap off, and then the gap equals the score). The source is `search` and `_Run.rescore` in `src/starfold/search.py`, and `derive_flags` in `src/starfold/result.py`.
 :::
 
 ## Learn more
