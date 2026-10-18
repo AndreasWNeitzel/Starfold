@@ -22,17 +22,20 @@ This guide shows which numbers of a Starfold result you may quote in a paper, an
 1. Print the flags and read each one before you write a sentence.
 
    ```python
-   print(result.flags)
+   for flag in result.flags:
+       print(flag)
    ```
 
    In the recorded APOGEE run, before the calibration test, you see:
 
    ```text
-   search_budget_exhausted: the search used every trial; a larger n_trials may help
-   consensus_subsampled: the co-association check ran on a seeded subset of stars
-   consensus_disagrees: the cut of the co-association matrix agrees with the partition below 0.5
-   null_not_run: no calibration test ran, so there is no p-value; run starfold.null_test
+   search_budget_exhausted
+   consensus_subsampled
+   consensus_disagrees
+   null_not_run
    ```
+
+   The {doc}`../reference/flags` page gives the meaning of each one.
 
    Each flag limits one kind of sentence. Step 4 gives the wording. The page {doc}`../reference/flags` says which flags block a claim (column "Fault").
 

@@ -58,7 +58,7 @@ This guide scores a Starfold partition against classes you already know, after t
 
 ## Expected result
 
-The recorded Digits run prints:
+For step 3, the recorded Digits run prints the lines below. Step 4 prints the Starfold value without rounding, because every digit has a known class.
 
 You see:
 

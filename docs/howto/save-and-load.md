@@ -39,7 +39,8 @@ This guide writes a result to disk as a checksummed directory and reads it back,
    ```python
    import numpy as np
 
-   print(np.array_equal(loaded.labels, result.labels), loaded.flags == result.flags)
+   assert np.array_equal(loaded.labels, result.labels) and loaded.flags == result.flags
+   print(f"saved to {path}; labels and flags match after reloading")
    ```
 
 ## Expected result

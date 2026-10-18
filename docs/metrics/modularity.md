@@ -61,7 +61,7 @@ The notebooks do not print this term alone. The recorded Digits run (1,797 image
 ```python
 for number in (0, 13, 33):
     trial = result.search.trials[number]
-    print(number, round(trial.modularity, 3))
+    print(number, f"{trial.modularity:.3f}")
 ```
 
 You see (values read from the recorded file, on the search's three subsets):

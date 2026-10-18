@@ -59,7 +59,6 @@ This guide turns a table of measurements into the array `starfold.recover` accep
    kept = X[result.kept_rows]  # lines up with result.labels
    prov = result.provenance
    print(f"rows kept: {prov['n_kept_rows']} of {prov['n_input_rows']}, columns: {prov['n_features']}")
-   print(result.flags)
    ```
 
 ## Expected result
