@@ -1,0 +1,354 @@
+/* Starfold manual: typography and surfaces on top of Furo.
+   Every colour comes from a Furo variable or one of the --sf-* variables set
+   in conf.py, so light and dark resolve as one set. */
+
+/* ---------- Reading text ---------- */
+
+article[role="main"] {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  font-feature-settings: "kern" 1;
+}
+
+article[role="main"] p,
+article[role="main"] li,
+article[role="main"] dd {
+  hyphens: manual;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-stack--headings);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+  text-wrap: balance;
+  color: var(--color-foreground-primary);
+}
+
+article h1 { font-size: 2.1em; margin-top: 0.4em; margin-bottom: 0.6em; }
+article h2 { font-size: 1.5em; margin-top: 2.2em; }
+article h3 { font-size: 1.22em; margin-top: 1.8em; }
+article h4 { font-size: 1.06em; }
+
+article p,
+article li { text-wrap: pretty; }
+
+a { text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+
+strong, b { font-weight: 600; }
+
+hr { border-color: var(--color-background-border); }
+
+/* ---------- Sidebar ---------- */
+
+.sidebar-drawer { border-right: 1px solid var(--color-background-border); }
+
+.sidebar-brand.sf-brand {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.55rem;
+  padding: var(--sidebar-item-spacing-vertical) var(--sidebar-item-spacing-horizontal);
+  text-decoration: none;
+  color: var(--color-foreground-primary);
+}
+.sf-brand:hover { color: var(--color-foreground-primary); }
+.sf-mark { width: 26px; height: 26px; flex: none; }
+.sf-wordmark {
+  font-family: var(--font-stack--headings);
+  font-weight: 600;
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
+}
+.sf-wordmark-sub {
+  align-self: flex-end;
+  margin-bottom: 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-foreground-muted);
+}
+
+.sidebar-tree .caption,
+.sidebar-tree :not(.caption) > .caption-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-foreground-muted);
+}
+.sidebar-tree .caption { margin-top: 1.4rem; }
+
+.sidebar-tree .reference { color: var(--color-foreground-secondary); }
+.sidebar-tree .current-page > .reference {
+  color: var(--color-brand-primary);
+  font-weight: 500;
+}
+.sidebar-tree li.current-page { box-shadow: inset 2px 0 0 var(--color-brand-primary); }
+
+.sidebar-search {
+  border-radius: 2px;
+}
+
+/* ---------- On-this-page column ---------- */
+
+.toc-title { letter-spacing: 0.09em; font-weight: 600; }
+
+/* ---------- Code ---------- */
+
+code.literal,
+.sig,
+pre { font-family: var(--font-stack--monospace); }
+
+code.literal {
+  font-size: 0.86em;
+  padding: 0.05em 0.22em;
+  border: 0;
+  border-radius: 2px;
+  background: var(--color-inline-code-background);
+}
+a code.literal { background: transparent; padding: 0; }
+
+div.highlight,
+.highlight pre {
+  background: var(--sf-code-background) !important;
+}
+div[class*="highlight-"] {
+  border: 1px solid var(--color-background-border);
+  border-radius: 2px;
+  box-shadow: none;
+  margin: 1.1em 0;
+}
+div[class*="highlight-"] pre {
+  font-size: 0.84em;
+  line-height: 1.55;
+  padding: 0.85em 1em;
+  border-radius: 2px;
+}
+.highlight .c, .highlight .c1, .highlight .cm, .highlight .ch { font-style: normal; }
+
+button.copybtn {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* ---------- Admonitions ---------- */
+
+.admonition,
+.topic {
+  --color-admonition-title: var(--color-brand-primary);
+  --color-admonition-title-background: transparent;
+  --color-admonition-title--note: var(--color-brand-primary);
+  --color-admonition-title-background--note: transparent;
+  background: transparent;
+  border: 0;
+  border-left: 3px solid var(--color-brand-primary);
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 0.95em;
+  padding: 0.1rem 0 0.1rem 1rem;
+}
+.admonition p.admonition-title {
+  background: transparent;
+  margin: 0 0 0.3rem 0;
+  padding: 0.5rem 0 0 0;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-brand-primary);
+}
+.admonition p.admonition-title::before { display: none; }
+.admonition > :last-child { margin-bottom: 0.5rem; }
+
+.admonition.warning,
+.admonition.caution,
+.admonition.attention,
+.admonition.danger,
+.admonition.error {
+  border-left-color: var(--sf-accent);
+}
+.admonition.warning > p.admonition-title,
+.admonition.caution > p.admonition-title,
+.admonition.attention > p.admonition-title,
+.admonition.danger > p.admonition-title,
+.admonition.error > p.admonition-title {
+  color: var(--sf-accent);
+}
+
+/* ---------- sphinx-design: dropdowns and cards ---------- */
+
+body {
+  --sd-color-primary: var(--color-brand-primary);
+  --sd-color-primary-highlight: var(--color-brand-primary);
+  --sd-color-card-border: var(--color-background-border);
+  --sd-color-card-border-hover: var(--color-brand-primary);
+  --sd-color-card-background: var(--color-background-primary);
+  --sd-color-card-text: var(--color-foreground-primary);
+  --sd-color-card-header: var(--color-background-secondary);
+  --sd-color-shadow: transparent;
+}
+
+details.sd-dropdown {
+  border: 1px solid var(--color-background-border) !important;
+  border-left: 3px solid var(--color-brand-primary) !important;
+  border-radius: 2px;
+  box-shadow: none !important;
+  background: var(--color-background-primary);
+}
+details.sd-dropdown.sf-formula { border-left-color: var(--sf-accent) !important; }
+details.sd-dropdown > summary.sd-summary-title {
+  background: var(--color-background-secondary);
+  border: 0;
+  color: var(--color-foreground-primary);
+  font-weight: 600;
+  padding: 0.55em 1em;
+}
+details.sd-dropdown[open] > summary.sd-summary-title {
+  border-bottom: 1px solid var(--color-background-border);
+}
+details.sd-dropdown .sd-summary-content {
+  background: var(--color-background-primary);
+  border: 0;
+  padding: 0.9em 1.1em 0.5em;
+}
+details.sd-dropdown .sd-summary-state-marker,
+details.sd-dropdown .sd-summary-icon { color: var(--color-foreground-muted); }
+
+.sd-card:not(.sd-dropdown) {
+  border: 1px solid var(--color-background-border) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  background: var(--color-background-primary);
+  transition: border-color 0.15s ease;
+}
+.sd-card:not(.sd-dropdown):hover { border-color: var(--color-brand-primary) !important; }
+.sd-card .sd-card-body { padding: 1rem 1.1rem 1.1rem; }
+.sd-card .sd-card-title {
+  font-family: var(--font-stack--headings);
+  font-weight: 600;
+  font-size: 1.08rem;
+  color: var(--color-brand-primary);
+  margin-bottom: 0.4rem;
+}
+.sd-card .sd-card-text {
+  color: var(--color-foreground-secondary);
+  font-size: 0.94em;
+  line-height: 1.5;
+}
+
+/* ---------- Figures: always a white plate ---------- */
+
+article figure img,
+article p > img,
+article a.reference > img,
+article img.align-center,
+article img.align-default {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  padding: 0.6rem;
+  background: #ffffff;
+  border: 1px solid var(--sf-plate-border);
+  border-radius: 2px;
+  filter: none !important;
+}
+article figure { margin: 1.6em 0; }
+article figure figcaption,
+article figure .caption {
+  margin-top: 0.55em;
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: var(--color-foreground-muted);
+  text-align: left;
+}
+article figure figcaption p { margin: 0; }
+
+/* ---------- Tables ---------- */
+
+.table-wrapper { box-shadow: none; margin: 1.2em 0; padding: 0 0 0.5rem; }
+table.docutils {
+  margin-left: 0;
+  border: 0;
+  border-collapse: collapse;
+  border-radius: 0;
+  box-shadow: none;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.94em;
+}
+table.docutils th,
+table.docutils td {
+  border: 0;
+  border-bottom: 1px solid var(--color-table-border);
+  padding: 0.45em 0.9em 0.45em 0.6em;
+}
+table.docutils th {
+  background: var(--color-table-header-background);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid var(--color-foreground-border);
+}
+table.docutils td:first-child,
+table.docutils th:first-child { border-left: 0; }
+table.docutils tr:last-child td { border-bottom: 1px solid var(--color-foreground-border); }
+
+/* ---------- API reference ---------- */
+
+dl.py > dt,
+dl.class > dt,
+dl.function > dt {
+  font-family: var(--font-stack--monospace);
+  border-left: 3px solid var(--color-brand-primary);
+  background: var(--color-background-secondary);
+  padding: 0.35em 0.7em;
+}
+.sig-name { font-weight: 600; }
+
+/* ---------- Glossary and definition lists ---------- */
+
+dl.glossary > dt {
+  font-family: var(--font-stack--headings);
+  font-weight: 600;
+  margin-top: 1.1em;
+}
+
+/* ---------- Landing page ---------- */
+
+section:has(> .sf-lede) > h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 2.5em;
+  margin-bottom: 0.25em;
+}
+section:has(> .sf-lede) > h1::before {
+  content: "";
+  flex: none;
+  width: 0.95em;
+  height: 0.95em;
+  background: url("starfold-mark-light.svg") center / contain no-repeat;
+}
+body[data-theme="dark"] section:has(> .sf-lede) > h1::before {
+  background-image: url("starfold-mark-dark.svg");
+}
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) section:has(> .sf-lede) > h1::before {
+    background-image: url("starfold-mark-dark.svg");
+  }
+}
+.sf-lede {
+  font-size: 1.22em;
+  line-height: 1.45;
+  color: var(--color-foreground-secondary);
+  margin: 0 0 1.4em;
+  max-width: 34em;
+  text-wrap: balance;
+}
+
+/* Let card grids align with the text column. */
+article .sd-container-fluid { padding-left: 0; padding-right: 0; }
+.highlight .go { color: var(--color-foreground-secondary) !important; }
