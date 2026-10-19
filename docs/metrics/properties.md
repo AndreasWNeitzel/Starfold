@@ -33,11 +33,11 @@ In each {term}`refit`, Starfold matches every group of the full fit to the refit
 
 Take one group with 32 refits (toy numbers). The refits give a median of [Fe/H] between minus 0.43 and minus 0.40. The median of the 32 medians is minus 0.42 and the band runs from minus 0.43 to minus 0.40. The band is narrow because the refit medians barely move.
 
-The recorded APOGEE run shows this for eight columns. The right panel below gives each group's median minus the table mean, in units of the table's standard deviation. The bars are the bands.
+The recorded run on the APOGEE DR19 example table shows this for eight columns. The right panel below gives each group's median minus the table mean, in units of the table's standard deviation. The bars are the bands. The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them.
 
 ![Left: APOGEE stars in the [Fe/H] against [Mg/Fe] plane with each group's median and its 5 to 95 percent range over refits. Right: medians of all eight columns for the two groups.](../figures/apogee/04_properties.png)
 
-Look at the right panel. The two groups differ by more than a unit of standard deviation in [Fe/H], [alpha/M] and [Mg/Fe], and the bars are smaller than the dots. The groups differ clearly, and their medians do not move with the refits.
+Look at the right panel. The two groups differ by more than a unit of standard deviation in [Fe/H], [alpha/M] and [Mg/Fe]. The bars are smaller than the dots, so these medians barely move across refits.
 
 ## Range and reference values
 
@@ -49,7 +49,7 @@ A group never matched by a refit with Jaccard above 0 has NaN in its row.
 
 ## How to read a value
 
-The range is the movement of the median under resampling. It is not the width of the group. Compare the band with the distance between group medians. The bands are `[no-source: internal-reasoning]`.
+The range is the movement of the median under resampling. It is not the width of the group. Compare the band with the distance between group medians. The bands are a rule of thumb from this project, not from a published source.
 
 | Band against the gap between group medians | Reading | Decision |
 |---|---|---|
@@ -66,7 +66,7 @@ The range is the movement of the median under resampling. It is not the width of
 
 ## Where Starfold prints it
 
-The attributes are `result.worlds.property_median` (shape groups by columns), `result.worlds.property_band` (shape groups by columns by 2) and `result.worlds.property_propagated`. The notebook `notebooks/02_apogee.py` printed the recorded lines below. These lines run inside the notebook, where `worlds`, `kept`, `groups`, `names`, `fmt`, `UNITS` and `np` are already defined. `fmt` gives three significant figures.
+The attributes are `result.worlds.property_median` (shape groups by columns), `result.worlds.property_band` (shape groups by columns by 2) and `result.worlds.property_propagated`. The notebook `notebooks/02_apogee.ipynb` printed the recorded lines below. These lines run inside the notebook, where `worlds`, `kept`, `groups`, `names`, `fmt`, `UNITS` and `np` are already defined. `fmt` gives three significant figures.
 
 ```python
 median, band = worlds.property_median, worlds.property_band
@@ -80,7 +80,7 @@ for i, g in enumerate(groups):
         )
 ```
 
-You see (first three columns of group 0, recorded APOGEE run, 32 refits, no per-star errors):
+For group 0, with 32 refits and no per-star errors, the first three columns read:
 
 ```text
 group 0: median over refits (5 to 95 percent), then all stars
@@ -89,7 +89,7 @@ group 0: median over refits (5 to 95 percent), then all stars
   mg_fe       0.273 (0.271 to 0.275)     0.0618  dex
 ```
 
-The last column is the median of all stars. Group 0 has a median [Fe/H] of minus 0.416 dex with a band of minus 0.424 to minus 0.405, about 0.02 dex wide. The recorded Digits run (`notebooks/01_digits.py`) printed `median width of the property bands: 1.00 pixel units`.
+The last column is the median of all stars. Group 0 has a median [Fe/H] of minus 0.416 dex with a band of minus 0.424 to minus 0.405, about 0.02 dex wide. The recorded digits run (`notebooks/01_digits.ipynb`) printed `median width of the property bands: 1.00 pixel units`.
 
 :::{dropdown} Formula
 For group $g$ and column $j$, let $m_{wj}$ be the median of column $j$ over the refit cluster that best matches $g$ in refit $w$. It uses the refit's own feature values (after the measurement draw, if any). Refits with best Jaccard 0 are skipped. Then

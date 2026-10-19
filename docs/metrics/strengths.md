@@ -39,7 +39,7 @@ middle of the cloud : strength between the two
 edge of the cloud   : strength near 0
 ```
 
-In the recorded Digits run, most grouped rows sit in cores, so the median strength is 1.00. A table whose groups are diffuse has lower strengths.
+The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them. In the recorded run on the scikit-learn digits dataset, most grouped rows sit in cores, so the median strength is 1.00. A table whose groups are diffuse has lower strengths.
 
 ## Range and reference values
 
@@ -51,7 +51,7 @@ The hdbscan package sets the strength of a {term}`noise` row to 0 (see the upstr
 
 ## How to read a value
 
-Starfold sets no cut on strengths. The bands are `[no-source: internal-reasoning]`.
+Starfold sets no cut on strengths. The bands are a rule of thumb from this project, not from a published source.
 
 | Strength | Reading | Decision |
 |---|---|---|
@@ -64,20 +64,18 @@ For a claim that a row is reproducibly in a group, use {doc}`support` instead. S
 ## What misleads
 
 - A strength of 1 is not a probability of 1. It is a position in one fit, which depends on the embedding and on the settings.
-- A high strength does not imply a recurrent group. In the recorded Digits run the median strength over all grouped rows is 1.00, yet five of the ten groups recur at 0.73 or less (see {doc}`recurrence`).
+- A high strength does not imply a recurrent group. In the recorded digits run the median strength over all grouped rows is 1.00, yet five of the ten groups recur at 0.73 or less (see {doc}`recurrence`).
 - Strengths are not comparable across fits. Two fits with different settings can give the same row different strengths.
 - A strength is not a measurement uncertainty. Nothing in it reflects the errors of your columns.
 
 ## Where Starfold prints it
 
-The attribute is `result.strengths`, one float32 value per kept row, taken from the `probabilities_` attribute of the HDBSCAN fit of the selected setting on all rows. The name in the code follows HDBSCAN, and the values are within-fit strengths, not posteriors. The notebook `notebooks/01_digits.py` printed the recorded line below.
+The attribute is `result.strengths`, one float32 value per kept row, taken from the `probabilities_` attribute of the HDBSCAN fit of the selected setting on all rows. The name in the code follows HDBSCAN, and the values are within-fit strengths, not posteriors. The notebook `notebooks/01_digits.ipynb` printed the recorded line below.
 
 ```python
 grouped = labels >= 0
 print(f"strengths of grouped rows: median {np.median(result.strengths[grouped]):.2f}")
 ```
-
-You see (recorded Digits run):
 
 ```text
 strengths of grouped rows: median 1.00

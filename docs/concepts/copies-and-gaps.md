@@ -20,7 +20,7 @@ UMAP, HDBSCAN and Optuna together can find groups in almost any table, including
 
 So Starfold never reads a score on its own. It asks how much higher the score is on your table than on copies that keep each column but lose the structure across columns.
 
-Two words carry this page, and they are different numbers. The score is one number for one setting on your table. The gap is that score minus the score of the same setting on a copy. By default the search maximises the gap.
+The score and the gap are different numbers. The score is one number for one setting on your table. The gap is that score minus the score of the same setting on a copy. By default the search maximises the gap.
 
 ## What a structureless copy is
 
@@ -60,7 +60,7 @@ Column A still holds 2, 4, 5, 7 and 9, and column B still holds 10, 30, 50, 60 a
 
 ### The copy on real data
 
-The next figure uses the APOGEE DR19 table, which this manual uses in its second tutorial: 9,242 stars. [Fe/H] is the iron abundance of a star and [Mg/Fe] its magnesium abundance relative to iron, both in dex (a logarithmic unit).
+The next figure uses the APOGEE DR19 example table from the second tutorial, which holds 9,242 stars. [Fe/H] is the iron abundance of a star and [Mg/Fe] its magnesium abundance relative to iron, both in dex (a logarithmic unit).
 
 ![Top row, three density plots of iron abundance against magnesium abundance for 9,242 real stars: the data with two sequences, a Gaussian copula copy with one smooth cloud, and a shuffled copy with no trend. Bottom row, histograms of each column alone, identical for all three.](../figures/manual/03_01.png)
 
@@ -82,10 +82,10 @@ The optional calibration test asks the same question of the whole procedure. By 
 
 The {term}`p-value` is the share of copies whose statistic is at least as high as the table's, counting the table as one more draw. If the table is a draw from the declared family of copies, a p-value at or below 0.05 comes up at most about 5 percent of the time. Ties and the stopping rule keep p from being spread exactly evenly.
 
-Recorded results (`bench/results`, 19 `gaussian_copula` copies, {term}`alpha` 0.05):
+The recorded results in `bench/results` used 19 `gaussian_copula` copies and an {term}`alpha` of 0.05:
 
-- Digits: the table's statistic was 0.710, the search gap of trial 7. No copy reached it, so p = 0.05. Structure is supported against this family.
-- APOGEE DR19: the table's statistic was 0.362, one copy scored higher, so p = 0.10. The test gives no support for structure in the table as a whole. That is not a finding of no groups.
+- The scikit-learn digits dataset: the table's statistic was 0.710, the search gap of trial 7. No copy reached it, so p = 0.05. Structure is supported against this family.
+- The APOGEE DR19 example table: the table's statistic was 0.362 and one copy scored higher, so p = 0.10. The test gives no support for structure in the table as a whole, which is different from showing that the table has no groups.
 
 The p-value holds only for the declared family of copies and the procedure that was simulated. It is not the probability that the groups are real. With 19 copies the smallest possible p is 1 in 20, which is 0.05. So p = 0.05 is the best result this test can give, and it does not separate a clear win from a narrow one. The 0.05 floor and the rule that the test stops after three copies reach the table hold at the default 19 copies only. The {doc}`../metrics/calibration-p` page has the details.
 

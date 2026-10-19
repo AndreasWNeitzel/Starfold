@@ -47,15 +47,13 @@ This guide writes a result to disk as a checksummed directory and reads it back,
 
 The recorded Digits notebook saves and reloads its result, then prints the line below. The notebook writes the absolute path of its own directory where `<your directory>` stands.
 
-You see:
-
 ```text
 saved to <your directory>; labels and flags match after reloading
 ```
 
 ## What each file holds
 
-The directory has three files. For the recorded Digits run they are `arrays.npz` (91,594 bytes), `result.json` (41,286 bytes) and `manifest.json` (169 bytes), read from `notebooks/runs/digits`.
+The directory has three files. For the recorded Digits run they are `arrays.npz` (91,594 bytes), `result.json` (41,372 bytes) and `manifest.json` (169 bytes), read from `notebooks/runs/digits`. The saved runs in `notebooks/runs/` ship with the repository, and notebooks 01 and 02 write them.
 
 | File | Holds |
 |---|---|

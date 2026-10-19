@@ -1,6 +1,6 @@
 # Refits: reproducibility, not truth
 
-This page explains what a refit is and which words Starfold allows for the result. Refitting on random subsets measures how reproducible your groups are, not whether they are true.
+This page explains what a refit measures, what it cannot tell you, and which words Starfold allows for the result.
 
 ```{eval-rst}
 .. index::
@@ -39,17 +39,15 @@ Group numbers are arbitrary. One refit's group 0 can be another refit's group 1,
 
 Starfold averages it over two sets of pairs. **Within** is the mean co-association over pairs of rows that share a group in the full fit. **Between** is the mean over pairs in different groups. The {term}`contrast` is within minus between. A contrast near 1 says the refits keep your groups together and keep different groups apart. A contrast near 0 says the refits treat both kinds of pair alike.
 
-Starfold uses it as a second check on the full fit. It also cuts the rows into groups using only the pair shares and compares that cut with the full-fit labels (the {term}`consensus check`). The cut is a second clustering, so it can fail while the contrast stays high. In the recorded digits run the contrast is 0.751 (within 0.820, between 0.068) and the cut found 3 groups, so the flag `consensus_disagrees` was raised. Read the contrast first. The {doc}`../metrics/coassociation` page has the bands.
+Starfold uses it as a second check on the full fit. It also cuts the rows into groups using only the pair shares and compares that cut with the full-fit labels (the {term}`consensus check`). The cut is a second clustering, so it can fail while the contrast stays high. In the recorded run on the scikit-learn digits dataset the contrast is 0.751 (within 0.820, between 0.068) and the cut found 3 groups, so the flag `consensus_disagrees` was raised. Read the contrast first. The {doc}`../metrics/coassociation` page has the bands.
 
 ## Reproducibility is not truth
 
-Refitting on random subsets answers one question: does the answer hold when the rows change a little? It cannot answer whether the groups are real.
+Refitting on random subsets answers one question: does the answer hold when the rows change a little? It cannot answer whether the groups are real, because a stable partition is not a true partition.
 
 - A method can give the same wrong answer every time. A bad scaling, a missing column or a wrong distance reproduces on every subset.
 - Refits reuse the rows you have. They do not see a part of the sky, a population or a selection effect that your table lacks.
 - A group can recur without being pure: it can come back with the same members and still mix different kinds of object. Only a check against known classes, made after the fact, shows this.
-
-A stable partition is not a true partition.
 
 ## Language rules
 
@@ -68,7 +66,7 @@ A stable partition is not a true partition.
 
 ## Read a recurrence between the marks
 
-A value below 0.85 is not highly stable by the `clusterboot` guidelines, and below 0.6 they say not to trust it. Digits group 3 has 0.54 (band 0.25 to 0.81). `[no-source: internal-reasoning]` Do the following.
+A value below 0.85 is not highly stable by the `clusterboot` guidelines, and below 0.6 they say not to trust it. Group 3 of the digits run has 0.54 (band 0.25 to 0.81). The steps below are a rule of thumb from this project, not from a published source.
 
 1. Read the band. A band that reaches below 0.5 means some refits lost the group.
 2. Find which group it merges with across refits. Look at the co-association between this group and each other group: a high value shows that the refits join them.
@@ -77,7 +75,7 @@ A value below 0.85 is not highly stable by the `clusterboot` guidelines, and bel
 
 ## Read the recorded digits run
 
-In the recorded digits run (`notebooks/runs/shots/01_digits.ipynb`), 32 refits found between 3 and 16 groups, and the full fit found 10. The unresolved mass was 0.044. Recurrence ran from 0.45 to 1.00. Groups 0 and 1 reach 1.00. Group 2 (0.84) and group 4 (0.82) come close to the 0.85 mark. Groups 6 to 9 sit between 0.70 and 0.77, group 3 at 0.54, and group 5 at 0.45, below the 0.5 mark, with a band from 0.02 to 0.94. The band is wide because the matched refit group differs a lot from refit to refit. So two groups come back almost unchanged, eight recur only in part, and the group count is unstable. Use the groups with high recurrence first.
+The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them. In the recorded digits run (`notebooks/01_digits.ipynb`), 32 refits found between 3 and 16 groups, and the full fit found 10. The unresolved mass was 0.044. Recurrence ran from 0.45 to 1.00. Groups 0 and 1 reach 1.00. Group 2 (0.84) and group 4 (0.82) come close to the 0.85 mark. Groups 6 to 9 sit between 0.70 and 0.77, group 3 at 0.54, and group 5 at 0.45, below the 0.5 mark, with a band from 0.02 to 0.94. The band is wide because the matched refit group differs a lot from refit to refit. So two groups come back almost unchanged, eight recur only in part, and the group count is unstable. Use the groups with high recurrence first.
 
 ## Learn more
 

@@ -25,7 +25,7 @@ Most clustering methods, such as k-means, put every row in some group. HDBSCAN d
 
 Noise therefore means that no clump claimed the row. It does not mean the measurement was bad. A row can be noise for three reasons. It is an outlier, it sits on a thin bridge between two groups, or the settings demand a denser clump than the table has there.
 
-Noise is information. A run with 30 noise rows out of 1,797 and a run with most rows in noise describe different tables. The {term}`flag` `high_unresolved_mass` warns when refits leave most rows unplaced.
+The amount of noise tells you something about the table. A run with 30 noise rows out of 1,797 and a run with most rows in noise describe different tables. The {term}`flag` `high_unresolved_mass` warns when refits leave most rows unplaced.
 
 HDBSCAN also reports a strength for each grouped row, from 0 to 1, where 1 is the core of a group. The strength describes one fit. It is not a probability that the row belongs to the group.
 
@@ -46,7 +46,7 @@ Both numbers count rows, and a fit on a subset has fewer rows than the full tabl
 ## Where HDBSCAN misleads
 
 - **It finds clumps in any map.** Given a smooth cloud, it still finds dense patches. {doc}`copies-and-gaps` says how Starfold guards against this.
-- **The count depends on the settings and the seed.** In the recorded digits run (seed 0), one fit of the library defaults on all rows found 51 groups, while the chosen setting found 10. Another seed gives another count for the defaults. The count is not a finding: see {doc}`refits`.
+- **The count depends on the settings and the seed.** In the recorded run on the scikit-learn digits dataset (seed 0), one fit of the library defaults on all rows found 51 groups, while the chosen setting found 10. Another seed gives another count for the defaults. The count is not a finding: see {doc}`refits`. The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them.
 - **Noise depends on `min_samples`.** Compare noise shares only between runs with the same settings.
 - **Strengths are not posteriors.** They rank rows within one fit.
 

@@ -40,7 +40,7 @@ refits       :  1   30    1
 
 The 5th percentile of the 32 counts is 2 and the 95th is 2. The interval is 2 to 2. Almost every refit found the same count, so the count reproduces.
 
-Now take a table where refits find between 3 and 19 groups. The interval is wide, so the count does not reproduce. The recorded Digits run is such a case.
+Now take a table where refits find between 3 and 19 groups. The interval is wide, so the count does not reproduce. The recorded run on the scikit-learn digits dataset is such a case. The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them.
 
 ![Share of the 32 Digits refits at each group count, with the 5 to 95 percent interval shaded from 3 to 16.](../figures/digits_counts.png)
 
@@ -54,7 +54,7 @@ Look at the shaded band and the bars. Refits found 3 to 19 groups, and the inter
 
 ## How to read a value
 
-The code raises `count_unstable` when fewer than half of the refits find the same count as the full fit. The width bands below are `[no-source: internal-reasoning]`.
+The code raises `count_unstable` when fewer than half of the refits find the same count as the full fit. The width bands below are a rule of thumb from this project, not from a published source.
 
 | Interval | Reading | Decision |
 |---|---|---|
@@ -71,7 +71,7 @@ The code raises `count_unstable` when fewer than half of the refits find the sam
 
 ## Where Starfold prints it
 
-The attributes are `result.worlds.count_interval` (a pair of integers), `result.worlds.count_values` (the count found by each refit) and `result.worlds.count_reference` (the full fit's count). The notebook `notebooks/02_apogee.py` printed the recorded lines below. These lines run inside the notebook, where `worlds` and `np` are already defined.
+The attributes are `result.worlds.count_interval` (a pair of integers), `result.worlds.count_values` (the count found by each refit) and `result.worlds.count_reference` (the full fit's count). The notebook `notebooks/02_apogee.ipynb` printed the recorded lines below. These lines run inside the notebook, where `worlds` and `np` are already defined.
 
 ```python
 counts, frequency = np.unique(worlds.count_values, return_counts=True)
@@ -82,14 +82,14 @@ print(
 print(f"interval {worlds.count_interval[0]} to {worlds.count_interval[1]}")
 ```
 
-You see (recorded APOGEE run, 32 refits):
+For the APOGEE DR19 example table, with 32 refits, it printed:
 
 ```text
 groups per refit: 2 in 31 refits, 3 in 1 refits
 interval 2 to 2
 ```
 
-The recorded Digits run (`notebooks/01_digits.py`) printed `refits: 32; groups found: 3 to 16` for the same attribute.
+The recorded digits run (`notebooks/01_digits.ipynb`) printed `refits: 32; groups found: 3 to 16` for the same attribute.
 
 :::{dropdown} Formula
 Let $c_w$ be the number of refit groups in refit $w$. Let $q_5$ and $q_{95}$ be the 5th and 95th percentile of the $c_w$ with linear interpolation. Then

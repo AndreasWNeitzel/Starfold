@@ -23,8 +23,7 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# Jupyter: notebooks are committed as jupytext percent .py files
-notebooks/*.ipynb
+# Jupyter
 .ipynb_checkpoints/
 
 # IDE
@@ -42,8 +41,13 @@ Thumbs.db
 # Run output
 /output/
 
-# Notebook runs
-notebooks/runs/
+# Notebook runs: only the two saved example results ship; anything else written there stays local
+notebooks/runs/*
+!notebooks/runs/digits/
+!notebooks/runs/apogee/
+
+# Results written by the manual's examples
+/runs/
 
 # Built manual
 docs/_build/

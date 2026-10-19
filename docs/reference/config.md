@@ -19,7 +19,7 @@ This page lists every field of `Config` and `Space` with its type, default, mean
    pair: setting; search space
 ```
 
-A fit is one run of {term}`UMAP` followed by {term}`HDBSCAN`. Costs are counted in fits because wall time depends on the machine. Recorded runs with the default `Config` and the calibration test off used 314 fits on Digits (1,797 rows), 334 on APOGEE (9,242 rows) and 258 on Letter (20,000 rows). These numbers come from each run's provenance and are recorded in the benchmark results. Wall time per fit is not measured here.
+A fit is one run of {term}`UMAP` followed by {term}`HDBSCAN`. Costs are counted in fits because wall time depends on the machine. Recorded runs with the default `Config` and the calibration test off used 314 fits on the scikit-learn digits dataset (1,797 rows). They used 334 on the APOGEE DR19 example table (9,242 rows) and 258 on Letter (20,000 rows). These numbers come from each run's provenance and are recorded in the benchmark results. Wall time per fit is not measured here.
 
 `Config(...)` raises `ValueError` in four cases: a numeric range is empty or reaches zero on a log axis, `n_explore` is not a power of two, `n_null_max` cannot reach `alpha`, or a budget is outside the range in the tables below. The message names the field. `Config` does not catch every unusable `Space`. An empty `selection_method` tuple, or `min_dist` bounds outside 0 to 1, pass construction and fail later in the search.
 

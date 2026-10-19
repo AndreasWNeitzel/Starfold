@@ -48,9 +48,9 @@ refit group C    : d x y z          shared 1, in either 7  ->  1/7 = 0.14
 
 In each refit, Starfold picks the refit group with the highest Jaccard index against the group and keeps that number. A group that scores 1.00 in every refit has recurrence 1. A group that refits keep splitting or dissolving scores low.
 
-The left panel below shows the recorded Digits run. Each dot is the mean over 32 refits. Each bar is the 5th to 95th percentile over refits. The dotted line sits at 0.85 and the dashed line at 0.5, the two `clusterboot` marks described below.
+The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them. The left panel below shows the recorded run on the scikit-learn digits dataset. Each dot is the mean over 32 refits. Each bar is the 5th to 95th percentile over refits. The dotted line sits at 0.85 and the dashed line at 0.5, the two `clusterboot` marks described below.
 
-![Left: recurrence of each of the 10 Digits groups with its 5 to 95 percent band. Middle: group sizes. Right: recurrence against purity, a post hoc check.](../figures/digits_groups.png)
+![Left: recurrence of each of the 10 digits groups with its 5 to 95 percent band. Middle: group sizes. Right: recurrence against purity, a post hoc check.](../figures/digits_groups.png)
 
 Look at groups 0 and 1 (dots at 1.00, no visible bar) against group 5 (dot at 0.45, bar from 0.02 to 0.94). Groups 0 and 1 are reproducible. Group 5 has 19 rows and often dissolves, so report it as fragile. The right panel plots recurrence against purity, the share of a group's rows that show the group's most common true digit. Purity is a post hoc check, made against labels that Starfold never read. The bars are percentiles: the 5th percentile is the value that 5 percent of the refits fall below.
 
@@ -62,7 +62,7 @@ Look at groups 0 and 1 (dots at 1.00, no visible bar) against group 5 (dot at 0.
 
 ## How to read a value
 
-Hennig (2007) proposes the mean Jaccard over resamples as the stability measure of a cluster, but gives no cutoff on that mean. The readings in the table come from the help page of the R function `clusterboot` (Hennig, R package fpc, [clusterboot help](https://rdrr.io/cran/fpc/man/clusterboot.html)). The help page calls them rough guidelines for its own bootstrap scheme. Starfold resamples in its own way, so read them as rough marks. It also warns that stability alone does not show that a cluster is valid. Starfold never uses these marks as filters and never removes a group. The decision column is advice from this manual, `[no-source: internal-reasoning]`.
+Hennig (2007) proposes the mean Jaccard over resamples as the stability measure of a cluster, but gives no cutoff on that mean. The readings in the table come from the help page of the R function `clusterboot` (Hennig, R package fpc, [clusterboot help](https://rdrr.io/cran/fpc/man/clusterboot.html)). The help page calls them rough guidelines for its own bootstrap scheme. Starfold resamples in its own way, so read them as rough marks. It also warns that stability alone does not show that a cluster is valid. Starfold never uses these marks as filters and never removes a group. The decision column is advice from this manual, not from a published source.
 
 | Recurrence | Reading (`clusterboot` help page) | Decision |
 |---|---|---|
@@ -75,7 +75,7 @@ The help page states the 0.5 mark for a single resample: a Jaccard of 0.5 or les
 
 ### If your value is below 0.75
 
-Take group 3 of the recorded Digits run: recurrence 0.54, band 0.25 to 0.81, 324 rows. The mean is below 0.6, so the `clusterboot` guidelines say not to trust it. The lower end of the band is below 0.5, so by the dissolution mark some refits lost the group. The group is large, so the small-group caution below does not explain it. `[no-source: internal-reasoning]`
+Take group 3 of the recorded digits run: recurrence 0.54, band 0.25 to 0.81, 324 rows. The mean is below 0.6, so the `clusterboot` guidelines say not to trust it. The lower end of the band is below 0.5, so by the dissolution mark some refits lost the group. The group is large, so the small-group caution below does not explain it. This reading is the manual's own; no published source gives it.
 
 1. Read the band. If its lower end is below 0.5, say that some refits lost the group.
 2. Find which group it merges with. Average the {term}`support` of the group's rows over the other groups. A second group with a large average means the refits move rows between the two. The {doc}`coassociation` page explains the within and between values that the same refits give.
@@ -92,13 +92,13 @@ The output depends on the table. The code runs after a `recover` call, where `re
 ## What misleads
 
 - A stable group is not a true group. Recurrence measures reproducibility under resampling only.
-- The mean can hide a wide band. In the Digits record, group 2 has a mean of 0.84 and a band from 0.12 to 0.99. Read the band with the mean.
-- Small groups move more. One row more or less changes the Jaccard index of a 19-row group much more than that of a 324-row group. `[no-source: internal-reasoning]`
+- The mean can hide a wide band. In the digits record, group 2 has a mean of 0.84 and a band from 0.12 to 0.99. Read the band with the mean.
+- Small groups move more. One row more or less changes the Jaccard index of a 19-row group much more than that of a 324-row group.
 - Recurrence is computed over refits of 80 percent of the rows. It says nothing about rows that are absent from the table, such as a missing selection.
 
 ## Where Starfold prints it
 
-The attributes are `result.worlds.group_recurrence` (one value per group) and `result.worlds.group_recurrence_band` (5th and 95th percentile per group). The notebook `notebooks/01_digits.py` printed the recorded run below. These lines run inside the notebook, where `w` and `sizes` (the group sizes) are already defined.
+The attributes are `result.worlds.group_recurrence` (one value per group) and `result.worlds.group_recurrence_band` (5th and 95th percentile per group). The notebook `notebooks/01_digits.ipynb` printed the recorded run below. These lines run inside the notebook, where `w` and `sizes` (the group sizes) are already defined.
 
 ```python
 w = result.worlds
@@ -110,7 +110,7 @@ for group, (recurrence, (low, high), size) in enumerate(
     )
 ```
 
-You see (first four of ten groups, recorded Digits run, 32 refits):
+The first four of the ten groups, from 32 refits, read:
 
 ```text
   group  0:  178 rows, recurrence 1.00 (1.00 to 1.00)
@@ -119,7 +119,7 @@ You see (first four of ten groups, recorded Digits run, 32 refits):
   group  3:  324 rows, recurrence 0.54 (0.25 to 0.81)
 ```
 
-The recorded APOGEE run (`notebooks/02_apogee.py`) gave group 0 recurrence 0.914 (0.886 to 0.935) and group 1 recurrence 0.918 (0.879 to 0.938).
+The recorded run on the APOGEE DR19 example table (`notebooks/02_apogee.ipynb`) gave group 0 recurrence 0.914 (0.886 to 0.935) and group 1 recurrence 0.918 (0.879 to 0.938).
 
 The band is a {term}`stability interval` over refits. It is not a {term}`confidence interval`. Refits that fail are counted as all noise, so they lower recurrence rather than being dropped.
 

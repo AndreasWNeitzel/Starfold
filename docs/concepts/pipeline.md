@@ -13,7 +13,7 @@ This page follows one call of `starfold.recover` through its six stages, and say
 
 ## The idea
 
-UMAP, HDBSCAN and Optuna each do one job: {doc}`umap` draws a map, {doc}`hdbscan` finds clumps in it, and {doc}`optuna` searches the settings of both. Starfold adds three things around them. A score that never reads labels. A discount for what a structureless table would score. And refits that measure how much the answer depends on the rows you happened to have.
+UMAP, HDBSCAN and Optuna each do one job: {doc}`umap` draws a map, {doc}`hdbscan` finds clumps in it, and {doc}`optuna` searches the settings of both. Starfold wraps them in a score that never reads labels, a discount for what a structureless table would score, and refits that measure how much the answer depends on the rows you happened to have.
 
 ```text
 your table -> search -> score -> choice -> full fit -> refits -> (calibration test)
@@ -27,13 +27,13 @@ your table -> search -> score -> choice -> full fit -> refits -> (calibration te
 
 2. **Score.** Each trial gets a {term}`score` on your table from {term}`prediction agreement`, {term}`coverage` and {term}`modularity`. Starfold fits the same setting on a {term}`structureless copy` of your table (your table with its cross-column structure destroyed) and scores that fit the same way. The score on your table minus the score on the copy is the trial's {term}`gap`. By default the search tries to make the gap large, so the number it ranks trials by is the gap, not the score. It produces one gap per trial. Read {doc}`copies-and-gaps` and {doc}`../metrics/gap`.
 
-3. **Choice.** The top three trials and the library defaults are scored again on new subsets and new copies (a {term}`fresh re-score`). The best of many noisy gaps is partly luck. The largest fresh gap wins, and ties go to the defaults. It produces one chosen setting, `result.params`, and a table of the candidates with their fresh scores and fresh gaps. That table is the sensitivity report.
+3. **Choice.** The top three trials and the library defaults are scored again on new subsets and new copies (a {term}`fresh re-score`), because the best of many noisy gaps is partly luck. The largest fresh gap wins, and ties go to the defaults. It produces one chosen setting, `result.params`, and a table of the candidates with their fresh scores and fresh gaps. That table is the sensitivity report.
 
 4. **Full fit.** The chosen setting is fitted once on all rows. Because the count-based settings `min_cluster_size` and `min_samples` depend on how many rows a fit sees, Starfold rescales them to the full table (`result.deployed_params`). It produces `result.labels`, one group number per kept row, with -1 for {term}`noise`. The groups and the noise rows together are the partition.
 
 5. **Refits.** The chosen setting is fitted again on 32 random 80 percent subsets. It produces {term}`support` per row, {term}`recurrence` per group, the {term}`count interval` and the {term}`unresolved mass`. A bounded {term}`co-association` check on the full fit follows: it counts how often each pair of rows lands in the same group across refits. Read {doc}`refits`.
 
-6. **Calibration test.** An optional test replays the first 17 trials (the defaults and the 16-trial Sobol design) on up to 19 structureless copies. It compares the best gap of each copy with the best gap of your table. The option `null_procedure="full_search"` replays the whole search instead. It produces a {term}`p-value`. It is off by default, because it costs about six times the fits of the rest of a run (four to nine times the wall time in the recorded runs). Run it once, on the result you report. Read {doc}`copies-and-gaps`.
+6. **Calibration test.** An optional test replays the first 17 trials (the defaults and the 16-trial Sobol design) on up to 19 structureless copies. It compares the best gap of each copy with the best gap of your table. The option `null_procedure="full_search"` replays the whole search instead. It produces a {term}`p-value`. It is off by default, because it costs about six times the fits of the rest of a run (four to nine times the wall time in the recorded runs, which ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`). Run it once, on the result you report. Read {doc}`copies-and-gaps`.
 
 Every stage ends in a {term}`flag` when its evidence is weak. `result.flags` collects them.
 

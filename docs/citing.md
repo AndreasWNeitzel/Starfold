@@ -138,7 +138,7 @@ Three works that Starfold's code cites have no DOI. Each entry was checked on 20
 }
 ```
 
-The galpy library, which built the orbital columns of the bundled APOGEE table, has a DOI: Bovy, J. 2015, The Astrophysical Journal Supplement Series 216, 29, [doi:10.1088/0067-0049/216/2/29](https://doi.org/10.1088/0067-0049/216/2/29).
+The galpy library, which built the orbital columns of the APOGEE DR19 example table, has a DOI: Bovy, J. 2015, The Astrophysical Journal Supplement Series 216, 29, [doi:10.1088/0067-0049/216/2/29](https://doi.org/10.1088/0067-0049/216/2/29).
 
 ## BibTeX for the methods
 

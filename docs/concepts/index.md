@@ -1,6 +1,6 @@
 # Concepts
 
-These pages explain the ideas behind Starfold in plain language, one idea per page. Read them in this order, or jump to the one you need. If you are short on time, read {doc}`pipeline` first: it names every stage and says which page covers it.
+These pages explain the ideas behind Starfold, one idea per page. Read them in this order, or jump to the one you need. If you are short on time, read {doc}`pipeline` first: it names every stage and says which page covers it.
 
 ```{eval-rst}
 .. index::

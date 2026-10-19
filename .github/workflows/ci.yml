@@ -48,8 +48,6 @@ jobs:
       - name: Mypy
         run: uv run --no-sync mypy --strict src/
 
-      - name: Notebooks are committed as py:percent only
-        run: test -z "$(git ls-files '*.ipynb' ':!legacy/')"
 
   test:
     name: test (py${{ matrix.python-version }})

@@ -65,9 +65,7 @@ This guide turns a table of measurements into the array `starfold.recover` accep
 
 `result.labels` has one entry per kept row, with -1 for {term}`noise`. `result.kept_rows` holds the positions of the kept rows in your input. If any row was dropped, `result.flags` contains `rows_rejected_nonfinite` (see {doc}`../reference/flags`).
 
-For the 1,797-row digits table, which has no missing values, the recorded run prints:
-
-You see:
+For the scikit-learn digits dataset, which has no missing values, the recorded run prints:
 
 ```text
 rows kept: 1797 of 1797, columns: 64

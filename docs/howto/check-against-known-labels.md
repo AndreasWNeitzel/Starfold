@@ -60,8 +60,6 @@ This guide scores a Starfold partition against classes you already know, after t
 
 For step 3, the recorded Digits run prints the lines below. Step 4 prints the Starfold value without rounding, because every digit has a known class.
 
-You see:
-
 ```text
 coverage-adjusted ARI, Starfold: 0.740
 coverage-adjusted ARI, defaults: 0.594

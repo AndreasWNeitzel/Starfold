@@ -1,0 +1,1921 @@
+{
+ "backends": null,
+ "consensus": {
+  "agreement": 0.0,
+  "between_association": 0.0034938853371052625,
+  "bytes_used": 268435456,
+  "contrast": 0.9756238956956198,
+  "n_rows": 4096,
+  "subsampled": true,
+  "within_association": 0.9791177810327251
+ },
+ "default_params": {
+  "min_cluster_size": 5,
+  "min_dist": 0.1,
+  "min_samples": 5,
+  "n_components": 2,
+  "n_neighbors": 15,
+  "selection_method": "eom"
+ },
+ "deployed_params": {
+  "min_cluster_size": 90,
+  "min_dist": 0.28944648646520316,
+  "min_samples": 30,
+  "n_components": 2,
+  "n_neighbors": 54,
+  "selection_method": "eom"
+ },
+ "flags": [
+  "search_budget_exhausted",
+  "consensus_subsampled",
+  "consensus_disagrees",
+  "null_not_run"
+ ],
+ "format": "starfold-result-2",
+ "null": {
+  "alpha": 0.05,
+  "exceedances": [],
+  "families": [],
+  "n_fits": 0,
+  "n_realisations": [],
+  "observed": 0.3619987473997828,
+  "p_intervals": [],
+  "p_value": 1.0,
+  "p_values": [],
+  "seconds": 0.0,
+  "skipped_reason": "null_not_run",
+  "statistic_name": "exploration_design_max",
+  "stopped_early": [],
+  "structure_supported": false,
+  "values": []
+ },
+ "params": {
+  "min_cluster_size": 72,
+  "min_dist": 0.28944648646520316,
+  "min_samples": 24,
+  "n_components": 2,
+  "n_neighbors": 54,
+  "selection_method": "eom"
+ },
+ "provenance": {
+  "config": {
+   "alpha": 0.05,
+   "check_backends": false,
+   "consensus_budget_bytes": 536870912,
+   "consensus_check_rows": 4096,
+   "gap_family": "gaussian_copula",
+   "min_improvement": 0.01,
+   "n_complete_pruned": 3,
+   "n_explore": 16,
+   "n_null_max": 19,
+   "n_null_rescore": 3,
+   "n_resamples": 3,
+   "n_rescore": 3,
+   "n_trials": 48,
+   "n_worlds": 32,
+   "null_exceedances": 3,
+   "null_families": [],
+   "null_procedure": "exploration",
+   "patience": 16,
+   "prune": true,
+   "resample_fraction": 0.8,
+   "scaling": "standard",
+   "space": {
+    "min_cluster_size": null,
+    "min_dist": [
+     0.0,
+     0.5
+    ],
+    "min_samples_fraction": [
+     0.05,
+     1.0
+    ],
+    "n_components": [
+     2,
+     10
+    ],
+    "n_neighbors": [
+     5,
+     100
+    ],
+    "selection_method": [
+     "eom",
+     "leaf"
+    ]
+   },
+   "world_fraction": 0.8
+  },
+  "engine_requested": "auto",
+  "engine_resolved": "cuml",
+  "input_fingerprint": "47d06dd7924573770df36731217bc1b952f94b309ffae991a94c09563a102753",
+  "libraries": {
+   "cuml": "26.8.0",
+   "hdbscan": "0.8.44",
+   "joblib": "1.5.3",
+   "numpy": "2.4.6",
+   "optuna": "4.9.0",
+   "pynndescent": "0.6.0",
+   "scikit-learn": "1.9.0",
+   "scipy": "1.18.0",
+   "umap-learn": "0.5.12"
+  },
+  "measurement": {
+   "kind": "none"
+  },
+  "n_features": 8,
+  "n_input_rows": 9242,
+  "n_jobs": 1,
+  "n_jobs_forced_to_one_on_cuml": false,
+  "n_kept_rows": 9242,
+  "peak_rss_mb": 1684.22265625,
+  "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "random_state": 0,
+  "stage_fits": {
+   "null": 0,
+   "reference": 2,
+   "search": 300,
+   "worlds": 32
+  },
+  "stage_seconds": {
+   "consensus": 1.7806098540022504,
+   "null": 9.745301213115454e-05,
+   "reference": 0.7751427630137186,
+   "search": 140.28115751300356,
+   "total": 162.52782520800247,
+   "worlds": 12.970504328026436
+  },
+  "starfold_version": "0.2.0",
+  "total_fits": 334
+ },
+ "search": {
+  "beats_default_under_objective": true,
+  "candidates": [
+   {
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fresh_pair_scores": [
+     0.627337718088622,
+     0.6253451329544552,
+     0.6212342633651761,
+     0.6276115373434362,
+     0.6190596368058141,
+     0.6318856082634364
+    ],
+    "fresh_score": 0.6254440483203183,
+    "gap": 0.37198941339632374,
+    "null_scores": [
+     0.5341433488891902,
+     0.06584832056658532,
+     0.1603722353162081
+    ],
+    "params": {
+     "min_cluster_size": 72,
+     "min_dist": 0.28944648646520316,
+     "min_samples": 24,
+     "n_components": 2,
+     "n_neighbors": 54,
+     "selection_method": "eom"
+    },
+    "score": 0.5188231358943358,
+    "trial_number": 45
+   },
+   {
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fresh_pair_scores": [
+     0.6431227068450704,
+     0.6366654434033233,
+     0.6367457942908422,
+     0.6455078201333077,
+     0.6368717111889387,
+     0.6512265987981375
+    ],
+    "fresh_score": 0.6417309196895686,
+    "gap": 0.37006356174433513,
+    "null_scores": [
+     0.3777924644104111,
+     0.12539738433445838,
+     0.31181222509083106
+    ],
+    "params": {
+     "min_cluster_size": 53,
+     "min_dist": 0.2550902369231685,
+     "min_samples": 44,
+     "n_components": 2,
+     "n_neighbors": 48,
+     "selection_method": "eom"
+    },
+    "score": 0.6422682468478701,
+    "trial_number": 32
+   },
+   {
+    "fit_counts": [
+     4,
+     2,
+     3
+    ],
+    "fresh_pair_scores": [
+     0.5822570400556591,
+     0.5658839170952089,
+     0.5587830431491775,
+     0.6015059010657483,
+     0.5576133896516747,
+     0.6186248316171957
+    ],
+    "fresh_score": 0.5811036103923247,
+    "gap": 0.32976282270794594,
+    "null_scores": [
+     0.28142862361739,
+     0.23974873617107592,
+     0.2328450032646704
+    ],
+    "params": {
+     "min_cluster_size": 54,
+     "min_dist": 0.33385499398071977,
+     "min_samples": 17,
+     "n_components": 2,
+     "n_neighbors": 36,
+     "selection_method": "eom"
+    },
+    "score": 0.4839383911875158,
+    "trial_number": 47
+   },
+   {
+    "fit_counts": [
+     266,
+     209,
+     260
+    ],
+    "fresh_pair_scores": [
+     0.2179390988457135,
+     0.3226791276911684,
+     0.1709205963740294,
+     0.18743223536277565,
+     0.3239906131085589,
+     0.22099518489484032
+    ],
+    "fresh_score": 0.2636464691052585,
+    "gap": -0.0006814695765414713,
+    "null_scores": [
+     0.2941188044114934,
+     0.20706774484818335,
+     0.2917972667857231
+    ],
+    "params": {
+     "min_cluster_size": 5,
+     "min_dist": 0.1,
+     "min_samples": 5,
+     "n_components": 2,
+     "n_neighbors": 15,
+     "selection_method": "eom"
+    },
+    "score": 0.0065784634304183465,
+    "trial_number": 0
+   }
+  ],
+  "exploration_max": 0.3619987473997828,
+  "gap_default": -0.0006814695765414713,
+  "gap_selected": 0.37198941339632374,
+  "n_completed": 39,
+  "n_completed_after_prune": 0,
+  "n_fits": 300,
+  "n_pruned": 9,
+  "paired_differences": [
+   0.40939861924290855,
+   0.30266600526328674,
+   0.45031366699114667,
+   0.4401793019806606,
+   0.2950690236972552,
+   0.4108904233685961
+  ],
+  "plan": {
+   "fraction": 0.8,
+   "n": 9242,
+   "seed": 0,
+   "seeds": [
+    3964924996,
+    901243215,
+    3884055042
+   ]
+  },
+  "score_default": 0.2636464691052585,
+  "score_selected": 0.6254440483203183,
+  "seconds": 140.28110827697674,
+  "selected": {
+   "min_cluster_size": 72,
+   "min_dist": 0.28944648646520316,
+   "min_samples": 24,
+   "n_components": 2,
+   "n_neighbors": 54,
+   "selection_method": "eom"
+  },
+  "selected_is_default": false,
+  "stop_reason": "budget",
+  "trials": [
+   {
+    "coverage": 0.2863454658228689,
+    "error": null,
+    "fit_counts": [
+     255,
+     283,
+     251
+    ],
+    "fit_noise": [
+     0.36421422775223156,
+     0.36015688395996753,
+     0.37111171219908035
+    ],
+    "modularity": 0.23811460176643903,
+    "null_score": 0.3192473336198811,
+    "number": 0,
+    "params": {
+     "min_cluster_size": 5,
+     "min_dist": 0.1,
+     "min_samples": 5,
+     "n_components": 2,
+     "n_neighbors": 15,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "default",
+    "raw_score": 0.32582579705029946,
+    "score": 0.0065784634304183465,
+    "seconds": 3.4107705889909994,
+    "stability": 0.5073177529169509,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.34765528806455626,
+    "error": null,
+    "fit_counts": [
+     64,
+     69,
+     65
+    ],
+    "fit_noise": [
+     0.42061130646470113,
+     0.4832296456586421,
+     0.47119285907492564
+    ],
+    "modularity": 0.31613657962637837,
+    "null_score": 0.018484688494821752,
+    "number": 1,
+    "params": {
+     "min_cluster_size": 26,
+     "min_dist": 0.4656830024905503,
+     "min_samples": 2,
+     "n_components": 5,
+     "n_neighbors": 64,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.3804834358946046,
+    "score": 0.3619987473997828,
+    "seconds": 3.2978606350079644,
+    "stability": 0.5011683938680458,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.21418232412061275,
+    "error": null,
+    "fit_counts": [
+     4,
+     9,
+     6
+    ],
+    "fit_noise": [
+     0.4975655937246416,
+     0.6928590749256154,
+     0.6444414390045983
+    ],
+    "modularity": 0.25245989538230035,
+    "null_score": 0.28821520357849023,
+    "number": 2,
+    "params": {
+     "min_cluster_size": 146,
+     "min_dist": 0.14255567034706473,
+     "min_samples": 64,
+     "n_components": 7,
+     "n_neighbors": 6,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.34685519301950307,
+    "score": 0.05863998944101284,
+    "seconds": 2.4998647159955,
+    "stability": 0.7717356776251286,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.14625327913995037,
+    "error": null,
+    "fit_counts": [
+     137,
+     125,
+     143
+    ],
+    "fit_noise": [
+     0.5808763862591291,
+     0.5807411414660536,
+     0.5700568028130917
+    ],
+    "modularity": 0.19033584167032114,
+    "null_score": 0.1721828568264527,
+    "number": 3,
+    "params": {
+     "min_cluster_size": 7,
+     "min_dist": 0.3255501165986061,
+     "min_samples": 7,
+     "n_components": 3,
+     "n_neighbors": 17,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.28342770406796836,
+    "score": 0.11124484724151565,
+    "seconds": 1.747908388992073,
+    "stability": 0.8179009397649858,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.4662112862200038,
+    "error": null,
+    "fit_counts": [
+     4,
+     4,
+     4
+    ],
+    "fit_noise": [
+     0.502028671896132,
+     0.3739518528536651,
+     0.4023532593995131
+    ],
+    "modularity": 0.39173747237998646,
+    "null_score": 0.5081942788134097,
+    "number": 4,
+    "params": {
+     "min_cluster_size": 385,
+     "min_dist": 0.00046966690570116043,
+     "min_samples": 61,
+     "n_components": 9,
+     "n_neighbors": 43,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.5557406642665622,
+    "score": 0.047546385453152484,
+    "seconds": 3.416445384005783,
+    "stability": 0.9398068969618922,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.38199216837643074,
+    "error": null,
+    "fit_counts": [
+     3,
+     6,
+     6
+    ],
+    "fit_noise": [
+     0.48295915607249124,
+     0.497971328103868,
+     0.5351636461996213
+    ],
+    "modularity": 0.3039298957204399,
+    "null_score": 0.38102208813269106,
+    "number": 5,
+    "params": {
+     "min_cluster_size": 161,
+     "min_dist": 0.2772439019754529,
+     "min_samples": 18,
+     "n_components": 6,
+     "n_neighbors": 31,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.43627397452668526,
+    "score": 0.0552518863939942,
+    "seconds": 2.5886396339919884,
+    "stability": 0.7152371088085934,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.23588536894524503,
+    "error": null,
+    "fit_counts": [
+     182,
+     170,
+     182
+    ],
+    "fit_noise": [
+     0.4801190154179064,
+     0.48404111441709496,
+     0.49296727076007574
+    ],
+    "modularity": 0.2498008920624463,
+    "null_score": 0.3265940496776122,
+    "number": 6,
+    "params": {
+     "min_cluster_size": 10,
+     "min_dist": 0.084731325507164,
+     "min_samples": 7,
+     "n_components": 6,
+     "n_neighbors": 12,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.3530972445392704,
+    "score": 0.026503194861658197,
+    "seconds": 2.317476380005246,
+    "stability": 0.7471159297180021,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.2680435053293507,
+    "error": null,
+    "fit_counts": [
+     8,
+     9,
+     9
+    ],
+    "fit_noise": [
+     0.6288882878009197,
+     0.5449012713010549,
+     0.6363267514200703
+    ],
+    "modularity": 0.24291766448776284,
+    "null_score": 0.35222765844445403,
+    "number": 7,
+    "params": {
+     "min_cluster_size": 63,
+     "min_dist": 0.3851502030156553,
+     "min_samples": 20,
+     "n_components": 10,
+     "n_neighbors": 8,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.3856279457981045,
+    "score": 0.03340028735365047,
+    "seconds": 3.283771282993257,
+    "stability": 0.8807265956363843,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.572479692543698,
+    "error": null,
+    "fit_counts": [
+     80,
+     76,
+     84
+    ],
+    "fit_noise": [
+     0.22504733567757643,
+     0.23370300243440628,
+     0.24601027860427374
+    ],
+    "modularity": 0.3536462600756849,
+    "null_score": 0.40205380798473966,
+    "number": 8,
+    "params": {
+     "min_cluster_size": 34,
+     "min_dist": 0.19459075899794698,
+     "min_samples": 2,
+     "n_components": 2,
+     "n_neighbors": 94,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.43936473756798455,
+    "score": 0.03731092958324489,
+    "seconds": 3.210037918004673,
+    "stability": 0.4189348023136232,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.19984044389756708,
+    "error": null,
+    "fit_counts": [
+     73,
+     66,
+     50
+    ],
+    "fit_noise": [
+     0.6568839599675412,
+     0.6210440898025426,
+     0.5566675682986205
+    ],
+    "modularity": 0.22623115909186006,
+    "null_score": 0.26882067850124947,
+    "number": 9,
+    "params": {
+     "min_cluster_size": 14,
+     "min_dist": 0.3613397660665214,
+     "min_samples": 5,
+     "n_components": 9,
+     "n_neighbors": 71,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.31033883471514295,
+    "score": 0.04151815621389349,
+    "seconds": 4.3095873539859895,
+    "stability": 0.6611082380116708,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.45226499683691695,
+    "error": null,
+    "fit_counts": [
+     9,
+     8,
+     7
+    ],
+    "fit_noise": [
+     0.30551798755747905,
+     0.42047606167162566,
+     0.4300784419799838
+    ],
+    "modularity": 0.41690111782659883,
+    "null_score": 0.4181097429170009,
+    "number": 10,
+    "params": {
+     "min_cluster_size": 238,
+     "min_dist": 0.061664840672165155,
+     "min_samples": 25,
+     "n_components": 3,
+     "n_neighbors": 9,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.5023419204745154,
+    "score": 0.0842321775575145,
+    "seconds": 1.7070978560077492,
+    "stability": 0.6723141138045593,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.46461589744659254,
+    "error": null,
+    "fit_counts": [
+     2,
+     24,
+     2
+    ],
+    "fit_noise": [
+     0.3665133892345145,
+     0.5666756829862051,
+     0.23978901812280226
+    ],
+    "modularity": 0.1932440224782437,
+    "null_score": 0.27702613462650666,
+    "number": 11,
+    "params": {
+     "min_cluster_size": 38,
+     "min_dist": 0.4721758207306266,
+     "min_samples": 8,
+     "n_components": 7,
+     "n_neighbors": 13,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.2227189243690647,
+    "score": -0.05430721025744195,
+    "seconds": 2.6064576860226225,
+    "stability": 0.12304705585722064,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.17739265871222742,
+    "error": null,
+    "fit_counts": [
+     11,
+     12,
+     10
+    ],
+    "fit_noise": [
+     0.7163916689207466,
+     0.6948877468217474,
+     0.7172031376791993
+    ],
+    "modularity": 0.1881781336656836,
+    "null_score": 0.251625342937139,
+    "number": 12,
+    "params": {
+     "min_cluster_size": 66,
+     "min_dist": 0.17054776288568974,
+     "min_samples": 49,
+     "n_components": 5,
+     "n_neighbors": 23,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.3042150051343227,
+    "score": 0.052589662197183695,
+    "seconds": 2.5609455300145783,
+    "stability": 0.8434067928466152,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.22892831967298588,
+    "error": null,
+    "fit_counts": [
+     4,
+     2,
+     5
+    ],
+    "fit_noise": [
+     0.6847443873410873,
+     0.5114958074114146,
+     0.7571003516364619
+    ],
+    "modularity": 0.15811695788598687,
+    "null_score": 0.29517164108467486,
+    "number": 13,
+    "params": {
+     "min_cluster_size": 85,
+     "min_dist": 0.4269823897629976,
+     "min_samples": 41,
+     "n_components": 4,
+     "n_neighbors": 33,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.22107726505880676,
+    "score": -0.0740943760258681,
+    "seconds": 2.176996913010953,
+    "stability": 0.2985068346455609,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.438601736567325,
+    "error": null,
+    "fit_counts": [
+     143,
+     135,
+     142
+    ],
+    "fit_noise": [
+     0.32850960238030835,
+     0.32648093048417637,
+     0.35515282661617525
+    ],
+    "modularity": 0.3469267782842937,
+    "null_score": 0.40453980205842094,
+    "number": 14,
+    "params": {
+     "min_cluster_size": 17,
+     "min_dist": 0.24229722376912832,
+     "min_samples": 2,
+     "n_components": 8,
+     "n_neighbors": 19,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.42082384988217475,
+    "score": 0.01628404782375381,
+    "seconds": 2.8476112089992967,
+    "stability": 0.4897707735047913,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.3473253008790976,
+    "error": null,
+    "fit_counts": [
+     4,
+     4,
+     4
+    ],
+    "fit_noise": [
+     0.49229104679469843,
+     0.4120908845009467,
+     0.6119826886664863
+    ],
+    "modularity": 0.2967385801335802,
+    "null_score": 0.36000634933766607,
+    "number": 15,
+    "params": {
+     "min_cluster_size": 320,
+     "min_dist": 0.28587289014831185,
+     "min_samples": 22,
+     "n_components": 4,
+     "n_neighbors": 6,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.434806847837807,
+    "score": 0.07480049850014092,
+    "seconds": 2.027936630009208,
+    "stability": 0.797588146137013,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.4623292626502078,
+    "error": null,
+    "fit_counts": [
+     488,
+     516,
+     496
+    ],
+    "fit_noise": [
+     0.2680551798755748,
+     0.24546929943197188,
+     0.2481741952934812
+    ],
+    "modularity": 0.23988476258286853,
+    "null_score": 0.3474964765713525,
+    "number": 16,
+    "params": {
+     "min_cluster_size": 6,
+     "min_dist": 0.10314084170386195,
+     "min_samples": 1,
+     "n_components": 8,
+     "n_neighbors": 48,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "exploration",
+    "raw_score": 0.36038881299905867,
+    "score": 0.012892336427706153,
+    "seconds": 3.770633911015466,
+    "stability": 0.4220460684978243,
+    "state": "complete"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     153,
+     142
+    ],
+    "fit_noise": [
+     0.5816878550175818,
+     0.5724912090884501
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 17,
+    "params": {
+     "min_cluster_size": 7,
+     "min_dist": 0.3695257750683326,
+     "min_samples": 5,
+     "n_components": 3,
+     "n_neighbors": 37,
+     "selection_method": "eom"
+    },
+    "partial_score": 0.26656103039092577,
+    "phase": "convergence",
+    "raw_score": 0.26656103039092577,
+    "score": 0.26656103039092577,
+    "seconds": 0.887498552998295,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": 0.2738120997386884,
+    "error": null,
+    "fit_counts": [
+     38,
+     31,
+     40
+    ],
+    "fit_noise": [
+     0.45401677035434135,
+     0.49486069786313225,
+     0.5351636461996213
+    ],
+    "modularity": 0.2813794530695385,
+    "null_score": 0.2484733822213928,
+    "number": 18,
+    "params": {
+     "min_cluster_size": 36,
+     "min_dist": 0.48623964545585374,
+     "min_samples": 3,
+     "n_components": 3,
+     "n_neighbors": 72,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.3421982208282497,
+    "score": 0.09372483860685688,
+    "seconds": 3.2099657179787755,
+    "stability": 0.5201016419257339,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.5256565772429503,
+    "error": null,
+    "fit_counts": [
+     66,
+     75,
+     2
+    ],
+    "fit_noise": [
+     0.3680010819583446,
+     0.4024885041925886,
+     0.007438463619150662
+    ],
+    "modularity": 0.24242856450696373,
+    "null_score": 0.024913807579930204,
+    "number": 19,
+    "params": {
+     "min_cluster_size": 23,
+     "min_dist": 0.3382832434381152,
+     "min_samples": 2,
+     "n_components": 7,
+     "n_neighbors": 85,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.24905177063093156,
+    "score": 0.22413796305100137,
+    "seconds": 4.296849771984853,
+    "stability": 0.12122243635464951,
+    "state": "complete"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     93,
+     72
+    ],
+    "fit_noise": [
+     0.33216121179334596,
+     0.24384636191506626
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 20,
+    "params": {
+     "min_cluster_size": 22,
+     "min_dist": 0.20744497664376743,
+     "min_samples": 1,
+     "n_components": 10,
+     "n_neighbors": 86,
+     "selection_method": "eom"
+    },
+    "partial_score": 0.3447056581901586,
+    "phase": "convergence",
+    "raw_score": 0.3447056581901586,
+    "score": 0.3447056581901586,
+    "seconds": 1.7574335410026833,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": 0.49958353512953196,
+    "error": null,
+    "fit_counts": [
+     220,
+     203,
+     204
+    ],
+    "fit_noise": [
+     0.28834189883689476,
+     0.31228022721125237,
+     0.2817149039761969
+    ],
+    "modularity": 0.3363258058557026,
+    "null_score": 0.39050456309705733,
+    "number": 21,
+    "params": {
+     "min_cluster_size": 11,
+     "min_dist": 0.38613902680981116,
+     "min_samples": 1,
+     "n_components": 6,
+     "n_neighbors": 52,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.4113960695512461,
+    "score": 0.020891506454188746,
+    "seconds": 3.754881437984295,
+    "stability": 0.4143927095365813,
+    "state": "complete"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     286,
+     263
+    ],
+    "fit_noise": [
+     0.465512577765756,
+     0.48038950500405736
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 22,
+    "params": {
+     "min_cluster_size": 5,
+     "min_dist": 0.40511565176134023,
+     "min_samples": 5,
+     "n_components": 4,
+     "n_neighbors": 6,
+     "selection_method": "eom"
+    },
+    "partial_score": 0.29851188520272537,
+    "phase": "convergence",
+    "raw_score": 0.29851188520272537,
+    "score": 0.29851188520272537,
+    "seconds": 0.6861752300173976,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     43,
+     33
+    ],
+    "fit_noise": [
+     0.5743846361915066,
+     0.5492291046794698
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 23,
+    "params": {
+     "min_cluster_size": 28,
+     "min_dist": 0.4720200981054994,
+     "min_samples": 3,
+     "n_components": 6,
+     "n_neighbors": 68,
+     "selection_method": "eom"
+    },
+    "partial_score": 0.29090390328774807,
+    "phase": "convergence",
+    "raw_score": 0.29090390328774807,
+    "score": 0.29090390328774807,
+    "seconds": 1.1791159480053466,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     96,
+     91
+    ],
+    "fit_noise": [
+     0.6447119285907492,
+     0.6641871787936164
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 24,
+    "params": {
+     "min_cluster_size": 12,
+     "min_dist": 0.35424571890471507,
+     "min_samples": 7,
+     "n_components": 6,
+     "n_neighbors": 18,
+     "selection_method": "leaf"
+    },
+    "partial_score": 0.28088796447688785,
+    "phase": "convergence",
+    "raw_score": 0.28088796447688785,
+    "score": 0.28088796447688785,
+    "seconds": 0.7239973600080702,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": 0.8369724282667619,
+    "error": null,
+    "fit_counts": [
+     2,
+     4,
+     5
+    ],
+    "fit_noise": [
+     0.060860156883959966,
+     0.16743305382742765,
+     0.17040843927508792
+    ],
+    "modularity": 0.3152670096940648,
+    "null_score": 0.29379579155185886,
+    "number": 25,
+    "params": {
+     "min_cluster_size": 26,
+     "min_dist": 0.21254379344479518,
+     "min_samples": 24,
+     "n_components": 2,
+     "n_neighbors": 62,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.6165231985729157,
+    "score": 0.32272740702105684,
+    "seconds": 2.4931460399820935,
+    "stability": 0.8880932917208132,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.7745017947309757,
+    "error": null,
+    "fit_counts": [
+     4,
+     4,
+     16
+    ],
+    "fit_noise": [
+     0.09101974573978902,
+     0.12604814714633486,
+     0.2792804977008385
+    ],
+    "modularity": 0.32105514826450726,
+    "null_score": 0.2689946796604477,
+    "number": 26,
+    "params": {
+     "min_cluster_size": 19,
+     "min_dist": 0.18273470510112433,
+     "min_samples": 18,
+     "n_components": 2,
+     "n_neighbors": 56,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.5776414724428444,
+    "score": 0.30864679278239665,
+    "seconds": 2.360307680006372,
+    "stability": 0.7751272985149894,
+    "state": "complete"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     20,
+     21
+    ],
+    "fit_noise": [
+     0.6164457668379767,
+     0.6578306735190695
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 27,
+    "params": {
+     "min_cluster_size": 44,
+     "min_dist": 0.18126522159445155,
+     "min_samples": 38,
+     "n_components": 2,
+     "n_neighbors": 95,
+     "selection_method": "leaf"
+    },
+    "partial_score": 0.3210108901013611,
+    "phase": "convergence",
+    "raw_score": 0.3210108901013611,
+    "score": 0.3210108901013611,
+    "seconds": 1.0136194569931831,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": 0.35255244808720376,
+    "error": null,
+    "fit_counts": [
+     19,
+     15,
+     18
+    ],
+    "fit_noise": [
+     0.5562618339193941,
+     0.4667297809034352,
+     0.5127130105490939
+    ],
+    "modularity": 0.32210426534291603,
+    "null_score": 0.2493748269140327,
+    "number": 28,
+    "params": {
+     "min_cluster_size": 33,
+     "min_dist": 0.17443131003053286,
+     "min_samples": 23,
+     "n_components": 4,
+     "n_neighbors": 47,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.4629656005583662,
+    "score": 0.21359077364433351,
+    "seconds": 2.5395071109815035,
+    "stability": 0.8738280042381006,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.595835171320145,
+    "error": null,
+    "fit_counts": [
+     4,
+     5,
+     33
+    ],
+    "fit_noise": [
+     0.10035163646199621,
+     0.16121179334595617,
+     0.4523938328374358
+    ],
+    "modularity": 0.3099849812983075,
+    "null_score": 0.28144346293234573,
+    "number": 29,
+    "params": {
+     "min_cluster_size": 21,
+     "min_dist": 0.18843741486659538,
+     "min_samples": 17,
+     "n_components": 2,
+     "n_neighbors": 57,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.45677927940409707,
+    "score": 0.17533581647175134,
+    "seconds": 2.4403757610125467,
+    "stability": 0.5160032022940153,
+    "state": "complete"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     92,
+     96
+    ],
+    "fit_noise": [
+     0.4789018122802272,
+     0.4691641871787936
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 30,
+    "params": {
+     "min_cluster_size": 21,
+     "min_dist": 0.482705771011388,
+     "min_samples": 2,
+     "n_components": 6,
+     "n_neighbors": 80,
+     "selection_method": "leaf"
+    },
+    "partial_score": 0.3496519064497311,
+    "phase": "convergence",
+    "raw_score": 0.3496519064497311,
+    "score": 0.3496519064497311,
+    "seconds": 1.2937575319956522,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     190,
+     2
+    ],
+    "fit_noise": [
+     0.3270219096564782,
+     0.0031106302407357318
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 31,
+    "params": {
+     "min_cluster_size": 12,
+     "min_dist": 0.33164386494347975,
+     "min_samples": 1,
+     "n_components": 7,
+     "n_neighbors": 89,
+     "selection_method": "eom"
+    },
+    "partial_score": 0.0,
+    "phase": "convergence",
+    "raw_score": 0.0,
+    "score": 0.0,
+    "seconds": 1.5727908989938442,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": 0.8846863341683254,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.10251555315120368,
+     0.07533134974303489,
+     0.12320800649175007
+    ],
+    "modularity": 0.3003921649412529,
+    "null_score": 0.0,
+    "number": 32,
+    "params": {
+     "min_cluster_size": 53,
+     "min_dist": 0.2550902369231685,
+     "min_samples": 44,
+     "n_components": 2,
+     "n_neighbors": 48,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.6422682468478701,
+    "score": 0.6422682468478701,
+    "seconds": 2.17044832900865,
+    "stability": 0.9969455396365485,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.6799744126282322,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.30944008655666755,
+     0.21152285637002977,
+     0.33621855558561
+    ],
+    "modularity": 0.3105970019438103,
+    "null_score": 0.2534487798339607,
+    "number": 33,
+    "params": {
+     "min_cluster_size": 461,
+     "min_dist": 0.22991779591774678,
+     "min_samples": 366,
+     "n_components": 3,
+     "n_neighbors": 61,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.5955203544925098,
+    "score": 0.34207157465854915,
+    "seconds": 3.2861720369837712,
+    "stability": 1.0,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.8162504875936856,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.16743305382742765,
+     0.08547470922369489,
+     0.21206383554233163
+    ],
+    "modularity": 0.3246006148371955,
+    "null_score": 0.38156140621364637,
+    "number": 34,
+    "params": {
+     "min_cluster_size": 445,
+     "min_dist": 0.14227111001448564,
+     "min_samples": 279,
+     "n_components": 3,
+     "n_neighbors": 49,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.642143115515156,
+    "score": 0.26058170930150965,
+    "seconds": 3.139678453007946,
+    "stability": 0.9993616982832765,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.56401192084491,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.3405463889640249,
+     0.2138220178523127,
+     0.4998647552069245
+    ],
+    "modularity": 0.293668642805968,
+    "null_score": 0.3032946383881681,
+    "number": 35,
+    "params": {
+     "min_cluster_size": 332,
+     "min_dist": 0.27812074281274274,
+     "min_samples": 265,
+     "n_components": 6,
+     "n_neighbors": 70,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.5491807254799979,
+    "score": 0.24588608709182974,
+    "seconds": 4.215368098026374,
+    "stability": 1.0,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.5240282383365659,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.4622667027319448,
+     0.18731403840952124,
+     0.4640248850419259
+    ],
+    "modularity": 0.28412497530217157,
+    "null_score": 0.09169588013283904,
+    "number": 36,
+    "params": {
+     "min_cluster_size": 223,
+     "min_dist": 0.28545708809747045,
+     "min_samples": 207,
+     "n_components": 3,
+     "n_neighbors": 34,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.5300148450511651,
+    "score": 0.4383189649183261,
+    "seconds": 2.2811646590125747,
+    "stability": 1.0,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.734556979136011,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.2392480389505004,
+     0.2126048147146335,
+     0.25939951311874493
+    ],
+    "modularity": 0.3020548639065202,
+    "null_score": 0.18009644899702668,
+    "number": 37,
+    "params": {
+     "min_cluster_size": 378,
+     "min_dist": 0.32225530456873647,
+     "min_samples": 318,
+     "n_components": 2,
+     "n_neighbors": 10,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.6052321274955833,
+    "score": 0.4251356784985566,
+    "seconds": 1.7925685190130025,
+    "stability": 0.99920499851187,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.671977700844184,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.2987557479037057,
+     0.2150392209899919,
+     0.31917771165810116
+    ],
+    "modularity": 0.28548430230719796,
+    "null_score": 0.3924833580661591,
+    "number": 38,
+    "params": {
+     "min_cluster_size": 193,
+     "min_dist": 0.4607057235552273,
+     "min_samples": 110,
+     "n_components": 2,
+     "n_neighbors": 8,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.576555039381293,
+    "score": 0.18407168131513396,
+    "seconds": 1.2913988970103674,
+    "stability": 0.9990453960913309,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.4916210000903738,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.5133892345144712,
+     0.27184203408168783,
+     0.4233162023262104
+    ],
+    "modularity": 0.2674460178368014,
+    "null_score": 0.2865003215516754,
+    "number": 39,
+    "params": {
+     "min_cluster_size": 436,
+     "min_dist": 0.21975610340843743,
+     "min_samples": 231,
+     "n_components": 3,
+     "n_neighbors": 5,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.5083127199134021,
+    "score": 0.22181239836172673,
+    "seconds": 1.8225020419922657,
+    "stability": 0.9989100230463045,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.8776521311609636,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.10873681363267514,
+     0.09156072491209089,
+     0.129564511766297
+    ],
+    "modularity": 0.3109475657976073,
+    "null_score": 0.428562118444084,
+    "number": 40,
+    "params": {
+     "min_cluster_size": 130,
+     "min_dist": 0.24478969623254393,
+     "min_samples": 106,
+     "n_components": 2,
+     "n_neighbors": 22,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.64824026247822,
+    "score": 0.219678144034136,
+    "seconds": 1.5314344599901233,
+    "stability": 0.9981560240175352,
+    "state": "complete"
+   },
+   {
+    "coverage": null,
+    "error": null,
+    "fit_counts": [
+     3,
+     3
+    ],
+    "fit_noise": [
+     0.7790100081146876,
+     0.7112523667838788
+    ],
+    "modularity": null,
+    "null_score": null,
+    "number": 41,
+    "params": {
+     "min_cluster_size": 178,
+     "min_dist": 0.3673520390034147,
+     "min_samples": 94,
+     "n_components": 4,
+     "n_neighbors": 70,
+     "selection_method": "leaf"
+    },
+    "partial_score": 0.31609122206791035,
+    "phase": "convergence",
+    "raw_score": 0.31609122206791035,
+    "score": 0.31609122206791035,
+    "seconds": 1.0455379029735923,
+    "stability": null,
+    "state": "pruned"
+   },
+   {
+    "coverage": 0.6558013761535212,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.3448742223424398,
+     0.18812550716797402,
+     0.3450094671355153
+    ],
+    "modularity": 0.3062901557748842,
+    "null_score": 0.2596103902197945,
+    "number": 42,
+    "params": {
+     "min_cluster_size": 213,
+     "min_dist": 0.26489503398680003,
+     "min_samples": 192,
+     "n_components": 3,
+     "n_neighbors": 60,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.5856459183145478,
+    "score": 0.32603552809475334,
+    "seconds": 3.0849879029847216,
+    "stability": 1.0,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.7928978945994315,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.21084663240465243,
+     0.14471192859074924,
+     0.18880173113335136
+    ],
+    "modularity": 0.30214938762987836,
+    "null_score": 0.4010723386130901,
+    "number": 43,
+    "params": {
+     "min_cluster_size": 246,
+     "min_dist": 0.3573273034768551,
+     "min_samples": 120,
+     "n_components": 2,
+     "n_neighbors": 13,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.6205149221365768,
+    "score": 0.21944258352348667,
+    "seconds": 1.5145200339902658,
+    "stability": 0.9972813709177738,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.32681212213903194,
+    "error": null,
+    "fit_counts": [
+     3,
+     3,
+     3
+    ],
+    "fit_noise": [
+     0.5367865837165269,
+     0.604949959426562,
+     0.6587773870705977
+    ],
+    "modularity": 0.27779710321454537,
+    "null_score": 0.44910676148627343,
+    "number": 44,
+    "params": {
+     "min_cluster_size": 369,
+     "min_dist": 0.12898773165768432,
+     "min_samples": 262,
+     "n_components": 2,
+     "n_neighbors": 16,
+     "selection_method": "leaf"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.44944369251433924,
+    "score": 0.0003369310280658122,
+    "seconds": 1.9985008770017885,
+    "stability": 1.0,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.8245523036436091,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     3
+    ],
+    "fit_noise": [
+     0.1777116581011631,
+     0.10494995942656207,
+     0.17176088720584257
+    ],
+    "modularity": 0.30131400984669116,
+    "null_score": 0.08670196489088057,
+    "number": 45,
+    "params": {
+     "min_cluster_size": 72,
+     "min_dist": 0.28944648646520316,
+     "min_samples": 24,
+     "n_components": 2,
+     "n_neighbors": 54,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.6055251007852164,
+    "score": 0.5188231358943358,
+    "seconds": 2.3806379350135103,
+    "stability": 0.8936324228332833,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.8969485062446751,
+    "error": null,
+    "fit_counts": [
+     2,
+     2,
+     2
+    ],
+    "fit_noise": [
+     0.09602380308358129,
+     0.08276981336218556,
+     0.09534757911820395
+    ],
+    "modularity": 0.30455577651110527,
+    "null_score": 0.4160523127990634,
+    "number": 46,
+    "params": {
+     "min_cluster_size": 117,
+     "min_dist": 0.2587237155961567,
+     "min_samples": 37,
+     "n_components": 2,
+     "n_neighbors": 81,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.6457583355683194,
+    "score": 0.229706022769256,
+    "seconds": 3.067573315987829,
+    "stability": 0.9857702571109023,
+    "state": "complete"
+   },
+   {
+    "coverage": 0.7584489121543493,
+    "error": null,
+    "fit_counts": [
+     3,
+     3,
+     3
+    ],
+    "fit_noise": [
+     0.1789288612388423,
+     0.22126048147146335,
+     0.2193670543684068
+    ],
+    "modularity": 0.2784056247450873,
+    "null_score": 0.0898942489953558,
+    "number": 47,
+    "params": {
+     "min_cluster_size": 54,
+     "min_dist": 0.33385499398071977,
+     "min_samples": 17,
+     "n_components": 2,
+     "n_neighbors": 36,
+     "selection_method": "eom"
+    },
+    "partial_score": null,
+    "phase": "convergence",
+    "raw_score": 0.5738326401828716,
+    "score": 0.4839383911875158,
+    "seconds": 1.9429453750199173,
+    "stability": 0.8948523957479756,
+    "state": "complete"
+   }
+  ]
+ },
+ "worlds": {
+  "count_interval": [
+   2,
+   2
+  ],
+  "count_reference": 2,
+  "n_fits": 32,
+  "property_propagated": false,
+  "seconds": 12.970364353997866,
+  "unresolved_mass": 0.15374983160627828,
+  "world_errors": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "world_seeds": [
+   2613022947,
+   3679268941,
+   3170341645,
+   2997468713,
+   2298030710,
+   2975998657,
+   1912161888,
+   2829527381,
+   1513406984,
+   112866602,
+   4028328772,
+   2764162875,
+   2212146841,
+   1219174208,
+   845058081,
+   3304971268,
+   643314579,
+   2420588202,
+   453490645,
+   3998318534,
+   836807846,
+   1652650018,
+   1111791252,
+   3977156005,
+   2915575706,
+   3326498632,
+   30083976,
+   663899376,
+   2896803068,
+   1527272399,
+   3067809905,
+   3779315933
+  ]
+ }
+}

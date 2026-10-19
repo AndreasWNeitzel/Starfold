@@ -44,9 +44,9 @@ refit 4: r's refit group is 10 rows, 5 in group 0, 5 in group 1 -> 0.5 for group
 
 Averaging the four refits gives support 0.575 for group 0, 0.125 for group 1 and 0.3 unresolved (toy numbers). The three sum to 1. Own support is 0.575.
 
-The left panel below shows own support for every grouped row of the recorded Digits run.
+The left panel below shows own support for every grouped row of the recorded run on the scikit-learn digits dataset. The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them.
 
-![Left: own support of every grouped Digits row. Middle: the unresolved share of every row. Right: own support split by a post hoc check against the true digits.](../figures/digits_support.png)
+![Left: own support of every grouped digits row. Middle: the unresolved share of every row. Right: own support split by a post hoc check against the true digits.](../figures/digits_support.png)
 
 Look at the left panel. Most rows sit between 0.8 and 1.0, with a tail toward 0. Rows in the tail keep changing company. Rows at 1.0 only ever share a refit cluster with rows of their own full-fit group.
 
@@ -58,7 +58,7 @@ Look at the left panel. Most rows sit between 0.8 and 1.0, with a tail toward 0.
 
 ## How to read a value
 
-Starfold sets no cut on support. Support measures how often a row stays with its group across refits. It is not a purity and not a probability. The bands below are a reading aid, labelled `[no-source: internal-reasoning]`.
+Starfold sets no cut on support. Support measures how often a row stays with its group across refits. It is not a purity and not a probability. The bands below are a reading aid, a rule of thumb from this project, not from a published source.
 
 | Own support | Reading | Decision |
 |---|---|---|
@@ -71,11 +71,11 @@ Starfold sets no cut on support. Support measures how often a row stays with its
 - High support is not membership probability. It is how often a row recurs with its group, not the chance that the row belongs there given a model.
 - A row that only one or two refits drew has a coarse average. Check `result.worlds.n_sampled`. A row that no refit drew has NaN support.
 - A failed refit counts as all noise, so it lowers support. Check `result.worlds.world_errors`.
-- Keeping only high-support rows loses rows and need not gain purity. In the recorded Digits run, 81 percent of the rows with own support of 0.9 or more match their group's majority digit (a post hoc check). For all 1,767 grouped rows the share is 83 percent. On a table with a diffuse background, the loss of rows can be large.
+- Keeping only high-support rows loses rows and need not gain purity. In the recorded digits run, 81 percent of the rows with own support of 0.9 or more match their group's majority digit (a post hoc check). For all 1,767 grouped rows the share is 83 percent. On a table with a diffuse background, the loss of rows can be large.
 
 ## Where Starfold prints it
 
-The attributes are `result.support` (shape rows by groups, same array as `result.worlds.support`), `result.worlds.own_support` (one value per row) and `result.worlds.n_sampled` (refits that drew each row). The notebook `notebooks/01_digits.py` printed the recorded check below. These lines run inside the notebook, where `w`, `result` and `np` are already defined.
+The attributes are `result.support` (shape rows by groups, same array as `result.worlds.support`), `result.worlds.own_support` (one value per row) and `result.worlds.n_sampled` (refits that drew each row). The notebook `notebooks/01_digits.ipynb` printed the recorded check below, from 32 refits. These lines run inside the notebook, where `w`, `result` and `np` are already defined.
 
 ```python
 sampled = w.n_sampled > 0
@@ -87,14 +87,12 @@ print(
 )
 ```
 
-You see (recorded Digits run, 32 refits):
-
 ```text
 refits that drew each row: 16 to 31
 support: shape (1797, 10); support + unresolved = 1 on drawn rows: True
 ```
 
-A per-row own support value from the recorded run is not measured here. The figure above shows the distribution.
+This page quotes no single row's own support from the recorded run. The figure above shows the distribution.
 
 :::{dropdown} Formula
 Let $W_i$ be the refits that drew row $i$. In refit $w$, row $i$ sits in refit cluster $k$. Let $s_{kg}$ be the share of the rows of $k$ that the full fit puts in group $g$ and $s_{k0}$ the share it calls noise. Then

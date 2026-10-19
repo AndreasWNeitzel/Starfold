@@ -60,7 +60,7 @@ pair a-d and b-d : together in 0 of 4 refits -> 0.00 each (different groups)
 
 Within is (1.00 + 0.75) / 2 = 0.875. Between is (0.25 + 0.25 + 0 + 0) / 4 = 0.125. The contrast is 0.875 minus 0.125, which is 0.75.
 
-The recorded APOGEE histogram below shows the same idea on 4,096 stars. Blue is pairs in the same group and red is pairs in different groups.
+The histogram below, from the recorded run on the APOGEE DR19 example table, shows the same idea on 4,096 stars. Blue is pairs in the same group and red is pairs in different groups. The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them.
 
 ![Histogram of co-association for star pairs in the same group (blue, mean 0.979) and in different groups (red, mean 0.003). Title: Contrast 0.976 on 4,096 stars.](../figures/apogee/07_consensus.png)
 
@@ -75,7 +75,7 @@ Look at the two spikes. Blue pairs pile up at 1, so refits almost always put the
 
 ## How to read a value
 
-Read the contrast first. It needs no cut. The 0.5 threshold on consensus agreement is the code's `consensus_disagrees` rule. The contrast bands are `[no-source: internal-reasoning]`.
+Read the contrast first. It needs no cut. The 0.5 threshold on consensus agreement is the code's `consensus_disagrees` rule. The contrast bands are a rule of thumb from this project, not from a published source.
 
 | Reading | Values | Decision |
 |---|---|---|
@@ -88,7 +88,7 @@ A consensus agreement below 0.5 raises the {term}`flag` `consensus_disagrees`. I
 ## What misleads
 
 - Consensus agreement 0.0 with contrast 0.976 is a cut failure, not evidence of absent groups. In the recorded APOGEE run the cut labelled all 4,096 subset stars as noise, while within was 0.979 and between 0.003. The contrast, which needs no cut, shows the refits agree.
-- The cut is a second clustering. It can fail where the pair shares still separate the groups. The cause of the all-noise cut on APOGEE was not diagnosed. The code notes that rows at the floor distance can let single linkage merge neighbouring groups.
+- The cut is a second clustering. It can fail where the pair shares still separate the groups. The cause of the all-noise cut on the APOGEE table was not diagnosed. The code notes that rows at the floor distance can let single linkage merge neighbouring groups.
 - Above 5,792 rows the check uses a subset of 4,096 rows (flag `consensus_subsampled`). Contrast then describes the subset only.
 - High contrast does not make the groups true. It measures how well refits agree with one fit.
 
@@ -96,7 +96,7 @@ A consensus agreement below 0.5 raises the {term}`flag` `consensus_disagrees`. I
 
 The attribute is `result.consensus`, with `within_association`, `between_association`, `contrast`, `agreement`, `subsampled`, `n_rows` and `bytes_used`. The peak memory is 16 bytes per pair of rows (the float64 matrix plus HDBSCAN's copy). The default budget is 512 MiB (`Config.consensus_budget_bytes`), which allows 5,792 rows. Above that, Starfold draws a seeded subset of `Config.consensus_check_rows` = 4,096 rows, which uses 256 MiB. The check refuses a subset that would exceed the budget.
 
-The notebook `notebooks/01_digits.py` printed the recorded lines below. These lines run inside the notebook, where `result` and `np` are already defined.
+The notebook `notebooks/01_digits.ipynb` printed the recorded lines below for the scikit-learn digits dataset, with 32 refits. These lines run inside the notebook, where `result` and `np` are already defined.
 
 ```python
 c = result.consensus
@@ -108,8 +108,6 @@ print(f"agreement of the cut with labels (ARI times coverage): {c.agreement:.3f}
 print(f"groups in the cut: {np.unique(c.labels[c.labels >= 0]).size}")
 ```
 
-You see (recorded Digits run, 32 refits):
-
 ```text
 rows used: 1797 (subset: False), memory: 49 MiB
 within-group co-association:  0.820
@@ -119,7 +117,7 @@ agreement of the cut with labels (ARI times coverage): 0.135
 groups in the cut: 3
 ```
 
-Digits also has a high contrast (0.751, in the top band) and a low consensus agreement (0.135), so `consensus_disagrees` was raised there too. Its cut returned 3 groups, not noise, so the failure mode differs from APOGEE. The recorded APOGEE run (`notebooks/02_apogee.py`) printed `4,096 stars (seeded subset): within 0.979, between 0.003, contrast 0.976, cut agreement 0.000`.
+The digits run also has a high contrast (0.751, in the top band) and a low consensus agreement (0.135), so `consensus_disagrees` was raised there too. Its cut returned 3 groups, not noise, so the failure mode differs from the APOGEE run. The recorded APOGEE run (`notebooks/02_apogee.ipynb`) printed `4,096 stars (seeded subset): within 0.979, between 0.003, contrast 0.976, cut agreement 0.000`.
 
 :::{dropdown} Formula
 For rows $i$ and $j$, $N_{ij}$ counts the refits that drew and assigned both, and $C_{ij}$ those that also gave them the same group. With $W$ refits,

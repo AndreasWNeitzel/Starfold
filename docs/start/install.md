@@ -42,7 +42,7 @@ This page installs Starfold on the CPU, then adds GPU support if you have a supp
    python -c "import starfold; print(starfold.__version__)"
    ```
 
-   You see:
+   It prints the version:
 
    ```text
    0.2.0
@@ -71,7 +71,7 @@ cd starfold
 uv sync --extra bench
 ```
 
-`uv sync` creates the virtual environment for you. Add `--extra gpu-cu13` or `--extra gpu-cu12` to the last command for cuML. The `bench` extra adds pandas, matplotlib, jupytext and ipykernel.
+`uv sync` creates the virtual environment for you. Add `--extra gpu-cu13` or `--extra gpu-cu12` to the last command for cuML. The `bench` extra adds pandas, matplotlib and ipykernel, which the notebooks need.
 
 ## Common install errors
 

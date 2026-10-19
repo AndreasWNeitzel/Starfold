@@ -62,7 +62,7 @@ Starfold uses scikit-learn for scaling, the adjusted Rand index and the CPU regr
 - [`sklearn.cluster.HDBSCAN`](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.HDBSCAN.html): the signature and attributes of the CPU reference.
 - [Clustering](https://scikit-learn.org/stable/modules/clustering.html): methods side by side, with a section on performance metrics.
 - [HDBSCAN example](https://scikit-learn.org/stable/auto_examples/cluster/plot_hdbscan.html): a runnable example.
-- [scikit-learn glossary](https://scikit-learn.org/stable/glossary.html): a model for looking up a word.
+- [scikit-learn glossary](https://scikit-learn.org/stable/glossary.html): definitions of the terms the scikit-learn pages use.
 
 ## Papers behind the tools
 

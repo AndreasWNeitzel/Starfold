@@ -73,7 +73,7 @@ This guide shows which numbers of a Starfold result you may quote in a paper, an
 
 ## Expected result
 
-An example paragraph, built only from the recorded APOGEE run (9,242 stars, eight columns, `random_state=0`, notebook `notebooks/02_apogee.py`, calibration record `bench/results/apogee_null.json`):
+An example paragraph, built only from the recorded APOGEE run (the APOGEE DR19 example table, eight columns, `random_state=0`, notebook `notebooks/02_apogee.ipynb`, calibration record `bench/results/apogee_null.json`):
 
 > Starfold recovered two groups of 1,588 and 6,586 stars from 9,242 stars and left 1,068 stars unassigned. Across 32 refits the groups had recurrence 0.914 (5 to 95 percent band 0.886 to 0.935) and 0.918 (0.879 to 0.938). The refits found 2 groups in 31 cases and 3 groups in one case, so the count interval is 2 to 2. The unresolved mass is 0.154. On fresh subsets and three fresh copies the chosen setting reached a gap of 0.372 against -0.001 for the library defaults. A matched Gaussian-copula test with 19 copies returned p = 0.10 (one copy, at 0.366, reached the table's statistic of 0.362; Monte Carlo interval 0.001 to 0.260), so the two-group split is not shown to exceed a single correlated population. The co-association contrast on a 4,096-star subset was 0.976, while the regrouping returned only noise (consensus agreement 0.000). Group 0 has a higher median [Mg/Fe] (0.273 dex) and [alpha/M] (0.222 dex) and a lower median [Fe/H] (-0.416 dex) than group 1 (0.040, 0.026 and -0.076 dex). These medians were not compared with published positions of the chemical sequences.
 

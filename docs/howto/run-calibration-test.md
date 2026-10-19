@@ -106,16 +106,14 @@ Each copy is drawn from the declared family and goes through the first 17 trials
 
 ## Expected result
 
-The recorded 19-copy runs on two tables, read from `bench/results/digits_null.json` and `bench/results/apogee_null.json`:
-
-You see:
+The recorded 19-copy runs on two tables, read from `bench/results/digits_null.json` and `bench/results/apogee_null.json`, summarised in two lines:
 
 ```text
 digits  observed 0.710, 19 copies, 0 at or above the data, p 0.05, fraction at or above 0.000 to 0.176 (95% Monte Carlo interval), 1938 fits, supported True
 apogee  observed 0.362, 19 copies, 1 at or above the data, p 0.10, fraction at or above 0.001 to 0.260 (95% Monte Carlo interval), 1938 fits, supported False
 ```
 
-The Digits table beat all 19 copies, and p sits on its floor of 0.05, which equals `alpha`, so the structure is supported at that level. The APOGEE table was matched by one copy (0.366 against 0.362), p is 0.10, and `result.flags` gains `no_structure_supported`. The decision this supports: for APOGEE, report the groups as reproducible across refits and do not claim that they exceed a correlated single population. The Digits record took 791 s for 1,938 fits (the engine is not stored in the record).
+The scikit-learn digits dataset beat all 19 copies, and p sits on its floor of 0.05, which equals `alpha`, so the structure is supported at that level. The APOGEE table was matched by one copy (0.366 against 0.362), p is 0.10, and `result.flags` gains `no_structure_supported`. For APOGEE, report the groups as reproducible across refits and do not claim that they exceed a correlated single population. The Digits record took 791 s for 1,938 fits (the engine is not stored in the record).
 
 ## Variations
 

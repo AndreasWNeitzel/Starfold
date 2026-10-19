@@ -27,7 +27,7 @@ Starfold recovers groups that come back when the table is resampled, and it meas
 
 ## Claims Starfold does not make
 
-**A stable partition is not a true partition.** A dense chance fluctuation is a real feature of the rows, and it recurs in every subset too. High {term}`recurrence` shows that a group is reproducible under the declared perturbation and says nothing about whether it is a population. Name the groups when you call a partition reproducible. In the recorded Digits run, two of ten groups recur at 1.00, seven recur between 0.54 and 0.84, and group 5 (19 rows) recurs at 0.45, below the 0.5 mark.
+**A stable partition is not a true partition.** A dense chance fluctuation is a real feature of the rows, and it recurs in every subset too. High {term}`recurrence` shows that a group is reproducible under the declared perturbation and says nothing about whether it is a population. Name the groups when you call a partition reproducible. The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them. In the recorded run on the scikit-learn digits dataset, two of ten groups recur at 1.00, seven recur between 0.54 and 0.84, and group 5 (19 rows) recurs at 0.45, below the 0.5 mark.
 
 **Recurrence is not a posterior.** {term}`Support <support>`, group recurrence and {term}`unresolved mass` are rates over {term}`refits <refit>`. They are not probabilities that a row belongs to a group. The same holds for HDBSCAN {term}`strengths <strengths>`, which are within-fit strengths, not {term}`posteriors <posterior>`.
 
@@ -43,11 +43,11 @@ Starfold recovers groups that come back when the table is resampled, and it meas
 
 ## Small groups merge
 
-The merge scale is about `sqrt(15 m)` rows, with `m = 0.8 n` the rows per resample. It is 155 rows at `n = 2,000` and 346 rows at `n = 10,000`. The scale is empirical, measured on the ten-table benchmark below and by injecting groups into the APOGEE table. Nothing above 20,000 rows was measured. Modularity's known preference for larger communities (Fortunato and Barthelemy 2007) is the likely reason, but the published bound does not give this number. If you expect smaller groups, use more rows and fewer irrelevant columns, or expect them to merge into a neighbour.
+The merge scale is about `sqrt(15 m)` rows, with `m = 0.8 n` the rows per resample. It is 155 rows at `n = 2,000` and 346 rows at `n = 10,000`. The scale is empirical, measured on the ten-table benchmark below and by injecting groups into the APOGEE DR19 example table. Nothing above 20,000 rows was measured. Modularity's known preference for larger communities (Fortunato and Barthelemy 2007) is the likely reason, but the published bound does not give this number. If you expect smaller groups, use more rows and fewer irrelevant columns, or expect them to merge into a neighbour.
 
 ### Injection into real data
 
-Artificial groups were added to a 2,000-row sample of the APOGEE table, three at a time (32 trials, 16 refits, seed 0, one run per size). Starfold did not know which rows were added. Each group holds made-up rows spread evenly inside a ball around a random real star, with the radius set by that star's distance to its 30th nearest neighbour. A group counts as retrieved when a reported group shares at least half its rows with it (Jaccard index 0.5 or more). Purity is the share of the best-matching group that is injected. Completeness is the share of the injected rows it holds.
+Artificial groups were added to a 2,000-row sample of the APOGEE DR19 example table, three at a time (32 trials, 16 refits, seed 0, one run per size). Starfold did not know which rows were added. Each group holds made-up rows spread evenly inside a ball around a random real star, with the radius set by that star's distance to its 30th nearest neighbour. A group counts as retrieved when a reported group shares at least half its rows with it (Jaccard index 0.5 or more). Purity is the share of the best-matching group that is injected. Completeness is the share of the injected rows it holds.
 
 | Rows per group | Retrieved | Purity | Completeness |
 |---:|---:|---:|---:|
@@ -61,7 +61,7 @@ The two smallest sizes were absorbed into large groups. Each row is one draw of 
 
 ### The ten-table benchmark
 
-Ten public tables with known classes were used only to score the output. Six form the development set and four are held out, so no rule or default was set by looking at them. Recovery is the adjusted Rand index (floored at 0) against the true classes on the assigned rows, times the share assigned. "Defaults" is the median recovery of the library defaults over 8 seeds. The second column is the mean class size inside one resample (`0.8 n / classes`) over `sqrt(15 m)`. For Digits that is 143.8 rows over 146.8, or 0.98.
+Ten public tables with known classes were used only to score the output. Six form the development set and four are held out, so no rule or default was set by looking at them. Recovery is the adjusted Rand index (floored at 0) against the true classes on the assigned rows, times the share assigned. "Defaults" is the median recovery of the library defaults over 8 seeds. The second column is the mean class size inside one resample (`0.8 n / classes`) over `sqrt(15 m)`. For the scikit-learn digits dataset that is 143.8 rows over 146.8, or 0.98.
 
 | Table (set) | Class size over scale | Starfold | Defaults |
 |---|---:|---:|---:|
@@ -85,7 +85,7 @@ Starfold matched or beat the defaults (within 0.02) on 6 of 6 development tables
 - **Missing values.** A row with NaN or infinity anywhere is dropped and counted, never filled in (flag `rows_rejected_nonfinite`). Filling gaps with a column mean would create a false dense clump.
 - **Duplicate rows.** A row listed twice counts twice.
 - **Tables above 20,000 rows.** Letter (20,000 rows) is the largest table run. Above 20,000 rows the full-data reference fit uses an approximate neighbour graph. Above 20,000 rows per resample (about 25,000 rows at the default 80 percent) the search graph is approximate too, and a run reproduces only with the same `n_jobs`. GPU memory was not recorded.
-- **Real measurement uncertainties.** `X_err` and `measurement_sampler` work, but no run with real measured uncertainties has been validated (the bundled APOGEE table carries none). An invented error bar produces an invented spread.
+- **Real measurement uncertainties.** `X_err` and `measurement_sampler` work, but no run with real measured uncertainties has been validated (the APOGEE DR19 example table carries none). An invented error bar produces an invented spread.
 - **Selection functions and scientific feature construction.** Starfold is domain-agnostic. You supply the features and the measurement model through explicit inputs. `recover` takes no selection function, so handle selection effects before you build the table.
 - **Python outside 3.11 and 3.12.** The package declares `requires-python >=3.11,<3.13`.
 

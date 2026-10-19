@@ -1,6 +1,6 @@
 # What Starfold does
 
-This page says what Starfold does, what it returns and what it does not claim, then sends you to the next page.
+Starfold sorts the rows of a numeric table into groups without labels and measures how often those groups come back when the rows change. This page lists what it returns and the claims it does not make.
 
 ```{eval-rst}
 .. index::
@@ -35,7 +35,7 @@ Starfold never sees any known classes your rows may have. It chooses the setting
 
 ## What it does not claim
 
-- A stable set of groups is not a true set of groups. Stability means the groups come back, not that they are real.
+- A stable set of groups is not a true set of groups. Stability means only that the groups come back.
 - {term}`Recurrence` is how often a group comes back across refits. It is not a {term}`posterior` probability.
 - A range over refits is a {term}`stability interval`, not a {term}`confidence interval`.
 - The number of groups is not a finding on its own. It means something only if you declare what real quantity you are counting (the estimand) and what you assume about it.
@@ -43,12 +43,12 @@ Starfold never sees any known classes your rows may have. It chooses the setting
 
 ## The pipeline in six steps
 
-1. **Search.** Optuna tries up to 48 {term}`setting`s of UMAP and HDBSCAN.
-2. **Score.** Each setting gets a {term}`score` on your table. Starfold fits the same setting on a {term}`structureless copy` of your table (your table with its cross-column structure destroyed) and subtracts that score. The difference is the {term}`gap`, and by default the search makes the gap large.
-3. **Choice.** The best few settings and the library defaults are scored again on new subsets. One wins.
-4. **Full fit.** The winner is fitted once on all rows. These are your labels.
-5. **Refits.** The winner is refitted on 32 random subsets (each one a possible world, stored in `result.worlds`) to measure recurrence.
-6. **Calibration test.** An optional test asks whether structureless copies score as high as your table.
+1. Search: Optuna tries up to 48 {term}`setting`s of UMAP and HDBSCAN.
+2. Score: each setting gets a {term}`score` on your table. Starfold fits the same setting on a {term}`structureless copy` of your table (your table with its cross-column structure destroyed) and subtracts that score. The difference is the {term}`gap`, and by default the search makes the gap large.
+3. Choice: the best few settings and the library defaults are scored again on new subsets. One wins.
+4. Full fit: the winner is fitted once on all rows. These are your labels.
+5. Refits: the winner is refitted on 32 random subsets (each one a possible world, stored in `result.worlds`) to measure recurrence.
+6. Calibration test: an optional test asks whether structureless copies score as high as your table.
 
 {doc}`../concepts/pipeline` explains each step and names the page that covers its output.
 

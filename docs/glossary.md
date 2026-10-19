@@ -124,7 +124,7 @@ min_samples
 
 modularity
   A number that compares the share of links between nearby rows that stay inside groups with the share expected by chance.
-  Starfold computes it on a 15-nearest-neighbour graph of your scaled columns, before any map is drawn, as one lane of the {term}`score` ({doc}`/metrics/modularity`).
+  Starfold computes it on a 15-nearest-neighbour graph of your scaled columns, before any map is drawn, as one term of the {term}`score` ({doc}`/metrics/modularity`).
 
 Monte Carlo interval
   The range of exceedance shares that a limited number of random copies leaves open, here a 95 percent {term}`Clopper-Pearson interval`.
@@ -272,15 +272,15 @@ agreement with known classes
 
 alpha elements
   Elements built mainly in massive stars that explode as supernovae, such as oxygen, magnesium, silicon and calcium. The ratio [alpha/M] compares their abundance with the Sun's, relative to the metals as a whole.
-  The disc stars of the bundled APOGEE table fall on a high-alpha and a low-alpha sequence at fixed iron content [Fe/H] ({doc}`/tutorial/apogee`).
+  The disc stars of the APOGEE DR19 example table fall on a high-alpha and a low-alpha sequence at fixed iron content [Fe/H] ({doc}`/tutorial/apogee`).
 
 APOGEE
   The Apache Point Observatory Galactic Evolution Experiment, an infrared spectroscopic survey of stars of the Milky Way, part of the Sloan Digital Sky Survey.
-  Starfold's bundled second example is a table of 9,242 stars from its data release 19 ({doc}`/tutorial/apogee`).
+  Starfold's bundled second example, the APOGEE DR19 example table, holds 9,242 stars from its data release 19 ({doc}`/tutorial/apogee`).
 
 ASPCAP
   The APOGEE Stellar Parameters and Chemical Abundances Pipeline, which fits each star's spectrum to get its temperature, surface gravity and abundances.
-  The three abundance columns of the bundled APOGEE table, [Fe/H], [alpha/M] and [Mg/Fe], come from it ({doc}`/tutorial/apogee`).
+  The three abundance columns of the APOGEE DR19 example table, [Fe/H], [alpha/M] and [Mg/Fe], come from it ({doc}`/tutorial/apogee`).
 
 backend agreement
   How well the partition from the CPU fit of one {term}`setting` matches the partition from the cuML fit, as the {term}`adjusted Rand index` times coverage per seed, and normalised by the smaller assigned share.
@@ -304,11 +304,11 @@ exceedance
 
 Gaia
   The European Space Agency mission that measures the positions, distances and motions of over a billion stars. Its third data release is Gaia DR3.
-  The orbital columns of the bundled APOGEE table were integrated from Gaia DR3 measurements ({doc}`/tutorial/apogee`).
+  The orbital columns of the APOGEE DR19 example table were integrated from Gaia DR3 measurements ({doc}`/tutorial/apogee`).
 
 galpy
   A Python package for galactic dynamics that integrates orbits of stars in a model of the Milky Way (Bovy 2015, [doi:10.1088/0067-0049/216/2/29](https://doi.org/10.1088/0067-0049/216/2/29)).
-  The orbital columns of the bundled APOGEE table (actions, angular momentum, eccentricity, energy) were computed with it; Starfold itself does not use it ({doc}`/tutorial/apogee`).
+  The orbital columns of the APOGEE DR19 example table (actions, angular momentum, eccentricity, energy) were computed with it; Starfold itself does not use it ({doc}`/tutorial/apogee`).
 
 geometric mean
   The n-th root of the product of n non-negative numbers, which is 0 whenever any one of them is 0.
@@ -328,7 +328,7 @@ purity
 
 refit agreement
   For one {term}`refit`, the {term}`adjusted Rand index`, floored at 0, between its labels and the full-fit labels on the rows it drew, times coverage.
-  Starfold prints the 32 values as `result.worlds.world_agreement`; the recorded Digits run has a median of 0.79 ({doc}`/concepts/refits`).
+  Starfold prints the 32 values as `result.worlds.world_agreement`; the recorded run on the scikit-learn digits dataset, which notebook 01 writes and which ships in the repository as `notebooks/runs/digits`, has a median of 0.79 ({doc}`/concepts/refits`).
 
 world
   The name the code uses for a {term}`refit`.

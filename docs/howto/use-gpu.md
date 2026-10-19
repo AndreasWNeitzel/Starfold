@@ -50,13 +50,11 @@ This guide installs {term}`cuML` (NVIDIA's GPU versions of UMAP and HDBSCAN), se
 
 The recorded Digits run, started with the default `engine="auto"` on a laptop RTX 3060 under WSL 2, prints:
 
-You see:
-
 ```text
 engine: asked for auto, used cuml
 ```
 
-Under cuML, UMAP, HDBSCAN and the scoring run on the GPU. Scaling, Optuna's sampling, the structureless copies and the final regrouping of the {term}`consensus check` run on the CPU. Peak GPU memory is not recorded, so it is not measured here. The recorded peak host memory of the Digits run is 1,428 MB.
+Under cuML, UMAP, HDBSCAN and the scoring run on the GPU. Scaling, Optuna's sampling, the structureless copies and the final regrouping of the {term}`consensus check` run on the CPU. Peak GPU memory is not recorded, so it is not measured here. The recorded peak host memory of the Digits run is 1,422 MB, and the run took 93.9 s.
 
 ## What "auto" does
 

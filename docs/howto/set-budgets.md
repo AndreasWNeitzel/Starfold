@@ -38,10 +38,10 @@ Recorded runs, from each run's provenance, with the calibration test off:
 
 | Table | Search fits | Reference fits | Refit fits | Total |
 |---|---:|---:|---:|---:|
-| Digits, 1,797 rows | 280 | 2 | 32 | 314 |
-| APOGEE, 9,242 rows | 300 | 2 | 32 | 334 |
+| scikit-learn digits, 1,797 rows | 280 | 2 | 32 | 314 |
+| APOGEE DR19 example table, 9,242 rows | 300 | 2 | 32 | 334 |
 
-The Digits run takes 80.4 s with cuML on a laptop RTX 3060 under WSL 2 when the run has the GPU to itself. The recorded output shows 182.0 s because notebook 02 ran at the same time. The recorded APOGEE time of 242 s does not say whether it was a solo run, and no solo time is recorded. No CPU time is recorded, so the CPU time of the same runs is not measured. The {doc}`calibration test <run-calibration-test>` costs about six times the rest of a run.
+With cuML on a laptop RTX 3060 under WSL 2, the Digits run took 93.9 s (search 77.4 s, refits 7.2 s) and the APOGEE run 163 s (search 140 s, refits 13 s). No CPU time is recorded, so the CPU time of the same runs is not measured. The {doc}`calibration test <run-calibration-test>` costs about six times the rest of a run.
 
 ## Steps to a laptop-sized run
 

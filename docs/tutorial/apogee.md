@@ -1,4 +1,4 @@
-# Tutorial: two groups in 9,242 APOGEE stars, part 1
+# Tutorial: two groups in the APOGEE DR19 example table, part 1
 
 ```{eval-rst}
 .. index::
@@ -8,7 +8,7 @@
    single: APOGEE table
 ```
 
-This tutorial runs Starfold on a real table of 9,242 stars with no labels and reads the groups in physical units. It follows the notebook `notebooks/02_apogee.py`. Part 2 ({doc}`apogee-checks`) runs the co-association check and the calibration test and ends with what the run supports and what it does not. Read {doc}`digits` and {doc}`digits-refits` first: they explain the same output more slowly, on a table where the true classes are known.
+This tutorial runs Starfold on the APOGEE DR19 example table, 9,242 real stars with no labels, and reads the groups in physical units. It follows the notebook `notebooks/02_apogee.ipynb`. Part 2 ({doc}`apogee-checks`) runs the co-association check and the calibration test and ends with what the run supports and what it does not. Read {doc}`digits` and {doc}`digits-refits` first: they explain the same output more slowly, on a table where the true classes are known.
 
 ## Goal
 
@@ -27,15 +27,15 @@ Treat the run as a check of the method, not as a finding about the Milky Way. Th
 
 - Run Python from the repository root, so that `bench.datasets` imports.
 - Know the words the digits tutorial explains: flag, recurrence, count interval and co-association. If not, read {doc}`digits` and {doc}`digits-refits` first.
-- Time: the recorded run took 242 seconds on a laptop GPU with RAPIDS cuML (334 fits, 1,693 MB of host memory). The notebook does not say whether the GPU was shared, and no standalone time is recorded. The CPU time at this size is not measured. For a quick CPU pass, use a random subsample of 3,000 stars; the recorded numbers below are for all stars.
+- Time: the recorded run took 163 s on a laptop RTX 3060 with RAPIDS cuML (search 140 s, refits 13 s, 334 fits, 1,684 MB peak host memory). The CPU time at this size is not measured. For a quick CPU pass, use a random subsample of 3,000 stars; the recorded numbers below are for all stars.
 - The numbers below come from the recorded run with `random_state=0`. A different engine or machine can change the last digits.
 
 ## Step 1: load the table and read the columns
 
 Each row is one star. Each column is one number measured or derived for that star. The table comes from two sources.
 
-- **APOGEE** is an infrared spectroscopic survey of stars in the Milky Way. **ASPCAP** is its pipeline: it fits each star's spectrum to get chemical abundances. The table keeps stars with a signal-to-noise ratio above 70.
-- **Gaia** is a space telescope that measures star positions and motions. **galpy** is a Python package that integrates a star's orbit in a model of the Galaxy's gravity. Together they give five orbital quantities.
+- APOGEE is an infrared spectroscopic survey of stars in the Milky Way. ASPCAP is its pipeline: it fits each star's spectrum to get chemical abundances. The table keeps stars with a signal-to-noise ratio above 70.
+- Gaia is a space telescope that measures star positions and motions. galpy is a Python package that integrates a star's orbit in a model of the Galaxy's gravity. Together they give five orbital quantities.
 
 Load the table and print a summary:
 
@@ -50,7 +50,7 @@ for j, name in enumerate(names):
     print(f"{name:8}{middle[j]:>12.4g}{low[j]:>12.4g}{high[j]:>12.4g}")
 ```
 
-The notebook formats the numbers with units. You see:
+The notebook formats the numbers with units:
 
 ```text
 9,242 stars
@@ -68,12 +68,12 @@ E         -155,907     -172,581 to  -144,186  km^2/s^2
 What the columns mean:
 
 - `fe_h` is [Fe/H], the iron abundance relative to the Sun. It is in {term}`dex`, a base-10 logarithm: 0 is solar, -1 is a tenth of solar.
-- `alpha_m` ([alpha/M]) and `mg_fe` ([Mg/Fe]) say how rich a star is in **alpha elements** such as magnesium. Stars that formed early and quickly are richer in them.
+- `alpha_m` ([alpha/M]) and `mg_fe` ([Mg/Fe]) say how rich a star is in alpha elements such as magnesium. Stars that formed early and quickly are richer in them.
 - `J_R` and `J_z` are orbital actions in kpc km/s (kiloparsec times kilometres per second): how far the orbit swings in and out, and up and down through the disc.
 - `L_z` is the angular momentum about the Galaxy's axis. It is large and positive for stars that rotate with the disc.
 - `ecc` is the orbital eccentricity, 0 for a circle. `E` is the orbital energy in km^2/s^2, more negative for a more tightly bound star.
 
-Decision: the columns have different scales. `E` runs to about -150,000 and `fe_h` to about 0.2. The next step deals with that.
+The columns have very different scales: `E` runs to about -150,000 and `fe_h` to about 0.2. The next step deals with that.
 
 ## Step 2: leave the scaling at its default
 
@@ -85,7 +85,7 @@ import starfold
 config = starfold.Config()
 ```
 
-There is no printed output. Decision: if a column carries a unit that makes its spread meaningless, drop the column. Do not leave it in and hope. See the how-to guides in {doc}`../howto/index`.
+There is no printed output. If a column carries a unit that makes its spread meaningless, drop the column rather than leave it in. See the how-to guides in {doc}`../howto/index`.
 
 ## Step 3: run `recover`
 
@@ -101,16 +101,16 @@ print(
 print("fits per stage:", prov["stage_fits"])
 ```
 
-You see:
+The recorded run prints:
 
 ```text
-engine cuml, 334 fits, 242 s, peak host memory 1,693 MB
+engine cuml, 334 fits, 163 s, peak host memory 1,684 MB
 fits per stage: {'search': 300, 'reference': 2, 'worlds': 32, 'null': 0}
 ```
 
 The `search` stage runs {term}`Optuna` over settings, `reference` is the fit on all stars, `worlds` is the 32 refits, and `null` is the calibration test. The `null` time is 0 here because the test is off.
 
-Decision: the run used the engine you expected. The stage `null` stays at 0 fits until step 10 in {doc}`apogee-checks`.
+The run used the engine you expected. The stage `null` stays at 0 fits until step 10 in {doc}`apogee-checks`.
 
 ## Step 4: read the flags
 
@@ -119,7 +119,7 @@ for flag in result.flags:
     print(flag)
 ```
 
-You see:
+Four flags are raised:
 
 ```text
 search_budget_exhausted
@@ -133,7 +133,7 @@ null_not_run
 - `consensus_disagrees`: a second check, which cuts the stars into groups from how often refits put pairs together, gave a different grouping (its score against your labels is below 0.5). Step 8 in {doc}`apogee-checks` explains it.
 - `null_not_run`: no calibration test ran, so there is no {term}`p-value`. Step 10 in {doc}`apogee-checks` runs it.
 
-Decision: none of the four says the search found nothing. `no_groups_in_reference` and `count_unstable` are absent, so there are groups and the count does not drift.
+None of the four says the search found nothing. `no_groups_in_reference` and `count_unstable` are absent, so there are groups and the count does not drift.
 
 ## Step 5: read the groups
 
@@ -144,7 +144,7 @@ print("interval", w.count_interval[0], "to", w.count_interval[1])
 print(f"unresolved mass {result.unresolved_mass:.3f}")
 ```
 
-The notebook prints the group sizes and recurrence as well. You see:
+The notebook prints the group sizes and recurrence as well:
 
 ```text
 2 groups; 1,068 of 9,242 stars unassigned
@@ -174,7 +174,7 @@ for field in result.params.to_dict():
     print(f"{field:18}" + "".join(f"{show(getattr(s, field)):>12}" for s in settings))
 ```
 
-The notebook prints a table of three columns. You see:
+The notebook prints a table of three columns:
 
 ```text
                     on subsets   all stars    defaults
@@ -186,7 +186,7 @@ min_samples                 24          30           5
 selection_method           eom         eom         eom
 ```
 
-Decision: the search chose a much larger `n_neighbors` (54) than the default (15), and a larger `n_neighbors` emphasises broad structure over fine detail. Because `n_components` is 2, the map in the next step is the map HDBSCAN cut.
+The search chose a much larger `n_neighbors` (54) than the default (15), and a larger `n_neighbors` emphasises broad structure over fine detail. Because `n_components` is 2, the map in the next step is the map HDBSCAN cut.
 
 ## Step 6: draw the map
 
@@ -194,7 +194,7 @@ The notebook refits the chosen setting on all stars with the same seed and check
 
 ![Scatter map of 9,242 stars: a large orange group on the left, a smaller blue group on the right, grey unassigned stars between and around them.](../figures/manual/02_01.png)
 
-Read it aloud. Every dot is one star. The axes are UMAP 1 and UMAP 2 and have no units: only which stars sit near which stars counts. The large orange island on the left is group 1 (6,586 stars). The smaller blue island on the right is group 0 (1,588 stars). Grey dots are unassigned stars (1,068), and they sit around the edges and in the bridge between the islands. A dot's opacity is its {term}`own support`. The stars on the orange side of the bridge, near UMAP 1 of 2, are faint: the refits did not keep them with the orange group.
+Every dot is one star. The axes are UMAP 1 and UMAP 2 and have no units: only which stars sit near which stars counts. The large orange island on the left is group 1 (6,586 stars). The smaller blue island on the right is group 0 (1,588 stars). Grey dots are unassigned stars (1,068), and they sit around the edges and in the bridge between the islands. A dot's opacity is its {term}`own support`. The stars on the orange side of the bridge, near UMAP 1 of 2, are faint: the refits did not keep them with the orange group.
 
 A good picture has compact islands with solid dots and a clear gap. A bad picture is one mixed cloud, or many small islands of different colours. Here the two islands are distinct but touch through the bridge, so the boundary between groups is not sharp.
 
@@ -202,9 +202,9 @@ The map has no units, so it cannot say what a region is. The same map, coloured 
 
 ![Eight copies of the map, each coloured by one column: [Fe/H], [alpha/M], [Mg/Fe], J_R, J_z, L_z, eccentricity and E.](../figures/manual/02_02.png)
 
-Read it aloud. Each panel uses the same map and a colour scale from dark purple (low) to yellow (high) for one column, clipped at the 2nd to 98th percentile. The right island is bright in [alpha/M], [Mg/Fe], `J_R`, `J_z` and eccentricity, and dark in [Fe/H] and `L_z`. In the left island, `L_z` and `E` change smoothly from top to bottom, so group 1 is itself a gradient and not one point.
+Each panel uses the same map and a colour scale from dark purple (low) to yellow (high) for one column, clipped at the 2nd to 98th percentile. The right island is bright in [alpha/M], [Mg/Fe], `J_R`, `J_z` and eccentricity, and dark in [Fe/H] and `L_z`. In the left island, `L_z` and `E` change smoothly from top to bottom, so group 1 is itself a gradient and not one point.
 
-Decision: the two islands differ in measured quantities, which is what a real split should do. The smooth gradient inside group 1 says not to read it as one tight population.
+The two islands differ in measured quantities, as a real split would. The smooth gradient inside group 1 is a reason not to read it as one tight population.
 
 ## Step 7: read the groups in physical units
 
@@ -219,7 +219,7 @@ for i in range(result.n_groups):
         print(f"  {name:8}{median[i, j]:>10.4g} ({band[i, j, 0]:.4g} to {band[i, j, 1]:.4g}){np.median(kept[:, j]):>12.4g}")
 ```
 
-The notebook formats the numbers and adds the unit. You see:
+The notebook formats the numbers and adds the unit:
 
 ```text
 group 0: median over refits (5 to 95 percent), then all stars
@@ -246,11 +246,11 @@ The Milky Way disc has two chemical sequences in the [Fe/H] against [Mg/Fe] plan
 
 ![Left, every star in the [Fe/H] against [Mg/Fe] plane with each group's median. Right, each group's median in every column, in standard deviations from the table mean.](../figures/manual/02_03.png)
 
-Read it aloud. In the left panel, the horizontal axis is [Fe/H] in dex and the vertical axis is [Mg/Fe] in dex. Blue dots (group 0) sit upper left and orange dots (group 1) sit lower right. The large circles mark the group medians, and their error bars are too small to see. The two clouds touch around [Fe/H] of -0.25. In the right panel, the horizontal axis lists the eight columns and the vertical axis is the group median minus the table mean, in standard deviations. Group 0 sits at about +1.7 in [alpha/M] and [Mg/Fe], about -1.1 in [Fe/H], about -0.9 in `L_z` and about -0.8 in `E`. Group 1 sits between about -0.55 and +0.32 in every column. The dotted line is the table mean.
+In the left panel, the horizontal axis is [Fe/H] in dex and the vertical axis is [Mg/Fe] in dex. Blue dots (group 0) sit upper left and orange dots (group 1) sit lower right. The large circles mark the group medians, and their error bars are too small to see. The two clouds touch around [Fe/H] of -0.25. In the right panel, the horizontal axis lists the eight columns and the vertical axis is the group median minus the table mean, in standard deviations. Group 0 sits at about +1.7 in [alpha/M] and [Mg/Fe], about -1.1 in [Fe/H], about -0.9 in `L_z` and about -0.8 in `E`. Group 1 sits between about -0.55 and +0.32 in every column. The dotted line is the table mean.
 
 A good picture has medians far apart relative to their bars. Here the bars are much narrower than the distance between the groups.
 
-Decision: the bars are stability intervals over refits. They are not confidence intervals, and they contain no measurement error, because the table has no per-star uncertainties. If your table has them, pass them to `recover` as `X_err`.
+The bars are stability intervals over refits, not confidence intervals. They contain no measurement error, because the table has no per-star uncertainties. If your table has them, pass them to `recover` as `X_err`.
 
 ## What you learned
 

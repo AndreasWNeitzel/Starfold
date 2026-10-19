@@ -15,7 +15,7 @@ This page lists 15 things you may see in a result or a run, with the likely caus
    single: error messages
 ```
 
-Each answer follows one order: causes, check, fix, where to read more. All checks use an object named `result`, the return value of `starfold.recover`. Causes come from the code and from the recorded runs. Where an effect was not measured, the answer says so.
+Each answer follows one order: causes, check, fix, where to read more. All checks use an object named `result`, the return value of `starfold.recover`. Causes come from the code and from the recorded runs. These ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them. Where an effect was not measured, the answer says so.
 
 ## Almost every row is noise
 
@@ -28,7 +28,7 @@ import numpy as np
 print(np.mean(result.labels < 0), result.flags)
 ```
 
-Then read `fit_noise` of each trial in `result.search.trials`. A noise share of 0.12 (1,068 of 9,242 rows) is what the recorded APOGEE run gave, so some noise is normal for a table with a diffuse background.
+Then read `fit_noise` of each trial in `result.search.trials`. A noise share of 0.12 (1,068 of 9,242 rows) is what the recorded run on the APOGEE DR19 example table gave, so some noise is normal for a table with a diffuse background.
 
 Fix. Work through these in order.
 
@@ -40,7 +40,7 @@ Read {doc}`metrics/unresolved` to separate noise in the full fit from noise acro
 
 ## The count interval is wide
 
-Causes. The interval is the 5th to 95th percentile of the number of groups that the {term}`refits <refit>` found, so a wide interval means the table supports several readings. Groups near the small-group scale merge and split from one refit to the next ({doc}`limits`). Irrelevant columns blur the groups. The recorded Digits run gave 10 groups with an interval of 3 to 16.
+Causes. The interval is the 5th to 95th percentile of the number of groups that the {term}`refits <refit>` found, so a wide interval means the table supports several readings. Groups near the small-group scale merge and split from one refit to the next ({doc}`limits`). Irrelevant columns blur the groups. The recorded run on the scikit-learn digits dataset gave 10 groups with an interval of 3 to 16.
 
 Check. Print `result.worlds.count_interval`, `result.worlds.count_reference` and `np.bincount(result.worlds.count_values)`.
 
@@ -111,7 +111,7 @@ Fix. Do not claim that the search improved on the defaults. The result is still 
 
 Causes. `null_families` is set, which adds up to 1,938 fits per family, about six times the rest of a run. The CPU is running instead of the GPU. The table is large, since every fit sees 0.8 of the rows.
 
-Check. Print `result.provenance["stage_seconds"]`, `["stage_fits"]` and `["engine_resolved"]`. Recorded runs with the test off used 314 fits (Digits) and 334 fits (APOGEE).
+Check. Print `result.provenance["stage_seconds"]`, `["stage_fits"]` and `["engine_resolved"]`. Recorded runs with the test off used 314 fits on the scikit-learn digits dataset and 334 fits on the APOGEE DR19 example table.
 
 Fix. Keep the test off for sweeps and run `null_test` once on the result you report. Lower `n_trials`, `n_worlds` or `n_resamples` ({doc}`howto/set-budgets`). Use several processes on the CPU ({doc}`howto/run-parallel`).
 
@@ -152,7 +152,7 @@ Fix. Raise the lower bound of `min_cluster_size` in `Space` and drop irrelevant 
 
 ## A group I expect is missing or merged
 
-Causes. Groups below about `sqrt(15 m)` rows merge into a neighbour, with `m` the rows per resample (155 at 2,000 rows, 346 at 10,000 rows). In an injection test on 2,000 APOGEE rows, groups of 30 and 60 rows were retrieved 0 of 3 times. Groups of 120, 240 and 480 rows were retrieved 3 of 3 times.
+Causes. Groups below about `sqrt(15 m)` rows merge into a neighbour, with `m` the rows per resample (155 at 2,000 rows, 346 at 10,000 rows). In an injection test on 2,000 rows of the APOGEE DR19 example table, groups of 30 and 60 rows were retrieved 0 of 3 times. Groups of 120, 240 and 480 rows were retrieved 3 of 3 times.
 
 Check. Compare the expected group size with `sqrt(15 * 0.8 * n)`.
 
@@ -160,7 +160,7 @@ Fix. Add rows, drop irrelevant columns, or expect the group to merge. See {doc}`
 
 ## CPU and GPU give different labels
 
-Causes. The backends differ in floating-point order, so labels and counts differ without the partitions being wrong. On the recorded Digits fits the group counts were 14, 12, 13 on the CPU and 10, 10, 10 on the GPU.
+Causes. The backends differ in floating-point order, so labels and counts differ without the partitions being wrong. On the recorded digits fits the group counts were 14, 12, 13 on the CPU and 10, 10, 10 on the GPU.
 
 Check. Run `starfold.compare_backends` and read `mean_normalised`. Below 0.8 the flag `backend_disagreement` is raised. The recorded Waveform value was 0.58.
 

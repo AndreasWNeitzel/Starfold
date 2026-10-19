@@ -1,6 +1,6 @@
 # Your first run
 
-This page runs Starfold on a table of 1,797 handwritten digit images in five lines and shows you how to read the result.
+This page runs Starfold in five lines on the scikit-learn digits dataset and shows you how to read the result. The dataset is a copy of the UCI handwritten digits test set: 1,797 images of 8 by 8 pixels, one per row, with 64 pixel columns.
 
 ```{eval-rst}
 .. index::
@@ -17,8 +17,8 @@ Install first, in one line: `pip install "starfold @ git+https://github.com/Andr
 ## What you need
 
 - Starfold installed, Python 3.11 or 3.12.
-- scikit-learn, which Starfold already installs. It ships the digits table, so you download nothing.
-- A few minutes. The recorded run took 80.4 s on a laptop RTX 3060 with {term}`cuML` when the run had the GPU to itself. The recorded output shows 182.0 s because notebook 02 ran at the same time. A CPU run is not measured here; expect it to take longer.
+- scikit-learn, which Starfold already installs. It ships the digits dataset, so you download nothing.
+- About a minute and a half on a GPU. The recorded run took 93.9 s on a laptop RTX 3060 with {term}`cuML` (search 77.4 s, refits 7.2 s). A CPU run is not measured here; expect it to take longer.
 
 ## What the call does
 
@@ -30,8 +30,6 @@ The last line of the code prints four things, in this order:
 2. The number of groups in the fit on all rows.
 3. The {term}`count interval`: the range of group counts that the 32 refits found.
 4. The {term}`unresolved mass`: how often a row failed to stay with its group across refits.
-
-The page explains each one after the output.
 
 ## Steps
 
@@ -45,15 +43,13 @@ The page explains each one after the output.
    print(result.flags, result.n_groups, result.worlds.count_interval, f"{result.unresolved_mass:.3f}")
    ```
 
-2. Run them. Nothing prints until the fit ends.
-
-   You see:
+2. Run them. Nothing prints until the fit ends, and then one line appears:
 
    ```text
    ('search_budget_exhausted', 'count_unstable', 'consensus_disagrees', 'null_not_run') 10 (3, 16) 0.044
    ```
 
-   The numbers come from the recorded run (`notebooks/runs/shots/01_digits.ipynb`, cuML engine, `random_state=0`). Another engine, machine or version can give other numbers, because the fits use random numbers and floating-point arithmetic. If yours differ a little, the reading below still holds. If the flags or the group count differ a lot, compare your versions and engine with the recorded ones: {doc}`../howto/reproduce-a-run`.
+   The numbers come from the recorded run (`notebooks/01_digits.ipynb`, cuML engine, `random_state=0`). Another engine, machine or version can give other numbers, because the fits use random numbers and floating-point arithmetic. If yours differ a little, the reading below still holds. If the flags or the group count differ a lot, compare your versions and engine with the recorded ones: {doc}`../howto/reproduce-a-run`.
 
 ## What each code line does
 
@@ -67,30 +63,30 @@ The page explains each one after the output.
 
 Read the flags first, then the group count, then the interval, then the unresolved mass.
 
-**The flags.** Four are raised:
+Four flags are raised:
 
 - `search_budget_exhausted` says the search used all 48 trials. It only says how the search ended.
 - `count_unstable` says fewer than half of the refits found the same number of groups as the full fit. Do not quote a single group count.
 - `consensus_disagrees` says a second check gave a different grouping. The check counts, for every pair of rows, how often the refits put them together (the {term}`co-association`), and cuts the rows into groups from those counts. The cut matched your labels with a score of 0.135 (the adjusted Rand index times coverage), below the 0.5 threshold, and it found 3 groups. Do not treat this as an error. Pairs of rows inside one group were together in 0.820 of the refits and pairs in different groups in 0.068. That gap, 0.751, is the {term}`contrast`. On average, the refits keep pairs inside your groups together and pairs across groups apart. It is an average over all pairs, so it does not show that every group holds, nor that the groups are real. The {doc}`../concepts/refits` page explains co-association.
 - `null_not_run` says the optional calibration test did not run, so there is no {term}`p-value`. It is expected, because the test is off by default.
 
-**The groups.** `10` is the number of groups in the full fit. Thirty of the 1,797 rows are {term}`noise` (label -1): no clump claimed them. Noise is not a bad measurement.
+`10` is the number of groups in the full fit. Thirty of the 1,797 rows are {term}`noise` (label -1): no clump claimed them. Noise is not a bad measurement.
 
-**The interval.** `(3, 16)` is the 5th to 95th percentile of the number of groups the 32 refits found, rounded outward to whole numbers. It is a {term}`stability interval`, not a {term}`confidence interval`. A wide interval, as here, says the count changes with the rows drawn. Do not quote 10 as the number of digit classes on this evidence. The count is not a finding.
+`(3, 16)` is the 5th to 95th percentile of the number of groups the 32 refits found, rounded outward to whole numbers. It is a {term}`stability interval`, not a {term}`confidence interval`. A wide interval, as here, says the count changes with the rows drawn. Do not quote 10 as the number of digit classes on this evidence. The count is not a finding.
 
-**The unresolved mass.** `0.044` is the average share of refit outcomes in which a row was left unresolved. Moving to another group does not count. A row counts as unresolved in one refit when that refit called it noise, or placed it with rows the full fit calls noise. Zero would mean no refit calls any row noise or groups it with full-fit noise rows. Above 0.5 the flag `high_unresolved_mass` is raised: on average, most refit outcomes leave a row unresolved. At 0.044 it is low, so read the other numbers as usual.
+`0.044` is the average share of refit outcomes in which a row was left unresolved. Moving to another group does not count. A row counts as unresolved in one refit when that refit called it noise, or placed it with rows the full fit calls noise. Zero would mean no refit calls any row noise or groups it with full-fit noise rows. Above 0.5 the flag `high_unresolved_mass` is raised: on average, most refit outcomes leave a row unresolved. At 0.044 it is low, so read the other numbers as usual.
 
-**Which groups come back.** The printout does not show it, but the recorded run also gives each group a {term}`recurrence`. Two groups (0 and 1) come back with recurrence 1.00. The other eight come back only in part, between 0.45 and 0.84. Use the high-recurrence groups first. The {doc}`../tutorial/index` page reads every group.
+The printout does not show which groups come back, but the recorded run also gives each group a {term}`recurrence`. Two groups (0 and 1) come back with recurrence 1.00. The other eight come back only in part, between 0.45 and 0.84. Use the high-recurrence groups first. The {doc}`../tutorial/index` page reads every group.
 
 ## Look at the groups
 
-The recorded notebook draws the groups on a two-dimensional picture, made by a separate UMAP fit for display. You do not need this figure to continue. It shows what Starfold found.
+The recorded notebook draws the groups on a two-dimensional picture, made by a separate UMAP fit for display. You do not need the figure for the rest of the page.
 
 ![Three scatter panels of the digits on a two-dimensional map. Left, ten colours for the true digits. Middle, Starfold's ten groups with faded points where support is low. Right, 51 groups from the library defaults.](../figures/manual/01_01.png)
 
 The left panel colours each image by its true digit, which Starfold never used. The middle panel colours the same images by Starfold's group. A faded point is a row with low own support: the refits rarely put that row back with its group. Own support runs from 0 to 1 and is not a probability or a purity. Grey points are the 30 noise rows. The right panel shows one fit of the library defaults on all rows (recorded run, `random_state=0`), which cuts the same map into 51 groups and 189 noise rows.
 
-Compare the middle panel with the left panel, then with the right panel. The defaults split the map into many small pieces, while Starfold's ten groups follow the islands more closely. The decision: trust the solid-coloured groups first, and check the faded ones against their recurrence before you use them.
+Compare the middle panel with the left panel, then with the right panel. The defaults split the map into many small pieces, while Starfold's ten groups follow the islands more closely. Trust the solid-coloured groups first, and check the faded ones against their recurrence before you use them.
 
 The display map is drawn by a separate UMAP fit. Distances between islands on it are not the ones HDBSCAN used, so do not read the gaps or sizes as measurements.
 

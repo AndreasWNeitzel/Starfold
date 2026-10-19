@@ -41,13 +41,13 @@ A {term}`structureless copy` keeps every value of every column and changes only 
 
 Each bar below counts copies by their best gap among the 17 opening trials. The dashed line is the table's best gap.
 
-![Histogram of the best gap among the opening trials for 19 gaussian_copula copies of the APOGEE table (blue) with the table's value as a dashed line. One copy sits next to the line.](../figures/apogee_null.png)
+![Histogram of the best gap among the opening trials for 19 gaussian_copula copies of the APOGEE DR19 example table (blue) with the table's value as a dashed line. One copy sits next to the line.](../figures/apogee_null.png)
 
-The figure's own caption calls this value the best exploration score. It is the best gap among trials 0 to 16. Look at the copies between 0.06 and 0.29, and at the single copy at the far right, inside the last bar next to the dashed line. One copy reached as high as the table, so the evidence for APOGEE is weak.
+The figure's own caption calls this value the best exploration score. It is the best gap among trials 0 to 16. Look at the copies between 0.06 and 0.29, and at the single copy at the far right, inside the last bar next to the dashed line. One copy reached as high as the table, so the evidence for the APOGEE DR19 example table is weak.
 
-For Digits, the dashed line sits right of every bar.
+For the scikit-learn digits dataset, the dashed line sits right of every bar.
 
-![Histogram of the best gap among the opening trials for 19 gaussian_copula copies of the Digits table with the table's value as a dashed line to the right of every copy.](../figures/digits_null.png)
+![Histogram of the best gap among the opening trials for 19 gaussian_copula copies of the scikit-learn digits dataset with the table's value as a dashed line to the right of every copy.](../figures/digits_null.png)
 
 Look at the empty space between the last bar and the dashed line. No copy reached the table, so p is at its floor. The table's value, 0.710, is the search gap of trial 7.
 
@@ -64,7 +64,7 @@ Look at the empty space between the last bar and the dashed line. No copy reache
 | 19 | 0.050 | 0.100 | 0.150 | 0.200 |
 | 99 | 0.010 | 0.020 | 0.030 | 0.040 |
 
-The table is the recorded output of `notebooks/03_calibration.py`. A lower floor needs more copies (99 copies reach 0.01 at up to 10,098 fits).
+The table is the recorded output of `notebooks/03_calibration.ipynb`. A lower floor needs more copies (99 copies reach 0.01 at up to 10,098 fits).
 
 ## How to read a value
 
@@ -81,7 +81,7 @@ The bands follow the notebooks. Neither reading says anything about how many gro
 ## What misleads
 
 - A small p-value is not the probability that the groups are real. It is valid only for the declared family of copies and for the procedure that was simulated. The default family, `gaussian_copula`, keeps every column's values exactly. It couples the columns through a fitted, shrunk Gaussian dependence on normal scores, so it does not reproduce the observed correlations exactly. It keeps any multimodality of a single column, and removes only multimodality that needs several columns together.
-- A large p-value is not a finding of no groups. In the APOGEE record, one copy reached a best gap of 0.366 against the table's 0.362. The interval on the share of copies is wide (0.001 to 0.260) because 19 copies are few.
+- A large p-value is not a finding of no groups. In the APOGEE DR19 record, one copy reached a best gap of 0.366 against the table's 0.362. The interval on the share of copies is wide (0.001 to 0.260) because 19 copies are few.
 - The test stops after 3 copies reach the table's value (Besag and Clifford 1991, a rule that ends the simulation once the answer is clear). At the default 19 copies, p after that stop is at least 4/(L+1), so it is at least 0.2 and cannot reach 0.05. More copies would only refine a value above alpha. With more than 19 copies allowed, this statement no longer holds.
 - The placeholder 1.0 is not a measurement. When no family was declared, `skipped_reason` is `null_not_run`, `p_value` is 1.0 and `structure_supported` is false. When the table's own statistic is zero or below, `skipped_reason` is `observed_statistic_zero`.
 
@@ -101,7 +101,7 @@ evidence = starfold.null_test(
 )
 ```
 
-Here `config` is the `Config` the run used. From the command line, `python -m bench.null_stage <dataset> <result folder> --output <folder>` replays the saved run's settings and writes `<dataset>_null.json` into the folder you name. Without `--output` it writes to `bench/results`, where it would overwrite the recorded file. The notebook `notebooks/03_calibration.py` read the recorded test records in `bench/results/` and printed the lines below.
+Here `config` is the `Config` the run used. From the command line, `python -m bench.null_stage <dataset> <result folder> --output <folder>` replays the saved run's settings and writes `<dataset>_null.json` into the folder you name. Without `--output` it writes to `bench/results`, where it would overwrite the recorded file. The notebook `notebooks/03_calibration.ipynb` read the recorded test records in `bench/results/` and printed the lines below.
 
 ```python
 for name, record in records.items():
@@ -114,14 +114,14 @@ for name, record in records.items():
     )
 ```
 
-You see (records `bench/results/digits_null.json` and `apogee_null.json`):
+The two records are `bench/results/digits_null.json` and `apogee_null.json`:
 
 ```text
 digits  observed 0.710, 19 copies, 0 at or above the data, p 0.05, fraction at or above 0.000 to 0.176 (95% Monte Carlo interval), 1938 fits, supported True
 apogee  observed 0.362, 19 copies, 1 at or above the data, p 0.10, fraction at or above 0.001 to 0.260 (95% Monte Carlo interval), 1938 fits, supported False
 ```
 
-The recorded runs in `notebooks/01_digits.py` and `notebooks/02_apogee.py` had the test off. Their `result.null.skipped_reason` is `null_not_run` and the placeholder 1.0 is in `result.null.p_value`.
+The recorded runs in `notebooks/01_digits.ipynb` and `notebooks/02_apogee.ipynb` had the test off. Their `result.null.skipped_reason` is `null_not_run` and the placeholder 1.0 is in `result.null.p_value`. These two notebooks write the runs that ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`, and `starfold.load` reads them.
 
 :::{dropdown} Formula
 With $L$ copies drawn and $h$ of them at or above the observed statistic (a tie counts against the table),

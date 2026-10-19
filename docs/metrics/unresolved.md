@@ -42,9 +42,9 @@ refit 4: r in a refit group that the full fit never calls noise   -> 0.0
 
 The unresolved share of r is (0 + 0.2 + 1 + 0) / 4 = 0.3. Averaging such shares over all rows gives the unresolved mass.
 
-The middle panel below shows the unresolved share of every row of the recorded Digits run. The dashed line is the mean.
+The middle panel below shows the unresolved share of every row of the recorded run on the scikit-learn digits dataset. The dashed line is the mean. The recorded runs quoted on this page ship in the repository under `notebooks/runs/digits` and `notebooks/runs/apogee`. Notebooks 01 and 02 write them, and `starfold.load` reads them.
 
-![Middle panel: histogram of the unresolved share of every Digits row, with the mean (the unresolved mass) as a dashed line.](../figures/digits_support.png)
+![Middle panel: histogram of the unresolved share of every digits row, with the mean (the unresolved mass) as a dashed line.](../figures/digits_support.png)
 
 Look at the tall bar near 0 and the dashed line next to it. Nearly all rows are placed by almost every refit, so the mass is small.
 
@@ -56,7 +56,7 @@ Look at the tall bar near 0 and the dashed line next to it. Nearly all rows are 
 
 ## How to read a value
 
-The 0.5 mark is the threshold of the `high_unresolved_mass` {term}`flag` in the code. The other bands are `[no-source: internal-reasoning]`.
+The 0.5 mark is the threshold of the `high_unresolved_mass` {term}`flag` in the code. The other bands are a rule of thumb from this project, not from a published source.
 
 | Unresolved mass | Reading | Decision |
 |---|---|---|
@@ -73,19 +73,17 @@ The 0.5 mark is the threshold of the `high_unresolved_mass` {term}`flag` in the 
 
 ## Where Starfold prints it
 
-The attribute is `result.unresolved_mass` (same value as `result.worlds.unresolved_mass`). The per-row values are in `result.worlds.unresolved`. The notebook `notebooks/01_digits.py` printed the recorded line below.
+The attribute is `result.unresolved_mass` (same value as `result.worlds.unresolved_mass`). The per-row values are in `result.worlds.unresolved`. The notebook `notebooks/01_digits.ipynb` printed the recorded line below, from 32 refits.
 
 ```python
 print(f"unresolved mass: {result.unresolved_mass:.3f}")
 ```
 
-You see (recorded Digits run, 32 refits):
-
 ```text
 unresolved mass: 0.044
 ```
 
-The recorded APOGEE run (`notebooks/02_apogee.py`) gave 0.154, which the notebook reads as about 15 percent of a star's refit outcomes being "no group".
+The recorded run on the APOGEE DR19 example table (`notebooks/02_apogee.ipynb`) gave 0.154, which the notebook reads as about 15 percent of a star's refit outcomes being "no group".
 
 :::{dropdown} Formula
 For row $i$ with $W_i$ the refits that drew it, let $u_{w,i} = 1$ if refit $w$ gives row $i$ noise. Otherwise $u_{w,i} = s_{k0}$, the share of its refit cluster $k$ that the full fit calls noise. Then

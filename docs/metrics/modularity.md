@@ -36,9 +36,9 @@ Rows in {term}`noise` keep their lines in the graph but belong to no group. Thei
 
 ## How to read a value
 
-Newman and Girvan (2004) write that, for the networks they studied, modularity values in practice fall between about 0.3 and 0.7, and that higher values are rare. That is a description of observed values in networks with clear communities, not a cut-off, and it was not derived for graphs built from nearest neighbours. Starfold does not gate on it. Because neighbours sit close together, a nearest-neighbour graph can give a positive value even to a cut through a smooth cloud. The bands below are only a guide and are [no-source: internal-reasoning].
+Newman and Girvan (2004) write that, for the networks they studied, modularity values in practice fall between about 0.3 and 0.7, and that higher values are rare. That is a description of observed values in networks with clear communities, not a cut-off, and it was not derived for graphs built from nearest neighbours. Starfold does not gate on it. Because neighbours sit close together, a nearest-neighbour graph can give a positive value even to a cut through a smooth cloud. The bands below are only a guide, a rule of thumb from this project, not from a published source.
 
-The decision question is: do the groups of this setting follow the neighbourhoods of my table, or do they cut through them? Compare the value with the other trials of the same run, and with the score on a structureless copy in {doc}`gap`.
+To judge whether the groups of this setting follow the neighbourhoods of your table or cut through them, compare the value with the other trials of the same run, and with the score on a structureless copy in {doc}`gap`.
 
 | Value | Reading | Decision |
 |---|---|---|
@@ -56,7 +56,7 @@ The decision question is: do the groups of this setting follow the neighbourhood
 
 Each trial stores `modularity` in `result.search.trials`. It is the mean over the fits of the trial of the modularity of each fit on its own subset graph, each clipped at 0.
 
-The notebooks do not print this term alone. The recorded Digits run (1,797 images, `random_state=0`) stores it in `bench/results/digits.json`, under `trial_diagnostics`, written by `bench/beats_default.py` from these attributes:
+The notebooks do not print this term alone. The recorded digits run (the scikit-learn digits dataset, `random_state=0`) stores it in `bench/results/digits.json`, under `trial_diagnostics`, written by `bench/beats_default.py` from these attributes:
 
 ```python
 for number in (0, 13, 33):
@@ -64,7 +64,7 @@ for number in (0, 13, 33):
     print(number, f"{trial.modularity:.3f}")
 ```
 
-You see (values read from the recorded file, on the search's three subsets):
+The recorded file holds these values, computed on the search's three subsets:
 
 ```text
 0 0.645

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-10-19)
 
 New code base and API. Code written for 0.0.1 needs porting.
 
@@ -19,6 +19,7 @@ New code base and API. Code written for 0.0.1 needs porting.
 - `measurement_draw` and `run_worlds` refuse negative uncertainties. `search_stopped_early` now means fewer than `n_trials` trials ran.
 - `python -m bench.null_stage` replays the saved search space, engine and worker count.
 - The recurrence marks 0.85 and 0.5 are now credited to the fpc `clusterboot` documentation, not Hennig (2007), and the manual describes the Gaussian copula family and sequential p-values correctly.
+- The three notebooks are committed as `.ipynb` files with their recorded outputs, so they read on GitHub without running anything. The paired `.py` versions are gone.
 - The manual is a Sphinx site built from `docs/` (install with `--extra docs`): tutorials, one page per metric, how-to guides, a flag reference, a glossary and an index. It replaces `docs/handbook.md`.
 - The APOGEE DR19 example table is now `bench/data/stellar_chemokinematics_apogee_dr19.npz`, read with `bench.datasets.example_table()` from a clone.
 

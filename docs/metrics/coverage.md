@@ -35,9 +35,9 @@ Coverage is 0 for a pair with no unseen rows. Starfold averages it over the six 
 
 ## How to read a value
 
-The bands are [no-source: internal-reasoning]. Starfold has no gate: a low coverage lowers the {term}`score` and a zero makes it zero.
+The bands are a rule of thumb from this project, not from a published source. Starfold has no gate: a low coverage lowers the {term}`score` and a zero makes it zero.
 
-The decision question is: how much of my table do the groups of this setting describe? Answer it before you report the groups as a description of the whole table.
+Before you report the groups as a description of the whole table, ask how much of the table the groups of this setting describe.
 
 | Value | Reading | Decision |
 |---|---|---|
@@ -47,7 +47,7 @@ The decision question is: how much of my table do the groups of this setting des
 
 ## What misleads
 
-1. A setting that lumps every row into one or two giant groups has coverage near 1. In the recorded Digits run, trial 13 reached a coverage of 1.0 and found 3 groups in a fit on all rows, for 10 true digits. Its modularity was 0.230, which is what exposed it.
+1. A setting that lumps every row into one or two giant groups has coverage near 1. In the recorded digits run, trial 13 reached a coverage of 1.0 and found 3 groups in a fit on all rows, for 10 true digits. Its modularity was 0.230, which is what exposed it.
 2. Coverage counts rows, not quality. A row in a wrong group counts the same as a row in a right one.
 3. Coverage says nothing about the rows in your table outside the tested sets. It uses only the rows that one subset held and another did not.
 
@@ -55,7 +55,7 @@ The decision question is: how much of my table do the groups of this setting des
 
 Each trial stores `coverage` in `result.search.trials`. The re-scored candidates keep the per-pair values in `pair_coverage` inside the trial score and combine them into `fresh_pair_scores`.
 
-The notebooks do not print this term alone. The recorded Digits run (1,797 images, `random_state=0`) stores it in `bench/results/digits.json`, under `trial_diagnostics`, written by `bench/beats_default.py` from these attributes:
+The notebooks do not print this term alone. The recorded digits run (the scikit-learn digits dataset, `random_state=0`) stores it in `bench/results/digits.json`, under `trial_diagnostics`, written by `bench/beats_default.py` from these attributes:
 
 ```python
 for number in (0, 6, 33):
@@ -63,7 +63,7 @@ for number in (0, 6, 33):
     print(number, round(trial.coverage, 3))
 ```
 
-You see (values read from the recorded file, on the search's three subsets):
+The recorded file holds these values, computed on the search's three subsets:
 
 ```text
 0 0.884
@@ -71,7 +71,7 @@ You see (values read from the recorded file, on the search's three subsets):
 33 0.975
 ```
 
-Trial 0 is the library defaults. Its group count here (42) comes from one fit on all rows at the recorded seed, with the trial's own settings and no rescaling. Another default-seed fit in the same run found 51 groups, so the count of a trial varies with the seed. The emitted fit of the selected setting rescales some settings to the full table. That is why trial 33 shows 14 groups in the trial table and 10 in the emitted fit. Trial 6 found 77 groups in such a single fit and left almost half of the tested rows out. Trial 33 is the setting Starfold selected.
+Trial 0 is the library defaults. Its group count (42) comes from one fit on all rows at the recorded seed, with the trial's own settings and no rescaling. Another default-seed fit in the same run found 51 groups, so the count of a trial varies with the seed. The emitted fit of the selected setting rescales some settings to the full table. That is why trial 33 shows 14 groups in the trial table and 10 in the emitted fit. Trial 6 found 77 groups in such a single fit and left almost half of the tested rows out. Trial 33 is the setting Starfold selected.
 
 :::{dropdown} Formula
 With `O` the held-out rows of the ordered pair (r, s) and `J` the rows of `O` that both the prediction and the fit on `s` assign to a group,

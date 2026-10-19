@@ -28,11 +28,11 @@ A 64-dimensional cloud does not fit on a flat sheet without damage, as a globe d
 - **Axes have no units.** "Display axis 1" is not a column. Only which rows sit near which counts.
 - **Different seeds draw different maps.** A {term}`seed` is the number that starts the random choices of a fit. The same table and settings with another seed can give a rotated, stretched or split layout.
 
-These are the reasons Starfold does not trust the map on its own. It checks the groups in three other ways. It predicts groups for rows left out of a fit (held-out rows). It measures how well the groups follow the neighbour links of the original scaled columns, with no map involved. And it refits on random subsets of the rows. The figure you see in the tutorials is a separate two-dimensional display fit. Read the neighbourhoods on it, not the distances. You do not need to set any of these options: Starfold searches them for you.
+These are the reasons Starfold does not trust the map on its own. It checks the groups in three other ways. It predicts groups for rows left out of a fit (held-out rows). It measures how well the groups follow the neighbour links of the original scaled columns, with no map involved. And it refits on random subsets of the rows. The figure you see in the tutorials is a separate two-dimensional display fit. Read the neighbourhoods on it, not the distances.
 
 ## The settings Starfold searches
 
-Starfold searches three UMAP settings. The defaults are those of `umap-learn` and are trial 0 of the search (the first setting it tries; see {doc}`optuna`). If you narrow a range so that it excludes a default, trial 0 uses the nearest bound instead.
+Starfold searches three UMAP settings, so you do not need to set them. The defaults are those of `umap-learn` and are trial 0 of the search (the first setting it tries; see {doc}`optuna`). If you narrow a range so that it excludes a default, trial 0 uses the nearest bound instead.
 
 | Setting | Default | Range searched | What it does |
 |---|---|---|---|

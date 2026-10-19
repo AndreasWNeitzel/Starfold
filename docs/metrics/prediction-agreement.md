@@ -55,9 +55,9 @@ Starfold averages the value over the six ordered pairs. It sets the value of a p
 
 ## How to read a value
 
-The bands below are [no-source: internal-reasoning]. Starfold has no gate on this term: a low value lowers the {term}`score`, nothing more.
+The bands below are a rule of thumb from this project, not from a published source. Starfold has no gate on this term: a low value lowers the {term}`score`, nothing more.
 
-The decision question is: does this setting deserve the trust its groups would need, or should I look at another trial? Read the value of the trial you care about in `result.search.trials`.
+To judge whether this setting's groups deserve trust or whether to look at another trial, read the value of the trial you care about in `result.search.trials`.
 
 | Value | Reading | Decision |
 |---|---|---|
@@ -67,7 +67,7 @@ The decision question is: does this setting deserve the trust its groups would n
 
 ## What misleads
 
-1. A coarse partition agrees well by default. Two or three large groups come back in every subset, so agreement alone favours the coarsest partition (von Luxburg 2010). In the recorded Digits run, trial 37 found 3 groups in a fit on all rows and reached an agreement of 0.908, for a table with 10 true digits. Modularity and coverage exist to counter this.
+1. A coarse partition agrees well by default. Two or three large groups come back in every subset, so agreement alone favours the coarsest partition (von Luxburg 2010). In the recorded digits run, trial 37 found 3 groups in a fit on all rows and reached an agreement of 0.908, for a table with 10 true digits. Modularity and coverage exist to counter this.
 2. The ARI counts only rows that both sides assigned to a group. A setting that calls most rows noise can keep a high ARI on the few rows left. The {doc}`coverage` term reports how many rows that is.
 3. Agreement measures whether the partition repeats across subsets of the same table. A stable partition is not automatically a true partition.
 
@@ -75,7 +75,7 @@ The decision question is: does this setting deserve the trust its groups would n
 
 Each trial stores its agreement as `stability` in `result.search.trials` (`stability` is the code name for prediction agreement, averaged over the six ordered pairs). The re-scored candidates in `result.search.candidates` keep the per-pair values combined with coverage and modularity in `fresh_pair_scores`.
 
-The notebooks do not print this term alone. The recorded Digits run (1,797 images, 64 pixel columns, `random_state=0`) stores it in `bench/results/digits.json`, under `trial_diagnostics`, written by `bench/beats_default.py` from these attributes:
+The notebooks do not print this term alone. The recorded digits run (the scikit-learn digits dataset, 64 pixel columns, `random_state=0`) stores it in `bench/results/digits.json`, under `trial_diagnostics`, written by `bench/beats_default.py` from these attributes:
 
 ```python
 for number in (0, 33):
@@ -83,7 +83,7 @@ for number in (0, 33):
     print(number, round(trial.stability, 3))
 ```
 
-You see (values read from the recorded file, `stability` on the search's three subsets):
+The recorded file holds these `stability` values, computed on the search's three subsets:
 
 ```text
 0 0.708

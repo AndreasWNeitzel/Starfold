@@ -4,7 +4,7 @@ Starfold finds groups in a numeric table without labels, then tells you how far 
 
 ![Three panels of the handwritten digits on a two-dimensional map: the true digits, Starfold's groups, and the library defaults](docs/figures/digits_partitions.png)
 
-*Handwritten digits (1,797 rows, 64 pixels) on a 2-D UMAP display. Left: the true digits, which Starfold never sees. Middle: Starfold's groups, faded where the refits rarely agree. Right: the UMAP and HDBSCAN defaults.*
+*The scikit-learn digits dataset on a 2-D UMAP display. It is a copy of the UCI handwritten digits test set: 1,797 images of 8 by 8 pixels, one per row, with 64 pixel columns. Left: the true digits, which Starfold never sees. Middle: Starfold's groups, faded where the refits rarely agree. Right: the UMAP and HDBSCAN defaults.*
 
 ## Install
 
@@ -20,7 +20,7 @@ The GPU extras install RAPIDS cuML, NVIDIA's GPU versions of UMAP and HDBSCAN (L
 
 ## First run
 
-These five lines run the whole procedure on the digits table that ships with scikit-learn. `random_state=0` is the seed: the number every random choice starts from, so a rerun gives the same result.
+These five lines run the whole procedure on the scikit-learn digits dataset. `random_state=0` is the seed: the number every random choice starts from, so a rerun gives the same result.
 
 ```python
 import starfold
@@ -67,7 +67,7 @@ null = starfold.null_test(X[result.kept_rows], result.search, random_state=0)
 print(null.p_value, null.structure_supported)
 ```
 
-To run it inside `recover` instead, pass `config=starfold.Config(null_families=("gaussian_copula",))` and read `result.null.p_value`. On Digits, `recover` makes 314 fits (a few minutes on a laptop GPU), against up to 1,938 for `null_test`.
+To run it inside `recover` instead, pass `config=starfold.Config(null_families=("gaussian_copula",))` and read `result.null.p_value`. With the test off, the recorded digits run makes 314 fits (93.9 s on a laptop RTX 3060 with cuML). The test itself adds up to 1,938 fits, and the recorded digits test took 791 s.
 
 ## Reading the flags
 
@@ -84,12 +84,12 @@ The manual's [flag reference](https://andreaswneitzel.github.io/Starfold/referen
 
 ## Scope and limits
 
-- **Input.** One row per object, with at least 50 finite rows and 2 numeric columns. The columns you choose define what "similar" means. Starfold scales them; use `Config(scaling="robust")` for heavy tails. Rows with a missing value are dropped, never filled in.
-- **Small groups merge.** Groups much smaller than about sqrt(12 n) rows (about 155 rows at n = 2,000 and 350 at n = 10,000) tend to be merged into larger ones. This is a rule of thumb measured on our benchmark and by injecting groups into a real table, not a derived bound.
-- **Stable is not true.** Support is how often the refits agree, not the probability that a row belongs to a group. The ranges over refits are stability intervals, not confidence intervals. A dense chance fluctuation also comes back in every subset. There is no per-group significance test.
-- **Counts.** The group count is not an estimate of how many populations exist. On our benchmark it can differ from the true class count (Gas drift: 390 groups against 6 classes; Letter: 284 against 26). Report `worlds.count_interval` with it.
-- **The p-value** holds only for its family of copies (by default a Gaussian copula: one population with the table's column values and correlations). It also holds only for the part of the search it replays: by default the library defaults and the 16 Sobol points that open the search, and the best score among them. `Config(null_procedure="full_search")` replays the whole search at a higher cost. With 19 copies the p-value cannot go below 0.05. It is not the probability that the groups are real.
-- **Evidence.** We compared Starfold and the UMAP and HDBSCAN defaults with the true classes of ten labelled public tables. The score is the adjusted Rand index (1 for identical groupings, near 0 for chance) on the assigned rows, times the share assigned. We used six tables to tune the method and held four out. Starfold matched or beat the defaults (within 0.02 counts as a match) on 8 of the ten: all six development tables and two of the four held out. On the four held-out tables, however, its mean was lower than the defaults' (0.24 against 0.29). The largest table has 20,000 rows; nothing larger has been measured. CPU and GPU runs do not give identical labels; compare them by partition with `starfold.compare_backends`. The [limits page](https://andreaswneitzel.github.io/Starfold/limits.html) gives the full list.
+- You need one row per object, with at least 50 finite rows and 2 numeric columns. The columns you choose define what "similar" means. Starfold scales them; use `Config(scaling="robust")` for heavy tails. Rows with a missing value are dropped, never filled in.
+- Groups much smaller than about sqrt(12 n) rows (about 155 rows at n = 2,000 and 350 at n = 10,000) tend to be merged into larger ones. This is a rule of thumb measured on our benchmark and by injecting groups into a real table, not a derived bound.
+- A stable group is not a true group. Support is how often the refits agree, not the probability that a row belongs to a group. The ranges over refits are stability intervals, not confidence intervals. A dense chance fluctuation also comes back in every subset. There is no per-group significance test.
+- The group count is not an estimate of how many populations exist. On our benchmark it can differ from the true class count (Gas drift: 390 groups against 6 classes; Letter: 284 against 26). Report `worlds.count_interval` with it.
+- The p-value of the calibration test holds only for its family of copies (by default a Gaussian copula: one population with the table's column values and correlations). It also holds only for the part of the search it replays: by default the library defaults and the 16 Sobol points that open the search, and the best score among them. `Config(null_procedure="full_search")` replays the whole search at a higher cost. With 19 copies the p-value cannot go below 0.05. It is not the probability that the groups are real.
+- We compared Starfold and the UMAP and HDBSCAN defaults with the true classes of ten labelled public tables. The score is the adjusted Rand index (1 for identical groupings, near 0 for chance) on the assigned rows, times the share assigned. We used six tables to tune the method and held four out. Starfold matched or beat the defaults (within 0.02 counts as a match) on 8 of the ten: all six development tables and two of the four held out. On the four held-out tables, however, its mean was lower than the defaults' (0.24 against 0.29). The largest table has 20,000 rows; nothing larger has been measured. CPU and GPU runs do not give identical labels; compare them by partition with `starfold.compare_backends`. The [limits page](https://andreaswneitzel.github.io/Starfold/limits.html) gives the full list.
 
 ## Learn more
 
@@ -101,7 +101,7 @@ The [manual](https://andreaswneitzel.github.io/Starfold/):
 - [How-to guides](https://andreaswneitzel.github.io/Starfold/howto/index.html): your own table, scaling, the GPU, the calibration test, reporting.
 - [Flags](https://andreaswneitzel.github.io/Starfold/reference/flags.html) and [glossary](https://andreaswneitzel.github.io/Starfold/glossary.html).
 
-Notebooks, in Jupytext percent format (plain `.py` files that open as notebooks): [handwritten digits](notebooks/01_digits.py), [9,242 APOGEE DR19 stars](notebooks/02_apogee.py), [the calibration test](notebooks/03_calibration.py). The APOGEE table ships with the repository, not the package ([provenance](bench/data/stellar_chemokinematics_apogee_dr19.md)). Changes between versions are in the [changelog](CHANGELOG.md).
+Notebooks, with their recorded outputs: [the scikit-learn digits dataset](notebooks/01_digits.ipynb), [the APOGEE DR19 example table](notebooks/02_apogee.ipynb), [the calibration test](notebooks/03_calibration.ipynb). The APOGEE table ships with the repository, not the package ([provenance](bench/data/stellar_chemokinematics_apogee_dr19.md)). Changes between versions are in the [changelog](CHANGELOG.md).
 
 ## Tests
 

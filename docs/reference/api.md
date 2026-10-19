@@ -33,70 +33,86 @@ This page shows the signature and docstring of each public name in `starfold`, g
 
 ## Run a recovery
 
-`recover` runs the whole procedure and returns one `Result`. `Config` declares its budgets and `Space` the ranges of the settings it searches.
+`recover` runs the whole procedure and returns one `Result`. `Config` declares its budgets and `Space` the ranges of the settings it searches. Every `Config` argument is a keyword with a default; {doc}`config` lists each one.
 
-```{autofunction} starfold.recover
+```{eval-rst}
+.. autofunction:: starfold.recover
 ```
 
-```{autoclass} starfold.Config
+```{eval-rst}
+.. autoclass:: starfold.Config()
 ```
 
-```{autoclass} starfold.Space
+```{eval-rst}
+.. autoclass:: starfold.Space
 ```
 
 ## Run one stage
 
 `search` runs the search alone. `null_test` runs the calibration test for a finished search. `generate_null` draws one structureless copy of a table.
 
-```{autofunction} starfold.search.search
+```{eval-rst}
+.. autofunction:: starfold.search.search
 ```
 
-```{autofunction} starfold.null_test
+```{eval-rst}
+.. autofunction:: starfold.null_test
 ```
 
-```{autofunction} starfold.generate_null
+```{eval-rst}
+.. autofunction:: starfold.generate_null
 ```
 
 ## Compare backends
 
 `compare_backends` fits one setting on the CPU and on cuML and reports how well the two partitions agree. `default_params` returns the library defaults.
 
-```{autofunction} starfold.compare_backends
+```{eval-rst}
+.. autofunction:: starfold.compare_backends
 ```
 
-```{autofunction} starfold.default_params
+```{eval-rst}
+.. autofunction:: starfold.default_params
 ```
 
 ## Save and load
 
 `save` writes a result to a directory with checksums. `load` checks them and rebuilds the result. The files are listed in {doc}`artifacts`.
 
-```{autofunction} starfold.save
+```{eval-rst}
+.. autofunction:: starfold.save
 ```
 
-```{autofunction} starfold.load
+```{eval-rst}
+.. autofunction:: starfold.load
 ```
 
 ## Result classes
 
 `Result` holds everything `recover` returns. The other classes hold its parts. Each field is explained in {doc}`result`.
 
-```{autoclass} starfold.Result
-:members: n_groups, support, unresolved_mass
+```{eval-rst}
+.. autoclass:: starfold.Result
+   :members: n_groups, support, unresolved_mass
 ```
 
-```{autoclass} starfold.SearchResult
+```{eval-rst}
+.. autoclass:: starfold.SearchResult
 ```
 
-```{autoclass} starfold.WorldEvidence
+```{eval-rst}
+.. autoclass:: starfold.WorldEvidence
 ```
 
-```{autoclass} starfold.NullEvidence
+```{eval-rst}
+.. autoclass:: starfold.NullEvidence
 ```
 
-```{autoclass} starfold.BackendAgreement
+```{eval-rst}
+.. autoclass:: starfold.BackendAgreement
 ```
 
-```{autoclass} starfold.Params
-:members: to_dict, from_dict
+```{eval-rst}
+.. autoclass:: starfold.Params
+   :members: to_dict, from_dict
 ```

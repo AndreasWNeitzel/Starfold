@@ -1,4 +1,4 @@
-# Tutorial: two groups in 9,242 APOGEE stars, part 2
+# Tutorial: two groups in the APOGEE DR19 example table, part 2
 
 ```{eval-rst}
 .. index::
@@ -9,7 +9,7 @@
    single: gap plot
 ```
 
-This page checks the two APOGEE groups with the co-association check and the calibration test, then writes down what the run supports. It continues {doc}`apogee` and follows the second half of the notebook `notebooks/02_apogee.py`.
+This page checks the two APOGEE groups with the co-association check and the calibration test, then writes down what the run supports. It continues {doc}`apogee` and follows the second half of the notebook `notebooks/02_apogee.ipynb`.
 
 ## Goal
 
@@ -18,7 +18,7 @@ You finish with two more pieces of evidence for how far to trust the two groups 
 ## Before you start
 
 - Finish {doc}`apogee`. Keep the same Python session, because steps 8 to 10 use `result`, `x`, `names` and `starfold` from there.
-- If you start a new session, load the recorded run from the clone instead. Run Python from the repository root:
+- If you start a new session, load the recorded run from the clone instead. The saved runs in `notebooks/runs/` ship with the repository, and notebooks 01 and 02 write them. Run Python from the repository root:
 
   ```python
   import starfold
@@ -42,7 +42,7 @@ print(f"{c.n_rows:,} stars ({'seeded subset' if c.subsampled else 'all'}): "
       f"contrast {c.contrast:.3f}, cut agreement {c.agreement:.3f}")
 ```
 
-You see:
+The recorded run prints:
 
 ```text
 4,096 stars (seeded subset): within 0.979, between 0.003, contrast 0.976, cut agreement 0.000
@@ -50,15 +50,13 @@ You see:
 
 ![Histogram of co-association for star pairs in the same group (blue) and in different groups (red), with a logarithmic vertical axis.](../figures/manual/02_04.png)
 
-Read it aloud. The horizontal axis is the co-association of a pair, from 0 to 1. The vertical axis is the density of pairs on a logarithmic scale, so rare values show. The blue histogram (same group) has a tall spike at 1 and a mean of 0.979. The red histogram (different groups) has a tall spike at 0 and a mean of 0.003. Between 0.1 and 0.9 both histograms sit between about 0.0001 and 0.06, against about 40 at the spikes, so few pairs are undecided.
+The horizontal axis is the co-association of a pair, from 0 to 1. The vertical axis is the density of pairs on a logarithmic scale, so rare values show. The blue histogram (same group) has a tall spike at 1 and a mean of 0.979. The red histogram (different groups) has a tall spike at 0 and a mean of 0.003. Between 0.1 and 0.9 both histograms sit between about 0.0001 and 0.06, against about 40 at the spikes, so few pairs are undecided.
 
 A good picture has the two spikes at opposite ends. A bad picture has both histograms centred in the middle, where refits disagree about which stars belong together.
 
-**The recorded cut failure.** The check also regroups the stars: it runs {term}`HDBSCAN` on the co-association turned into a distance, and compares that cut with the partition. The consensus agreement (printed as "cut agreement": the cut against the partition, adjusted Rand index times coverage) is 0.000. The cut assigned every one of the 4,096 stars to no group. That is why `consensus_disagrees` is raised. The cause of the all-noise cut was not diagnosed. The code notes that rows at the floor distance can let the cut merge neighbouring groups.
+In the recorded run the regrouping failed. The check also regroups the stars: it runs {term}`HDBSCAN` on the co-association turned into a distance, and compares that cut with the partition. The consensus agreement (printed as "cut agreement": the cut against the partition, adjusted Rand index times coverage) is 0.000. The cut assigned every one of the 4,096 stars to no group. That is why `consensus_disagrees` is raised. The cause of the all-noise cut was not diagnosed. The code notes that rows at the floor distance can let the cut merge neighbouring groups.
 
-What it does not mean: the groups are not absent. The contrast of 0.976 needs no cut, and it is high. What it does mean: the cut is a second clustering, and it can fail where the pair shares still separate the groups. So you must not cite it as independent confirmation of the partition here. In this run the evidence is the contrast, not the cut.
-
-Decision: read the contrast first. A contrast near 1 says the refits agree with your partition. The {doc}`../metrics/coassociation` page has the bands.
+The failed cut does not mean the groups are absent. The contrast of 0.976 needs no cut, and it is high. The cut is a second clustering, and it can fail where the pair shares still separate the groups, so do not cite it here as independent confirmation of the partition. In this run the evidence is the contrast. Read it first: a contrast near 1 says the refits agree with your partition. The {doc}`../metrics/coassociation` page has the bands.
 
 ## Step 9: compare the copy and the gap
 
@@ -66,7 +64,7 @@ Every trial was scored twice on the same subsets, once on the data and once on a
 
 ![Scatter of the score on the data against the score on the structureless copy for each trial, with a dashed no-advantage line.](../figures/manual/02_05.png)
 
-Read it aloud. Each dot is one finished trial. The horizontal axis is its score on the data. The vertical axis is its score on the copy. The dashed diagonal marks equal scores, "no advantage". Blue dots are the Sobol design and orange dots are {term}`TPE` proposals. The star is the library defaults (trial 0) and the ring is the selected trial, here trial 45.
+Each dot is one finished trial. The horizontal axis is its score on the data. The vertical axis is its score on the copy. The dashed diagonal marks equal scores, "no advantage". Blue dots are the Sobol design and orange dots are {term}`TPE` proposals. The star is the library defaults (trial 0) and the ring is the selected trial, here trial 45.
 
 A dot on the diagonal gains nothing from the data. A dot far below it scores well on the data and poorly on the copy. The defaults sit on the diagonal, at about 0.33 on both axes. The selected trial sits at about 0.60 on the data and 0.09 on the copy.
 
@@ -77,13 +75,13 @@ s = result.search
 print(f"fresh gap over three fresh copies: selected {s.gap_selected:.3f}, defaults {s.gap_default:.3f}")
 ```
 
-You see:
+The recorded run prints:
 
 ```text
 fresh gap over three fresh copies: selected 0.372, defaults -0.001
 ```
 
-Decision: the defaults gain nothing over the copy (a gap of -0.001) and the selected setting gains 0.372. The search found a setting that uses structure the copy lacks. This is a statement about one setting on three copies, not a test. The test comes next.
+The defaults gain nothing over the copy (a gap of -0.001) and the selected setting gains 0.372, so the search found a setting that uses structure the copy lacks. That comparison covers one setting on three copies and is not a test. The test comes next.
 
 ## Step 10: read the calibration test result
 
@@ -109,9 +107,7 @@ One copy reached a best gap of 0.3655 against the table's 0.3620. Since p is abo
 
 Three reasons can explain that, and this run cannot separate them. The statistic uses only the 17 opening trials, and its power against the full-search statistic is not measured. With 19 copies, p moves in steps of 0.05, and one copy decided the outcome. The copy keeps a Gaussian dependence between iron, magnesium and the orbits, and that dependence may carry much of the two-sequence signal.
 
-The {term}`Monte Carlo interval` of 0.001 to 0.260 is wide because 19 copies are few. It is a 95 percent Clopper-Pearson interval (Clopper and Pearson 1934, doi:10.1093/biomet/26.4.404) for the chance that a copy reaches the table's value. It says how well the simulation pinned the p-value, and not how sure you can be that the groups are real. The readings "p at most 0.05 means no copy reached the table" and "p above 0.05 means at least one did" hold at the default 19 copies only. See {doc}`../metrics/calibration-p`.
-
-Decision: report the groups as reproducible, and not as shown to exceed the copy.
+The {term}`Monte Carlo interval` of 0.001 to 0.260 is wide because 19 copies are few. It is a 95 percent Clopper-Pearson interval (Clopper and Pearson 1934, doi:10.1093/biomet/26.4.404) for the chance that a copy reaches the table's value. It says how well the simulation pinned the p-value, and not how sure you can be that the groups are real. The readings "p at most 0.05 means no copy reached the table" and "p above 0.05 means at least one did" hold at the default 19 copies only. See {doc}`../metrics/calibration-p`. Report the groups as reproducible, and not as shown to exceed the copy.
 
 ## Step 11: report it
 
@@ -134,17 +130,17 @@ A wording that follows the evidence: "Starfold recovers 2 groups with recurrence
 
 ## What the run does not support
 
-- **That the groups are distinct populations.** Reproducible is not true. At the default 19 copies, a p-value at or below 0.05 would say only that no copy scored as high as the table. A p-value above 0.05 says at least one did.
-- **That the Milky Way holds this many populations.** The count depends on the settings and on what you call a population. Its interval is over refits, not a confidence interval.
-- **A membership probability for each star.** Support counts how often a star recurs with its group. HDBSCAN strengths describe one fit. Neither is a {term}`posterior`.
-- **Anything about the Galaxy as a whole.** These are APOGEE stars with a signal-to-noise ratio above 70 and Gaia orbits inside a volume cut. No selection function (the chance that a star of a given kind enters the sample) was modelled.
-- **Anything about measurement error.** The table has no per-star uncertainties, so the bands reflect subsampling and seeds only.
-- **A citable result.** The bundled table is for tutorials. For published work, rebuild it from APOGEE and Gaia using the provenance note in `bench/data/stellar_chemokinematics_apogee_dr19.md`.
+- It does not show that the groups are distinct populations. Reproducible is not true. At the default 19 copies, a p-value at or below 0.05 would say only that no copy scored as high as the table. A p-value above 0.05 says at least one did.
+- It does not show that the Milky Way holds this many populations. The count depends on the settings and on what you call a population. Its interval is over refits, not a confidence interval.
+- It gives no membership probability for any star. Support counts how often a star recurs with its group. HDBSCAN strengths describe one fit. Neither is a {term}`posterior`.
+- It says nothing about the Galaxy as a whole. These are APOGEE stars with a signal-to-noise ratio above 70 and Gaia orbits inside a volume cut. No selection function (the chance that a star of a given kind enters the sample) was modelled.
+- It says nothing about measurement error. The table has no per-star uncertainties, so the bands reflect subsampling and seeds only.
+- It is not a citable result. The bundled table is for tutorials. For published work, rebuild it from APOGEE and Gaia using the provenance note in `bench/data/stellar_chemokinematics_apogee_dr19.md`.
 
 ## What you learned
 
 - Two groups recur (0.91 and 0.92), the count interval is 2 to 2, and the unresolved mass is 0.154.
-- The co-association contrast is 0.976. The cut failed for a cause not diagnosed, and that is a warning about the cut, not about the groups.
+- The co-association contrast is 0.976. The cut failed for a cause not diagnosed, which is a warning about the cut and says nothing against the groups.
 - The calibration test gave p = 0.10, so the split is reproducible and not shown to beat a structureless copy.
 
 Look up a number on its own page:

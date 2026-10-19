@@ -54,7 +54,6 @@ bench = [
     # fetch_openml(parser="auto") reads dense ARFF through pandas.
     "pandas>=2.0",
     "matplotlib>=3.8",
-    "jupytext>=1.16",
     "ipykernel>=6.29",
 ]
 docs = [
@@ -160,5 +159,3 @@ branch = true
 show_missing = true
 skip_covered = false
 
-[tool.jupytext]
-formats = "ipynb,py:percent"

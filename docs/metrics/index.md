@@ -18,7 +18,7 @@ This page lists every number Starfold prints or returns, says what question each
 | {doc}`Unresolved mass <unresolved>` | How much of the table do the refits fail to place in a group? | 0 to 1 | `result.unresolved_mass`, `result.worlds.unresolved` |
 | {doc}`Count interval <count-interval>` | How much does the number of groups move across refits? | whole numbers | `result.worlds.count_interval`, `count_values` |
 | {doc}`Co-association contrast <coassociation>` | Do pairs in one group stay together across refits, and pairs in different groups stay apart? | -1 to 1 | `result.consensus.contrast`, `within_association`, `between_association`, `agreement` |
-| {doc}`Calibration p-value <calibration-p>` | Does the table beat structureless copies on the largest search gap among trials 0 to 16 (the defaults and the 16-trial Sobol design; 0.710 for Digits, the search gap of trial 7)? | 0 to 1 | `result.null.p_value`, `p_intervals` |
+| {doc}`Calibration p-value <calibration-p>` | Does the table beat structureless copies on the largest search gap among trials 0 to 16 (the defaults and the 16-trial Sobol design; 0.710 for the scikit-learn digits dataset, the search gap of trial 7)? | 0 to 1 | `result.null.p_value`, `p_intervals` |
 | {doc}`Strengths <strengths>` | How firmly does HDBSCAN hold each row inside its group in one fit? | 0 to 1 | `result.strengths` |
 | {doc}`Properties <properties>` | What are the typical column values of each group, with a band over refits? | column units | `result.worlds.property_median`, `property_band` |
 
