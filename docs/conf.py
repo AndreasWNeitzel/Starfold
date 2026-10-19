@@ -57,8 +57,7 @@ _font_stacks = {
         '"IBM Plex Serif", Charter, "Bitstream Charter", Cambria, Georgia, serif'
     ),
     "font-stack--monospace": (
-        '"IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", '
-        "monospace"
+        '"IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace'
     ),
 }
 
